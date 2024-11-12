@@ -18,7 +18,7 @@ locals {
     }
     "_ens" = {
       type    = "TXT"
-      value   = "a=0x20373F5a3Bb30b528a9acdAbE02a3f99fb74ee45"
+      value   = "ENS1 dnsname.ens.eth 0x20373F5a3Bb30b528a9acdAbE02a3f99fb74ee45"
       proxied = false
     }
   }
