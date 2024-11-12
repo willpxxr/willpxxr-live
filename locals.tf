@@ -16,6 +16,11 @@ locals {
       value   = local.proxied_a_record_placeholder
       proxied = true
     }
+    "_ens" = {
+      type    = "TXT"
+      value   = "a=0x20373F5a3Bb30b528a9acdAbE02a3f99fb74ee45"
+      proxied = false
+    }
   }
   redirects = {
     "willpxxr.com" = {
