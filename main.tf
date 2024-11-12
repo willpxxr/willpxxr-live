@@ -1,7 +1,7 @@
 resource "cloudflare_record" "main" {
-  for_each = local.records
+  for_each = { for record in local.records: lower("records/${record.name}/${record.type}") => record }
   zone_id  = data.cloudflare_zone.main.id
-  name     = each.key
+  name     = each.value.name
   type     = each.value.type
   proxied  = each.value.proxied
   content  = each.value.value
