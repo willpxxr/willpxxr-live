@@ -34,3 +34,35 @@ resource "cloudflare_ruleset" "main" {
     }
   }
 }
+
+resource "cloudflare_list" "main" {
+  for_each    = local.lists
+  account_id  = data.cloudflare_accounts.main.accounts[0].id
+  name        = each.key
+  description = each.key
+  kind        = each.value.kind
+
+  dynamic "item" {
+    for_each = each.value.values
+    iterator = value
+    content {
+      value {
+        ip = "${value.value}"
+      }
+    }
+  }
+}
+
+resource "cloudflare_filter" "main" {
+  for_each    = { for rule in local.waf: rule.name => rule }
+  zone_id     = data.cloudflare_zone.main.id
+  expression  = each.value.expression
+}
+
+resource "cloudflare_firewall_rule" "main" {
+  for_each    = { for rule in local.waf: rule.name => rule }
+  zone_id     = data.cloudflare_zone.main.id
+  description = each.value.name
+  filter_id   = cloudflare_filter.main[each.key].id
+  action      = "block"
+}

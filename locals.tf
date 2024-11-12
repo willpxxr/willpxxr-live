@@ -1,5 +1,15 @@
 locals {
+  lists = {
+    vpn = {
+      kind   = "ip"
+      values = [
+        "84.21.169.28"
+      ]
+    }
+  }
+
   proxied_a_record_placeholder = "192.0.2.1"
+
   records = [
     {
       name    = "git"
@@ -26,6 +36,7 @@ locals {
       proxied = false
     }
   ]
+
   redirects = {
     "willpxxr.com" = {
       to = "https://www.linkedin.com/in/williamtjparr/"
@@ -34,4 +45,19 @@ locals {
       to = "https://github.com/willpxxr"
     }
   }
+
+  // ideally this would be a list, but limited to one per account :sadge:.
+  waf_allowed_hosted = [
+    "willpxxr.com",
+    "git.willpxxr.com"
+  ]
+
+
+
+  waf = [
+    {
+      name       = "zone lockdown"
+      expression = "(not ip.src in $vpn and not http.host in {${join(" ", [for host in local.waf_allowed_hosted: "\"${host}\""])}})"
+    }
+  ]
 }
