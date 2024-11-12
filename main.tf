@@ -4,7 +4,7 @@ resource "cloudflare_record" "main" {
   name     = each.key
   type     = each.value.type
   proxied  = each.value.proxied
-  value    = each.value.value
+  content  = each.value.value
 }
 
 resource "cloudflare_ruleset" "main" {
