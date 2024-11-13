@@ -28,8 +28,8 @@ resource "cloudflare_ruleset" "redirect" {
         }
       }
 
-      expression  = "http.host eq \"${redirect.key}\""
-      description = "Redirects hostname ${redirect.key} to ${redirect.value.to}"
+      expression  = "http.host in {${join(" ", [for host in redirect.value.hosts : "\"${host}\""])}}"
+      description = "Redirects hostnames [${join(", ", redirect.value.hosts)}] to ${redirect.value.to}"
       enabled     = true
     }
   }
@@ -60,10 +60,10 @@ resource "cloudflare_ruleset" "waf" {
   phase   = "http_request_firewall_custom"
 
   dynamic "rules" {
-    for_each = { for rule in local.waf : rule.name => rule }
+    for_each = local.waf
     iterator = rule
     content {
-      description = rule.key
+      description = rule.value.name
       action      = "block"
       expression  = rule.value.expression
       enabled     = true

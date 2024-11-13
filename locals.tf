@@ -34,21 +34,24 @@ locals {
       type    = "TXT"
       value   = "ENS1 dnsname.ens.eth 0x20373F5a3Bb30b528a9acdAbE02a3f99fb74ee45"
       proxied = false
-    }
+    },
   ]
 
-  redirects = {
-    "willpxxr.com" = {
-      to = "https://www.linkedin.com/in/williamtjparr/"
-    }
-    "git.willpxxr.com" = {
-      to = "https://github.com/willpxxr"
-    }
-  }
+  redirects = [
+    {
+      hosts = ["willpxxr.com", "www.willpxxr.com"]
+      to    = "https://www.linkedin.com/in/williamtjparr/"
+    },
+    {
+      hosts = ["git.willpxxr.com"]
+      to    = "https://github.com/willpxxr"
+    },
+  ]
 
   // ideally this would be a list, but limited to one per account :sadge:.
   waf_allowed_hosted = [
     "willpxxr.com",
+    "www.willpxxr.com",
     "git.willpxxr.com"
   ]
 
