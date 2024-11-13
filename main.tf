@@ -1,5 +1,5 @@
 resource "cloudflare_record" "main" {
-  for_each = { for record in local.records: lower("records/${record.name}/${record.type}") => record }
+  for_each = { for record in local.records : lower("records/${record.name}/${record.type}") => record }
   zone_id  = data.cloudflare_zone.main.id
   name     = each.value.name
   type     = each.value.type
@@ -7,7 +7,7 @@ resource "cloudflare_record" "main" {
   content  = each.value.value
 }
 
-resource "cloudflare_ruleset" "main" {
+resource "cloudflare_ruleset" "redirect" {
   zone_id     = data.cloudflare_zone.main.id
   name        = "Redirect for willpxxr.com zone"
   description = "Defines redirect rules for domains under willpxxr.com"
@@ -47,22 +47,26 @@ resource "cloudflare_list" "main" {
     iterator = value
     content {
       value {
-        ip = "${value.value}"
+        ip = value.value
       }
     }
   }
 }
 
-resource "cloudflare_filter" "main" {
-  for_each    = { for rule in local.waf: rule.name => rule }
-  zone_id     = data.cloudflare_zone.main.id
-  expression  = each.value.expression
-}
+resource "cloudflare_ruleset" "waf" {
+  zone_id = data.cloudflare_zone.main.id
+  name    = "Firewall Custom Rules"
+  kind    = "zone"
+  phase   = "http_request_firewall_custom"
 
-resource "cloudflare_firewall_rule" "main" {
-  for_each    = { for rule in local.waf: rule.name => rule }
-  zone_id     = data.cloudflare_zone.main.id
-  description = each.value.name
-  filter_id   = cloudflare_filter.main[each.key].id
-  action      = "block"
+  dynamic "rules" {
+    for_each = { for rule in local.waf : rule.name => rule }
+    iterator = rule
+    content {
+      description = rule.key
+      action      = "block"
+      expression  = rule.value.expression
+      enabled     = true
+    }
+  }
 }

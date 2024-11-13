@@ -1,7 +1,7 @@
 locals {
   lists = {
     vpn = {
-      kind   = "ip"
+      kind = "ip"
       values = [
         "84.21.169.0/24"
       ]
@@ -57,7 +57,7 @@ locals {
   waf = [
     {
       name       = "zone lockdown"
-      expression = "(not ip.src in $vpn and not http.host in {${join(" ", [for host in local.waf_allowed_hosted: "\"${host}\""])}})"
+      expression = "(not ip.src in $vpn and not http.host in {${join(" ", [for host in local.waf_allowed_hosted : "\"${host}\""])}})"
     }
   ]
 }
