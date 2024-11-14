@@ -58,7 +58,8 @@ locals {
   waf_allowed_hosted = [
     "willpxxr.com",
     "www.willpxxr.com",
-    "git.willpxxr.com"
+    "git.willpxxr.com",
+    "status.willpxxr.com",
   ]
 
 
