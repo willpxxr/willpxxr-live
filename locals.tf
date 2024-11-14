@@ -38,8 +38,8 @@ locals {
     {
       name    = "status"
       type    = "CNAME"
-      value   = "willpxxr.github.io/repo/status.willpxxr.com
-      proxied = false
+      value   = "willpxxr.github.io"
+      proxied = true
     }
   ]
 
