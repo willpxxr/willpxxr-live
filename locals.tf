@@ -40,7 +40,13 @@ locals {
       type    = "CNAME"
       value   = "willpxxr.github.io"
       proxied = true
-    }
+    },
+    {
+      name    = "auth"
+      type    = "CNAME"
+      value   = "dev-5tebe1ce-cd-nfe0aksybxkgh4pr.edge.tenants.us.auth0.com"
+      proxied = false
+    },
   ]
 
   redirects = [
