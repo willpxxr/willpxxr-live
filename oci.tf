@@ -122,6 +122,11 @@ data "oci_core_images" "main" {
   sort_by = "TIMECREATED"
   sort_order = "DESC"
   shape = "VM.Standard.A1.Flex"
+  filter {
+    name   = "display_name"
+    values = ["^Oracle-Linux-8.*OKE.*"]
+    regex  = true
+  }
 }
 
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
