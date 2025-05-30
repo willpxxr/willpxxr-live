@@ -1,5 +1,6 @@
 locals {
   kubernetes_version = "v1.33.0"
+  kubernetes_node_disk_boot_size_gb = 50
 }
 
 resource "oci_identity_compartment" "main" {
@@ -115,6 +116,14 @@ data "oci_identity_availability_domains" "ads" {
     compartment_id = oci_identity_compartment.main.id
 }
 
+data "oci_core_images" "main" {
+  compartment_id = oci_identity_compartment.main.id
+  operating_system = "Oracle Linux"
+  sort_by = "TIMECREATED"
+  sort_order = "DESC"
+  shape = "VM.Standard.A1.Flex"
+}
+
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
   cluster_id         = oci_containerengine_cluster.k8s_cluster.id
   compartment_id     = oci_identity_compartment.main.id
@@ -141,7 +150,7 @@ resource "oci_containerengine_node_pool" "k8s_node_pool" {
       subnet_id           = oci_core_subnet.vcn_private_subnet.id
     }
 
-    size = 1
+    size = 2
   }
 
   node_shape = "VM.Standard.A1.Flex"
@@ -154,6 +163,12 @@ resource "oci_containerengine_node_pool" "k8s_node_pool" {
   initial_node_labels {
     key   = "name"
     value = "k8s-cluster"
+  }
+
+  node_source_details {
+    image_id = data.oci_core_images.main.images[0].id
+    source_type = "IMAGE"
+    boot_volume_size_in_gbs = local.kubernetes_node_disk_boot_size_gb
   }
 }
 
