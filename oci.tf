@@ -7,7 +7,7 @@ resource "oci_identity_compartment" "main" {
 module "vcn" {
   source                       = "oracle-terraform-modules/vcn/oci"
   version                      = "3.6.0"
-  compartment_id               = oci_identity_compartment.main.name
+  compartment_id               = oci_identity_compartment.main.id
   internet_gateway_route_rules = null
   local_peering_gateways       = null
   nat_gateway_route_rules      = null
@@ -20,7 +20,7 @@ module "vcn" {
 }
 
 resource "oci_core_subnet" "vcn_private_subnet" {
-  compartment_id = oci_identity_compartment.main.name
+  compartment_id = oci_identity_compartment.main.id
   vcn_id         = module.vcn.vcn_id
   cidr_block     = "10.0.1.0/24"
   route_table_id = module.vcn.nat_route_id
@@ -32,7 +32,7 @@ resource "oci_core_subnet" "vcn_private_subnet" {
 }
 
 resource "oci_core_subnet" "vcn_public_subnet" {
-  compartment_id    = oci_identity_compartment.main.name
+  compartment_id    = oci_identity_compartment.main.id
   vcn_id            = module.vcn.vcn_id
   cidr_block        = "10.0.0.0/24"
   route_table_id    = module.vcn.ig_route_id
@@ -43,7 +43,7 @@ resource "oci_core_subnet" "vcn_public_subnet" {
 }
 
 resource "oci_core_security_list" "private_subnet_sl" {
-  compartment_id = oci_identity_compartment.main.name
+  compartment_id = oci_identity_compartment.main.id
   vcn_id         = module.vcn.vcn_id
   display_name   = "k8s-private-subnet-sl"
 
@@ -63,7 +63,7 @@ resource "oci_core_security_list" "private_subnet_sl" {
 }
 
 resource "oci_core_security_list" "public_subnet_sl" {
-  compartment_id = oci_identity_compartment.main.name
+  compartment_id = oci_identity_compartment.main.id
   vcn_id         = module.vcn.vcn_id
   display_name   = "k8s-public-subnet-sl"
 
@@ -85,7 +85,7 @@ resource "oci_core_security_list" "public_subnet_sl" {
 }
 
 resource "oci_containerengine_cluster" "k8s_cluster" {
-  compartment_id     = oci_identity_compartment.main.name
+  compartment_id     = oci_identity_compartment.main.id
   kubernetes_version = "1.33"
   name               = "k8s-cluster"
   vcn_id             = module.vcn.vcn_id
@@ -108,12 +108,12 @@ resource "oci_containerengine_cluster" "k8s_cluster" {
 }
 
 data "oci_identity_availability_domains" "ads" {
-    compartment_id = "ocid1.tenancy.oc1..aaaaaaaal7ioy4xx4zw4g2fhbxrcbvkdzuea2t4gm3gbi7jayibgkk55amua"
+    compartment_id = oci_identity_compartment.main.id
 }
 
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
   cluster_id         = oci_containerengine_cluster.k8s_cluster.id
-  compartment_id     = oci_identity_compartment.main.name
+  compartment_id     = oci_identity_compartment.main.id
   kubernetes_version = "1.33"
   name               = "k8s-node-pool"
 
