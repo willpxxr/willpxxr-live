@@ -1,5 +1,5 @@
 locals {
-  kubernetes_version = "v1.33.0"
+  kubernetes_version = "v1.32.1"
   kubernetes_node_disk_boot_size_gb = 50
 }
 
@@ -112,60 +112,22 @@ resource "oci_containerengine_cluster" "k8s_cluster" {
   }
 }
 
-data "oci_identity_availability_domains" "ads" {
-    compartment_id = oci_identity_compartment.main.id
-}
+module "workers" {
+  source = "oracle-terraform-modules/oke/oci//modules/workers"
+  version = "5.2.4"
 
-data "oci_containerengine_node_pool_option" "main" {
-  compartment_id       = oci_identity_compartment.main.id
-  node_pool_option_id  = "all"
-}
-
-resource "oci_containerengine_node_pool" "k8s_node_pool" {
-  cluster_id         = oci_containerengine_cluster.k8s_cluster.id
-  compartment_id     = oci_identity_compartment.main.id
-  kubernetes_version = local.kubernetes_version
-  name               = "k8s-node-pool"
-
-  node_metadata = {
-    user_data = base64encode(file("files/node-pool-init.sh"))
-  }
-
-  node_config_details {
-    placement_configs {
-      availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-      subnet_id           = oci_core_subnet.vcn_private_subnet.id
-    }
-
-    placement_configs {
-      availability_domain = data.oci_identity_availability_domains.ads.availability_domains[1].name
-      subnet_id           = oci_core_subnet.vcn_private_subnet.id
-    }
-
-    placement_configs {
-      availability_domain = data.oci_identity_availability_domains.ads.availability_domains[2].name
-      subnet_id           = oci_core_subnet.vcn_private_subnet.id
-    }
-
-    size = 2
-  }
-
-  node_shape = "VM.Standard.A1.Flex"
-
-  node_shape_config {
-    memory_in_gbs = 12
-    ocpus         = 2
-  }
-
-  initial_node_labels {
-    key   = "name"
-    value = "k8s-cluster"
-  }
-
-  node_source_details {
-    image_id = data.oci_containerengine_node_pool_option.main.sources[0].image_id
-    source_type = "IMAGE"
-    boot_volume_size_in_gbs = local.kubernetes_node_disk_boot_size_gb
+  worker_pool_mode = "node-pool"
+  worker_pool_size = 2
+  worker_pools = {
+    oke-vm-standard-free-tier = {
+      description      = "OKE-managed Node Pool with OKE Oracle Linux 8 image",
+      shape            = "VM.Standard.A1.Flex",
+      create           = true,
+      ocpus            = 2,
+      memory           = 12,
+      boot_volume_size = 50,
+      os               = "Oracle Linux",
+      os_version       = "8",
+    },
   }
 }
-
