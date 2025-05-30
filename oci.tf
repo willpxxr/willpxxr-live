@@ -90,6 +90,14 @@ resource "oci_core_security_list" "public_subnet_sl" {
     source_type = "CIDR_BLOCK"
     protocol    = "all"
   }
+
+  # temp. allow ingress to public api server
+  ingress_security_rules {
+    stateless   = false
+    source      = "10.0.0.0/0"
+    source_type = "CIDR_BLOCK"
+    protocol    = "all"
+  }
 }
 
 resource "oci_containerengine_cluster" "k8s_cluster" {
