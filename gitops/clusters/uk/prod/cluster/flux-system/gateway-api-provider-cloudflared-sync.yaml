@@ -2,10 +2,10 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: gateway-api
+  name: gateway-api-provider-cloudflared
   namespace: flux-system
 spec:
   interval: 1m0s
   ref:
     branch: main
-  url: https://github.com/kubernetes-sigs/gateway-api
+  url: https://github.com/pl4nty/cloudflare-kubernetes-gateway

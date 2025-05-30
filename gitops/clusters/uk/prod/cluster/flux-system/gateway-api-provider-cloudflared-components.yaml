@@ -1,0 +1,24 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: cloudflared
+spec:
+  controllerName: github.com/pl4nty/cloudflare-kubernetes-gateway
+  parametersRef:
+    group: ""
+    kind: Secret
+    namespace: cloudflared
+    name: cloudflare
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway
+  namespace: cloudflared
+spec:
+  gatewayClassName: cloudflared
+  listeners:
+  - protocol: HTTP
+    port: 80
+    name: http

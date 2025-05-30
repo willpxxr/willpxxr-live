@@ -5,3 +5,9 @@ resources:
 - gotk-sync.yaml
 - gateway-api-sync.yaml
 - gateway-api-kustomization.yaml
+- gateway-api-provider-cloudflared-kustomization.yaml
+- gateway-api-provider-cloudflared-sync.yaml
+- gateway-api-provider-cloudflared-components.yaml
+- teleport-components.yaml
+- teleport-helm-release.yaml
+- teleport-helm-repository.yaml
