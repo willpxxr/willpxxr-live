@@ -3,3 +3,5 @@ kind: Kustomization
 resources:
 - gotk-components.yaml
 - gotk-sync.yaml
+- gateway-api-sync.yaml
+- gateway-api-kustomization.yaml
