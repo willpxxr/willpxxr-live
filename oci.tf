@@ -2,6 +2,7 @@ locals {
   kubernetes_version = "v1.33.0"
   kubernetes_node_disk_boot_size_gb = 50
   # hard code for now because this is painful
+  kubernetes_node_version = "v1.31.1"
   kubernetes_node_image_id = "ocid1.image.oc1.uk-london-1.aaaaaaaaw5wosv5hcnsccntpobqcflm4viraldidrnlafrozu6q6izkswmma"
 }
 
@@ -121,7 +122,7 @@ data "oci_identity_availability_domains" "ads" {
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
   cluster_id         = oci_containerengine_cluster.k8s_cluster.id
   compartment_id     = oci_identity_compartment.main.id
-  kubernetes_version = local.kubernetes_version
+  kubernetes_version = local.kubernetes_node_version
   name               = "k8s-node-pool"
 
   node_metadata = {
