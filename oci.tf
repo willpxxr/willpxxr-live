@@ -131,11 +131,6 @@ resource "oci_containerengine_node_pool" "k8s_node_pool" {
 
   node_config_details {
     placement_configs {
-      availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-      subnet_id           = oci_core_subnet.vcn_private_subnet.id
-    }
-
-    placement_configs {
       availability_domain = data.oci_identity_availability_domains.ads.availability_domains[1].name
       subnet_id           = oci_core_subnet.vcn_private_subnet.id
     }
