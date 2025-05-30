@@ -1,6 +1,8 @@
 locals {
   kubernetes_version = "v1.33.0"
   kubernetes_node_disk_boot_size_gb = 50
+  # hard code for now because this is painful
+  kubernetes_node_image_id = "ocid1.image.oc1.uk-london-1.aaaaaaaaw5wosv5hcnsccntpobqcflm4viraldidrnlafrozu6q6izkswmma"
 }
 
 resource "oci_identity_compartment" "main" {
@@ -116,11 +118,6 @@ data "oci_identity_availability_domains" "ads" {
     compartment_id = oci_identity_compartment.main.id
 }
 
-data "oci_containerengine_node_pool_option" "main" {
-  compartment_id       = oci_identity_compartment.main.id
-  node_pool_option_id  = "all"
-}
-
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
   cluster_id         = oci_containerengine_cluster.k8s_cluster.id
   compartment_id     = oci_identity_compartment.main.id
@@ -163,7 +160,7 @@ resource "oci_containerengine_node_pool" "k8s_node_pool" {
   }
 
   node_source_details {
-    image_id = data.oci_containerengine_node_pool_option.main.sources[0].image_id
+    image_id = local.kubernetes_node_image_id
     source_type = "IMAGE"
     boot_volume_size_in_gbs = local.kubernetes_node_disk_boot_size_gb
   }
