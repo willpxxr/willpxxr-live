@@ -108,7 +108,7 @@ resource "oci_containerengine_cluster" "k8s_cluster" {
 }
 
 data "oci_identity_availability_domains" "ads" {
-    compartment_id = oci_identity_compartment.main.name
+    compartment_id = "ocid1.tenancy.oc1..aaaaaaaal7ioy4xx4zw4g2fhbxrcbvkdzuea2t4gm3gbi7jayibgkk55amua"
 }
 
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
