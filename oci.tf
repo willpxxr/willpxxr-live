@@ -2,8 +2,8 @@ locals {
   kubernetes_version = "v1.33.0"
   kubernetes_node_disk_boot_size_gb = 50
   # hard code for now because this is painful
-  kubernetes_node_version = "v1.31.1"
-  kubernetes_node_image_id = "ocid1.image.oc1.uk-london-1.aaaaaaaaw5wosv5hcnsccntpobqcflm4viraldidrnlafrozu6q6izkswmma"
+  kubernetes_node_version = "v1.32.1"
+  kubernetes_node_image_id = "ocid1.image.oc1.uk-london-1.aaaaaaaaovf2cgp52xj5asm4ocj4pt3vwzx477auu34glzzwofsez7i37jtq"
 }
 
 resource "oci_identity_compartment" "main" {
@@ -137,11 +137,6 @@ resource "oci_containerengine_node_pool" "k8s_node_pool" {
 
     placement_configs {
       availability_domain = data.oci_identity_availability_domains.ads.availability_domains[1].name
-      subnet_id           = oci_core_subnet.vcn_private_subnet.id
-    }
-
-    placement_configs {
-      availability_domain = data.oci_identity_availability_domains.ads.availability_domains[2].name
       subnet_id           = oci_core_subnet.vcn_private_subnet.id
     }
 
