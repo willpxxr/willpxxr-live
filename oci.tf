@@ -116,17 +116,9 @@ data "oci_identity_availability_domains" "ads" {
     compartment_id = oci_identity_compartment.main.id
 }
 
-data "oci_core_images" "main" {
-  compartment_id = oci_identity_compartment.main.id
-  operating_system = "Oracle Linux"
-  sort_by = "TIMECREATED"
-  sort_order = "DESC"
-  shape = "VM.Standard.A1.Flex"
-  filter {
-    name   = "display_name"
-    values = ["^Oracle-Linux-8.*OKE.*"]
-    regex  = true
-  }
+data "oci_containerengine_node_pool_option" "main" {
+  compartment_id       = oci_identity_compartment.main.id
+  node_pool_option_id  = "all"
 }
 
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
@@ -171,7 +163,7 @@ resource "oci_containerengine_node_pool" "k8s_node_pool" {
   }
 
   node_source_details {
-    image_id = data.oci_core_images.main.images[0].id
+    image_id = data.oci_containerengine_node_pool_option.main.sources[0].image_id
     source_type = "IMAGE"
     boot_volume_size_in_gbs = local.kubernetes_node_disk_boot_size_gb
   }
