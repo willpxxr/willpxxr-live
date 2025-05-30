@@ -94,7 +94,7 @@ resource "oci_core_security_list" "public_subnet_sl" {
   # temp. allow ingress to public api server
   ingress_security_rules {
     stateless   = false
-    source      = "10.0.0.0/0"
+    source      = "0.0.0.0/0"
     source_type = "CIDR_BLOCK"
     protocol    = "all"
   }
