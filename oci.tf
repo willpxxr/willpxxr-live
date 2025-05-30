@@ -1,3 +1,7 @@
+locals {
+  kubernetes_version = "v1.33.0"
+}
+
 resource "oci_identity_compartment" "main" {
   name        = "shared-resources"
   description = "Shared Resources in OCI"
@@ -86,7 +90,7 @@ resource "oci_core_security_list" "public_subnet_sl" {
 
 resource "oci_containerengine_cluster" "k8s_cluster" {
   compartment_id     = oci_identity_compartment.main.id
-  kubernetes_version = "1.33"
+  kubernetes_version = local.kubernetes_version
   name               = "k8s-cluster"
   vcn_id             = module.vcn.vcn_id
   endpoint_config {
@@ -114,7 +118,7 @@ data "oci_identity_availability_domains" "ads" {
 resource "oci_containerengine_node_pool" "k8s_node_pool" {
   cluster_id         = oci_containerengine_cluster.k8s_cluster.id
   compartment_id     = oci_identity_compartment.main.id
-  kubernetes_version = "1.33"
+  kubernetes_version = local.kubernetes_version
   name               = "k8s-node-pool"
 
   node_metadata = {
