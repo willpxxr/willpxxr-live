@@ -66,6 +66,7 @@ locals {
     "www.willpxxr.com",
     "git.willpxxr.com",
     "status.willpxxr.com",
+    "teleport.willpxxr.com",
   ]
 
 
