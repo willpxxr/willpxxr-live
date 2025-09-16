@@ -36,6 +36,12 @@ locals {
       proxied = false
     },
     {
+      name    = "_discord"
+      type    = "TXT"
+      value   = "dh=7302e029c74bae4f578b37e1d21e676f12c9f9be"
+      proxied = false
+    },
+    {
       name    = "status"
       type    = "CNAME"
       value   = "willpxxr.github.io"
