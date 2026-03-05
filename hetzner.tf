@@ -3,6 +3,10 @@ locals {
   # Available as a public Hetzner image since 2025-04-23; minor patch updates are managed by Hetzner.
   # https://factory.talos.dev/?schematic=ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515
   talos_schematic = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
+
+  # Explicit IP assignments. Counts are derived from list length to prevent drift.
+  control_plane_ips = ["10.0.1.1", "10.0.1.2"]
+  worker_ips        = ["10.0.1.11", "10.0.1.12"]
 }
 
 # Resolve the public Talos image provided by Hetzner Cloud using the schematic ID.
@@ -23,6 +27,38 @@ resource "hcloud_network_subnet" "main" {
   type         = "cloud"
   network_zone = "eu-central"
   ip_range     = "10.0.1.0/24"
+}
+
+# Load balancer for the Kubernetes API — provides a stable endpoint across control plane nodes
+resource "hcloud_load_balancer" "control_plane" {
+  name               = "willpxxr-prod-cp"
+  load_balancer_type = "lb11"
+  location           = "nbg1"
+}
+
+resource "hcloud_load_balancer_network" "control_plane" {
+  load_balancer_id = hcloud_load_balancer.control_plane.id
+  network_id       = hcloud_network.main.id
+  ip               = "10.0.1.254"
+
+  depends_on = [hcloud_network_subnet.main]
+}
+
+resource "hcloud_load_balancer_service" "kube_api" {
+  load_balancer_id = hcloud_load_balancer.control_plane.id
+  protocol         = "tcp"
+  listen_port      = 6443
+  destination_port = 6443
+}
+
+resource "hcloud_load_balancer_target" "control_plane" {
+  count            = length(local.control_plane_ips)
+  type             = "server"
+  load_balancer_id = hcloud_load_balancer.control_plane.id
+  server_id        = hcloud_server.control_plane[count.index].id
+  use_private_ip   = true
+
+  depends_on = [hcloud_load_balancer_network.control_plane]
 }
 
 # Firewall: restrict the Kubernetes and Talos APIs to the VPN subnet only
@@ -53,40 +89,77 @@ resource "talos_machine_secrets" "main" {}
 data "talos_machine_configuration" "control_plane" {
   cluster_name     = "willpxxr-prod"
   machine_type     = "controlplane"
-  cluster_endpoint = "https://${hcloud_server.control_plane.ipv4_address}:6443"
+  cluster_endpoint = "https://${hcloud_load_balancer.control_plane.ipv4}:6443"
   machine_secrets  = talos_machine_secrets.main.machine_secrets
 }
 
-# CX32: 4 AMD vCPU, 8 GB RAM, 80 GB NVMe — serves as both control plane and worker.
-# Single-node topology is an intentional cost trade-off (no HA). Hetzner Cloud allows
-# all outbound traffic by default; the firewall below only restricts inbound access.
+# Worker machine configuration
+data "talos_machine_configuration" "worker" {
+  cluster_name     = "willpxxr-prod"
+  machine_type     = "worker"
+  cluster_endpoint = "https://${hcloud_load_balancer.control_plane.ipv4}:6443"
+  machine_secrets  = talos_machine_secrets.main.machine_secrets
+}
+
+# CX22: 2 vCPU, 4 GB RAM, 40 GB NVMe — dedicated control plane nodes.
+# Note: a 2-member etcd cluster requires both nodes for write quorum; losing either
+# member makes the cluster read-only. Add a third control plane for true fault tolerance.
 resource "hcloud_server" "control_plane" {
-  name         = "willpxxr-prod-cp-1"
-  server_type  = "cx32"
+  count        = length(local.control_plane_ips)
+  name         = "willpxxr-prod-cp-${count.index + 1}"
+  server_type  = "cx22"
   location     = "nbg1"
   image        = data.hcloud_image.talos.id
   firewall_ids = [hcloud_firewall.main.id]
 
   network {
     network_id = hcloud_network.main.id
-    ip         = "10.0.1.1"
+    ip         = local.control_plane_ips[count.index]
   }
 
   depends_on = [hcloud_network_subnet.main]
 }
 
-# Push the Talos machine config to the control plane
+# CX22: 2 vCPU, 4 GB RAM, 40 GB NVMe — dedicated worker nodes.
+resource "hcloud_server" "worker" {
+  count        = length(local.worker_ips)
+  name         = "willpxxr-prod-worker-${count.index + 1}"
+  server_type  = "cx22"
+  location     = "nbg1"
+  image        = data.hcloud_image.talos.id
+  firewall_ids = [hcloud_firewall.main.id]
+
+  network {
+    network_id = hcloud_network.main.id
+    ip         = local.worker_ips[count.index]
+  }
+
+  depends_on = [hcloud_network_subnet.main]
+}
+
+# Push the Talos machine config to each control plane node
 resource "talos_machine_configuration_apply" "control_plane" {
+  count                       = length(local.control_plane_ips)
   client_configuration        = talos_machine_secrets.main.client_configuration
   machine_configuration_input = data.talos_machine_configuration.control_plane.machine_configuration
-  node                        = hcloud_server.control_plane.ipv4_address
+  node                        = hcloud_server.control_plane[count.index].ipv4_address
 
   depends_on = [hcloud_server.control_plane]
 }
 
-# Bootstrap the Talos cluster (runs etcd, issues PKI certs)
+# Push the Talos machine config to each worker node
+resource "talos_machine_configuration_apply" "worker" {
+  count                       = length(local.worker_ips)
+  client_configuration        = talos_machine_secrets.main.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.worker.machine_configuration
+  node                        = hcloud_server.worker[count.index].ipv4_address
+
+  depends_on = [hcloud_server.worker, talos_machine_configuration_apply.control_plane]
+}
+
+# Bootstrap the Talos cluster on the first control plane (runs etcd, issues PKI certs)
 resource "talos_machine_bootstrap" "main" {
-  node                 = hcloud_server.control_plane.ipv4_address
+  node                 = hcloud_server.control_plane[0].ipv4_address
   client_configuration = talos_machine_secrets.main.client_configuration
 
   depends_on = [talos_machine_configuration_apply.control_plane]
@@ -95,7 +168,7 @@ resource "talos_machine_bootstrap" "main" {
 # Retrieve kubeconfig once the cluster is bootstrapped
 data "talos_cluster_kubeconfig" "main" {
   client_configuration = talos_machine_secrets.main.client_configuration
-  node                 = hcloud_server.control_plane.ipv4_address
+  node                 = hcloud_server.control_plane[0].ipv4_address
 
   depends_on = [talos_machine_bootstrap.main]
 }
