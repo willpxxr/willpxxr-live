@@ -7,11 +7,28 @@ terraform {
     }
     hcloud = {
       source  = "hetznercloud/hcloud"
-      version = "~> 1.0"
+      version = "~> 1.60"
     }
     talos = {
       source  = "siderolabs/talos"
-      version = "~> 0.7"
+      version = "~> 0.10"
+    }
+    # Additional providers required by the hcloud-talos/talos/hcloud module
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.5"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 3.1"
+    }
+    kubectl = {
+      source  = "alekc/kubectl"
+      version = "~> 2.1"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.2"
     }
   }
 }
