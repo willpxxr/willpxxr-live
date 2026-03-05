@@ -1,0 +1,77 @@
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: teleport
+  namespace: flux-system
+spec:
+  resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: teleport
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: HelmRepository
+      metadata:
+        name: teleport
+        namespace: flux-system
+      spec:
+        interval: 1m0s
+        url: https://charts.releases.teleport.dev
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: teleport-values
+        namespace: flux-system
+      data:
+        values.yaml: |
+          clusterName: teleport.willpxxr.com
+          chartMode: standalone
+          proxyListenerMode: multiplex
+          acme: true
+          acmeEmail: the@willpxxr.com
+          publicAddr:
+          - teleport.willpxxr.com:443
+          authentication:
+            type: github
+            localAuth: true
+          ingress:
+            enabled: false
+          service:
+            type: ClusterIP
+          log:
+            level: INFO
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: teleport-cluster
+        namespace: teleport
+      spec:
+        interval: 30m0s
+        chart:
+          spec:
+            chart: teleport-cluster
+            sourceRef:
+              kind: HelmRepository
+              name: teleport
+              namespace: flux-system
+        valuesFrom:
+          - kind: ConfigMap
+            name: teleport-values
+            namespace: flux-system
+    - apiVersion: gateway.networking.k8s.io/v1alpha2
+      kind: TLSRoute
+      metadata:
+        name: teleport
+        namespace: teleport
+      spec:
+        parentRefs:
+          - name: gateway
+            namespace: cloudflared
+        hostnames:
+          - "teleport.willpxxr.com"
+          - "*.teleport.willpxxr.com"
+        rules:
+          - backendRefs:
+              - name: teleport-cluster
+                port: 443
