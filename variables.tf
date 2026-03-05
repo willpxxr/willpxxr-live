@@ -3,7 +3,7 @@ variable "cloudflare_api_token" {
   description = "Cloudflare API Token"
 }
 
-variable "oci_rsa_private_key_base64enc" {
+variable "digitalocean_token" {
   sensitive   = true
-  description = "OCI API Key RSA Private Key"
+  description = "DigitalOcean API Token"
 }
