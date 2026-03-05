@@ -5,9 +5,13 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.0"
     }
-    digitalocean = {
-      source  = "digitalocean/digitalocean"
-      version = "~> 2.0"
+    hcloud = {
+      source  = "hetznercloud/hcloud"
+      version = "~> 1.0"
+    }
+    talos = {
+      source  = "siderolabs/talos"
+      version = "~> 0.7"
     }
   }
 }
@@ -16,6 +20,6 @@ provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
 
-provider "digitalocean" {
-  token = var.digitalocean_token
+provider "hcloud" {
+  token = var.hetzner_token
 }

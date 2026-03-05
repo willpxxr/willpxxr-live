@@ -3,7 +3,7 @@ variable "cloudflare_api_token" {
   description = "Cloudflare API Token"
 }
 
-variable "digitalocean_token" {
+variable "hetzner_token" {
   sensitive   = true
-  description = "DigitalOcean API Token"
+  description = "Hetzner Cloud API Token"
 }
