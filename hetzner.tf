@@ -1,15 +1,14 @@
 locals {
-  # Talos version running on cluster nodes.
-  # Update to adopt a new release; machines must be re-imaged after changing this value.
-  talos_version = "v1.9.4"
+  # Schematic ID for the public Talos image provided by Hetzner Cloud (Talos + qemu-guest-agent).
+  # Available as a public Hetzner image since 2025-04-23; minor patch updates are managed by Hetzner.
+  # https://factory.talos.dev/?schematic=ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515
+  talos_schematic = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
 }
 
-# Look up the Talos snapshot pre-uploaded to the Hetzner Cloud project.
-# To create the snapshot, follow:
-# https://www.talos.dev/v1.9/talos-guides/install/cloud-platforms/hetzner/
+# Resolve the public Talos image provided by Hetzner Cloud using the schematic ID.
+# No manual snapshot upload required.
 data "hcloud_image" "talos" {
-  with_selector     = "os=talos,version=${local.talos_version}"
-  most_recent       = true
+  name              = local.talos_schematic
   with_architecture = "x86"
 }
 
@@ -71,13 +70,6 @@ resource "hcloud_server" "control_plane" {
   network {
     network_id = hcloud_network.main.id
     ip         = "10.0.1.1"
-  }
-
-  lifecycle {
-    precondition {
-      condition     = data.hcloud_image.talos.id != null
-      error_message = "Talos snapshot for version ${local.talos_version} not found in Hetzner Cloud. Upload it first: https://www.talos.dev/v1.9/talos-guides/install/cloud-platforms/hetzner/"
-    }
   }
 
   depends_on = [hcloud_network_subnet.main]
