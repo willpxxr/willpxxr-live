@@ -14,11 +14,10 @@ module "talos" {
   firewall_kube_api_source  = ["100.64.0.0/10"]
   firewall_talos_api_source = ["100.64.0.0/10"]
 
-  # Talos image — PREREQUISITE: the image must include the siderolabs/tailscale extension for
-  # Tailscale integration to work. Generate a new schematic at https://factory.talos.dev
-  # (add siderolabs/tailscale alongside the existing Hetzner extensions), upload the resulting
-  # image or use Packer, then replace the schematic ID below.
-  # Current schematic (ce4c980...) includes only Talos + qemu-guest-agent — no Tailscale.
+  # Talos image — built by Packer (packer/talos/talos.pkr.hcl) from the schematic in
+  # packer/talos/schematic.yaml, which includes siderolabs/qemu-guest-agent and
+  # siderolabs/tailscale. Run `packer build packer/talos/talos.pkr.hcl` once per Talos
+  # version upgrade; the data source below resolves the most-recently pushed snapshot.
   talos_image_id_x86 = data.hcloud_image.talos.id
 
   # 2× CX23 control planes.
@@ -48,11 +47,13 @@ module "talos" {
   }
 }
 
-# Resolve the public Talos image provided by Hetzner Cloud using the schematic ID.
-# No manual snapshot upload required.
+# Resolve the Talos snapshot built by Packer (packer/talos/talos.pkr.hcl).
+# The snapshot is labelled os=talos,tailscale=true and includes both
+# siderolabs/qemu-guest-agent and siderolabs/tailscale.
 data "hcloud_image" "talos" {
-  name              = "ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515"
+  with_selector     = "os=talos,tailscale=true"
   with_architecture = "x86"
+  most_recent       = true
 }
 
 # Expose the Talos client config so operators can manage the cluster via VPN:
