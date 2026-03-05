@@ -7,29 +7,32 @@ module "talos" {
   cluster_name  = "willpxxr-prod"
   location_name = "nbg1"
 
-  # Firewall: restrict Kubernetes API (:6443) and Talos API (:50000) to VPN only.
-  # terraform apply for initial bootstrap must be run from a machine inside the VPN.
+  # Firewall: restrict Kubernetes API (:6443) and Talos API (:50000) to the
+  # Tailscale CGNAT range only. terraform apply must be run from a machine
+  # connected to Tailscale/Meshnet.
   firewall_use_current_ip   = false
-  firewall_kube_api_source  = var.vpn_cidrs
-  firewall_talos_api_source = var.vpn_cidrs
+  firewall_kube_api_source  = ["100.64.0.0/10"]
+  firewall_talos_api_source = ["100.64.0.0/10"]
 
-  # Use the Hetzner-provided public Talos image (schematic: Talos + qemu-guest-agent).
-  # Available as a public image since 2025-04-23; no manual snapshot upload required.
-  # https://factory.talos.dev/?schematic=ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515
+  # Talos image — PREREQUISITE: the image must include the siderolabs/tailscale extension for
+  # Tailscale integration to work. Generate a new schematic at https://factory.talos.dev
+  # (add siderolabs/tailscale alongside the existing Hetzner extensions), upload the resulting
+  # image or use Packer, then replace the schematic ID below.
+  # Current schematic (ce4c980...) includes only Talos + qemu-guest-agent — no Tailscale.
   talos_image_id_x86 = data.hcloud_image.talos.id
 
-  # 2× CX22 control planes (2 vCPU / 4 GB RAM / 40 GB NVMe).
+  # 2× CX23 control planes.
   # Note: a 2-member etcd cluster requires both nodes for write quorum — losing either
   # makes the cluster read-only. Add a third control plane for true fault tolerance.
   control_plane_nodes = [
-    { id = 1, type = "cx22" },
-    { id = 2, type = "cx22" },
+    { id = 1, type = "cx23" },
+    { id = 2, type = "cx23" },
   ]
 
-  # 2× CX22 workers (2 vCPU / 4 GB RAM / 40 GB NVMe).
+  # 2× CX23 workers.
   worker_nodes = [
-    { id = 1, type = "cx22" },
-    { id = 2, type = "cx22" },
+    { id = 1, type = "cx23" },
+    { id = 2, type = "cx23" },
   ]
 
   # VPN-only access: kubeconfig and talosconfig use private IPs.
@@ -37,9 +40,12 @@ module "talos" {
   kubeconfig_endpoint_mode   = "private_ip"
   talosconfig_endpoints_mode = "private_ip"
 
-  # Flux manages CNI and CCM post-bootstrap; disable Terraform-driven deployments.
-  deploy_cilium    = false
-  deploy_hcloud_ccm = false
+  # Tailscale system extension — nodes join the Tailscale network on first boot.
+  # Requires a Talos image built with the siderolabs/tailscale extension (see note above).
+  tailscale = {
+    enabled  = true
+    auth_key = var.tailscale_auth_key
+  }
 }
 
 # Resolve the public Talos image provided by Hetzner Cloud using the schematic ID.
