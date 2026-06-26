@@ -2,7 +2,7 @@
 apiVersion: "cilium.io/v2"
 kind: CiliumClusterwideNetworkPolicy
 metadata:
-  name: default-deny
+  name: deny-by-default
 spec:
   description: "Cluster-wide backstop: selects every pod except kube-system with zero allow rules of its own, so any namespace without its own explicit network-policy.yaml is denied all traffic by default rather than silently left open. Namespaces with their own policies are unaffected, since Cilium unions allows across all policies selecting an endpoint."
   endpointSelector:
