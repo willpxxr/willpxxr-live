@@ -1,0 +1,42 @@
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: charts
+  namespace: flux-system
+spec:
+  inputsFrom:
+    - kind: ResourceSetInputProvider
+      selector:
+        matchLabels:
+          fluxcd.controlplane.io/resourceset: charts
+
+  resourcesTemplate: |
+    ---
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: HelmRepository
+    metadata:
+      name: << inputs.name >>
+      namespace: flux-system
+    spec:
+      interval: 1m0s
+      url: << inputs.repoURL >>
+    ---
+    apiVersion: helm.toolkit.fluxcd.io/v2
+    kind: HelmRelease
+    metadata:
+      name: << inputs.name >>
+      namespace: flux-system
+    spec:
+      interval: 10m0s
+      targetNamespace: << inputs.namespace >>
+      install:
+        createNamespace: true
+      chart:
+        spec:
+          chart: << inputs.chart >>
+          sourceRef:
+            kind: HelmRepository
+            name: << inputs.name >>
+            namespace: flux-system
+      values: << inputs.values >>

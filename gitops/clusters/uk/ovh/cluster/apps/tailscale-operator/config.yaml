@@ -1,0 +1,20 @@
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: tailscale-operator
+  namespace: flux-system
+  labels:
+    fluxcd.controlplane.io/resourceset: charts
+spec:
+  type: Static
+  defaultValues:
+    name: "tailscale-operator"
+    namespace: "tailscale"
+    repoURL: "https://pkgs.tailscale.com/helmcharts"
+    chart: "tailscale-operator"
+    values:
+      apiServerProxyConfig:
+        mode: "true"
+      operatorConfig:
+        hostname: "willpxxr-live-ovh"

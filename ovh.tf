@@ -47,3 +47,13 @@ module "flux_operator_bootstrap" {
 
   depends_on = [ovh_cloud_project_kube_nodepool.main]
 }
+
+resource "ovh_cloud_project_kube_iprestrictions" "main" {
+  count = length(var.ovh_kube_allowed_cidrs) > 0 ? 1 : 0
+
+  service_name = ovh_cloud_project.main.project_id
+  kube_id      = ovh_cloud_project_kube.main.id
+  ips          = var.ovh_kube_allowed_cidrs
+
+  depends_on = [module.flux_operator_bootstrap]
+}
