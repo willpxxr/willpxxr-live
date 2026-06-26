@@ -1,0 +1,85 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: flux-system
+spec:
+  description: "Flux controllers talk to each other within flux-system (e.g. notification-controller receiving events, source-controller serving artifacts to kustomize/helm-controller)."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: flux-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: flux-system
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: flux-system
+spec:
+  description: "DNS resolution via CoreDNS, required to resolve git/helm/OCI source hosts."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: flux-system
+spec:
+  description: "All Flux controllers and the Flux Operator watch/reconcile Kubernetes resources via the API server."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-source-fetch-egress
+  namespace: flux-system
+spec:
+  description: "source-controller and helm-controller fetch arbitrary git repositories, Helm chart repositories, and OCI registries (e.g. GitHub, ghcr.io, pkgs.tailscale.com, charts.external-secrets.io) whose hosts can't be reasonably enumerated, so this allows HTTPS egress to the public internet."
+  endpointSelector:
+    matchLabels:
+      app: source-controller
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-helm-fetch-egress
+  namespace: flux-system
+spec:
+  description: "helm-controller fetches Helm charts directly from chart repositories/OCI registries over HTTPS."
+  endpointSelector:
+    matchLabels:
+      app: helm-controller
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

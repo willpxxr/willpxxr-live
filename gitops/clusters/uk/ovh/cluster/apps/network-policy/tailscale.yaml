@@ -1,0 +1,61 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: tailscale
+spec:
+  description: "The operator and its managed proxy pods (ingress/egress/API-server proxies) communicate with each other within the tailscale namespace."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: tailscale
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: tailscale
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: tailscale
+spec:
+  description: "DNS resolution via CoreDNS, required to resolve Tailscale's control plane and DERP relay hostnames."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: tailscale
+spec:
+  description: "The operator manages Kubernetes resources (Secrets, StatefulSets for proxies) via the API server, and the API Server Proxy feature itself forwards authenticated tailnet requests to it."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-tailscale-control-plane-egress
+  namespace: tailscale
+spec:
+  description: "The operator and every tailnet device (including proxy pods) need outbound HTTPS to Tailscale's coordination server and UDP to DERP relays; these endpoints aren't a fixed enumerable set, so this allows general internet egress for the tailscale daemon's connectivity."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world

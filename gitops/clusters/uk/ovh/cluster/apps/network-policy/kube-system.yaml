@@ -1,0 +1,15 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-all
+  namespace: kube-system
+spec:
+  description: "kube-system runs OVH-managed components (CSI driver, cloud-controller-manager, metrics-server, Cilium's own operator/agent) whose exact network requirements aren't documented in enough detail to enumerate safely. Left fully open deliberately rather than guess and risk breaking cluster-management functionality from a locked-out state; revisit if OVH publishes a definitive list of required endpoints."
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - all
+  egress:
+    - toEntities:
+        - all
