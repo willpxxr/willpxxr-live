@@ -1,5 +1,3 @@
-data "ovh_me" "main" {}
-
 data "ovh_order_cart" "main" {
   ovh_subsidiary = "IE"
 }
