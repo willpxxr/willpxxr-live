@@ -1,11 +1,7 @@
 resource "tailscale_oauth_client" "k8s_operator" {
   description = "willpxxr-live-ovh Kubernetes operator"
-  # Verify these scope identifiers against the Tailscale admin console's
-  # OAuth client scope picker before relying on this apply succeeding --
-  # could not get fully authoritative confirmation of the exact scope
-  # string format from Tailscale's docs.
-  scopes = ["devices:core:write", "auth_keys:write"]
-  tags   = ["tag:k8s-operator"]
+  scopes      = ["devices:core", "auth_keys"]
+  tags        = ["tag:k8s-operator"]
 }
 
 data "onepassword_vault" "kubernetes" {
