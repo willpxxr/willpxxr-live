@@ -4,4 +4,3 @@ resources:
 - flux-instance.yaml
 - charts.yaml
 - network-policy.yaml
-- kube-system-network-policy.yaml
