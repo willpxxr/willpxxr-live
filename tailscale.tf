@@ -1,7 +1,26 @@
+resource "tailscale_acl" "main" {
+  overwrite_existing_content = true
+
+  acl = jsonencode({
+    tagOwners = {
+      "tag:k8s-operator" = ["autogroup:admin"]
+    }
+    acls = [
+      {
+        action = "accept"
+        src    = ["*"]
+        dst    = ["*:*"]
+      }
+    ]
+  })
+}
+
 resource "tailscale_oauth_client" "k8s_operator" {
   description = "willpxxr-live-ovh Kubernetes operator"
   scopes      = ["devices:core", "auth_keys"]
   tags        = ["tag:k8s-operator"]
+
+  depends_on = [tailscale_acl.main]
 }
 
 data "onepassword_vault" "kubernetes" {
