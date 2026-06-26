@@ -21,6 +21,18 @@ terraform {
       source  = "oracle/oci"
       version = "~> 7.0"
     }
+    tailscale = {
+      source  = "tailscale/tailscale"
+      version = "~> 0.19"
+    }
+    onepassword = {
+      source  = "1Password/onepassword"
+      version = "~> 2.0"
+    }
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.3"
+    }
   }
 }
 
@@ -40,4 +52,17 @@ provider "ovh" {
   endpoint      = "ovh-eu"
   client_id     = var.ovh_client_id
   client_secret = var.ovh_client_secret
+}
+
+data "external" "tailscale_identity_token" {
+  program = ["sh", "-c", "printf '{\"token\":\"%s\"}' \"$TFC_WORKLOAD_IDENTITY_TOKEN_TAILSCALE\""]
+}
+
+provider "tailscale" {
+  oauth_client_id = var.tailscale_bootstrap_oauth_client_id
+  identity_token  = data.external.tailscale_identity_token.result.token
+}
+
+provider "onepassword" {
+  service_account_token = var.onepassword_terraform_service_account_token
 }
