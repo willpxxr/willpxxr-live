@@ -22,10 +22,6 @@ resource "ovh_cloud_project_kube" "main" {
   service_name = ovh_cloud_project.main.project_id
   name         = "willpxxr-live"
   region       = var.ovh_kube_region
-
-  private_network_configuration {
-    private_network_routing_as_default = false
-  }
 }
 
 resource "ovh_cloud_project_kube_nodepool" "main" {
