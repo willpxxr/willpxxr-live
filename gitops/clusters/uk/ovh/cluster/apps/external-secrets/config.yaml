@@ -1,0 +1,17 @@
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: external-secrets
+  namespace: flux-system
+  labels:
+    fluxcd.controlplane.io/resourceset: charts
+spec:
+  type: Static
+  defaultValues:
+    name: "external-secrets"
+    namespace: "external-secrets"
+    repoURL: "https://charts.external-secrets.io"
+    chart: "external-secrets"
+    values:
+      installCRDs: true
