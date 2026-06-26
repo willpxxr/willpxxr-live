@@ -19,3 +19,8 @@ variable "ovh_kube_region" {
   description = "OVH region for the Kubernetes cluster"
   default     = "UK1"
 }
+
+variable "oci_rsa_private_key_base64enc" {
+  sensitive   = true
+  description = "OCI API Key RSA Private Key, base64-encoded. Only used to satisfy provider configuration for detaching decommissioned OCI resources from state (see moves.tf) — no real OCI resources are managed."
+}
