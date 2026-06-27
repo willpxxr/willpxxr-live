@@ -136,7 +136,12 @@ module "flux_operator_bootstrap" {
   source  = "controlplaneio-fluxcd/flux-operator-bootstrap/kubernetes"
   version = "0.7.0"
 
-  revision = 1
+  # Bump whenever flux-instance.yaml changes -- the bootstrap Job only
+  # re-applies the FluxInstance (bypassing Flux's own reconciliation loop,
+  # which is necessary to break out of any deadlock where the root
+  # Kustomization can't successfully apply anything, including its own
+  # updated spec) when this changes.
+  revision = 2
 
   gitops_resources = {
     instance_yaml = file("${path.root}/gitops/clusters/de/hetzner/cluster/flux-system/flux-instance.yaml")
