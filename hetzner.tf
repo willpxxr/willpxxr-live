@@ -19,6 +19,10 @@ module "talos" {
   talos_version      = "v1.12.2"
   kubernetes_version = "1.35.0"
 
+  # Packer only builds an x86 snapshot (see packer/talos/talos.pkr.hcl) -- without
+  # this the module also looks up an ARM image by label selector and fails to find one.
+  disable_arm = true
+
   # Firewall: restrict Kubernetes API (:6443) and Talos API (:50000) to the
   # Tailscale CGNAT range only. terraform apply must be run from a machine
   # connected to Tailscale, or via the TFC OIDC bridge for in-cluster resources.
