@@ -9,7 +9,7 @@ resource "tailscale_acl" "main" {
       {
         action = "accept"
         src    = ["*"]
-        dst    = ["*:*"]
+        dst    = ["*:443"]
       }
     ]
   })
