@@ -33,7 +33,7 @@ source "hcloud" "talos" {
   image       = "debian-12"
   rescue      = "linux64"
   location    = var.location
-  server_type = "cx22"
+  server_type = "cx23"
 
   snapshot_name = "talos-${var.talos_version}"
   snapshot_labels = {
