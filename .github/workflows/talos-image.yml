@@ -46,32 +46,3 @@ jobs:
         env:
           HCLOUD_TOKEN: ${{ secrets.HETZNER_TOKEN }}
         run: packer build -var "hcloud_token=$HCLOUD_TOKEN" .
-
-      # Only runs once the build above has actually finished, so Terraform
-      # never plans/applies against an in-progress or stale snapshot.
-      - name: "Trigger Terraform Cloud run"
-        env:
-          TFC_TOKEN: ${{ secrets.TFC_TOKEN }}
-          TFC_WORKSPACE_ID: ${{ secrets.TFC_WORKSPACE_ID }}
-        run: |
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --header "Authorization: Bearer $TFC_TOKEN" \
-            --header "Content-Type: application/vnd.api+json" \
-            --request POST \
-            --data '{
-              "data": {
-                "attributes": {
-                  "message": "Triggered by Talos image build (run '"$GITHUB_RUN_ID"')"
-                },
-                "type": "runs",
-                "relationships": {
-                  "workspace": {
-                    "data": { "type": "workspaces", "id": "'"$TFC_WORKSPACE_ID"'" }
-                  }
-                }
-              }
-            }' \
-            https://app.terraform.io/api/v2/runs
