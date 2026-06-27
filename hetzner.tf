@@ -26,12 +26,15 @@ module "talos" {
   # this the module also looks up an ARM image by label selector and fails to find one.
   disable_arm = true
 
-  # Firewall: restrict Kubernetes API (:6443) and Talos API (:50000) to the
-  # Tailscale CGNAT range only. terraform apply must be run from a machine
-  # connected to Tailscale, or via the TFC OIDC bridge for in-cluster resources.
+  # Open to all IPs rather than restricted to the Tailscale CGNAT range: an
+  # IP-based firewall would have blocked Terraform Cloud's own remote runners
+  # from reaching the Talos API during bootstrap (no stable egress IP exists
+  # for them to allowlist). Security boundary is mTLS (Talos API) and TLS+RBAC
+  # (Kubernetes API), not network-level IP filtering -- same reasoning as
+  # commit c18784a on the prior branch this was ported from.
   firewall_use_current_ip   = false
-  firewall_kube_api_source  = ["100.64.0.0/10"]
-  firewall_talos_api_source = ["100.64.0.0/10"]
+  firewall_kube_api_source  = ["0.0.0.0/0", "::/0"]
+  firewall_talos_api_source = ["0.0.0.0/0", "::/0"]
 
   # Talos image — built by Packer (packer/talos/talos.pkr.hcl) from the schematic in
   # packer/talos/schematic.yaml, which includes siderolabs/qemu-guest-agent and
@@ -51,10 +54,10 @@ module "talos" {
     { id = 2, type = "cx23" },
   ]
 
-  # VPN-only access: kubeconfig and talosconfig use private IPs.
-  # Clients must be connected to Tailscale to reach the cluster.
-  kubeconfig_endpoint_mode   = "private_ip"
-  talosconfig_endpoints_mode = "private_ip"
+  # Public IPs so Terraform Cloud's remote runners can reach the cluster
+  # directly -- see the firewall comment above for why this is safe.
+  kubeconfig_endpoint_mode   = "public_ip"
+  talosconfig_endpoints_mode = "public_ip"
 
   # Tailscale system extension -- nodes join the tailnet on first boot using a
   # Terraform-managed reusable pre-authorized key, rather than a manually pasted one.
