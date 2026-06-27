@@ -4,6 +4,7 @@ resource "tailscale_acl" "main" {
   acl = jsonencode({
     tagOwners = {
       "tag:k8s-operator" = ["autogroup:admin"]
+      "tag:k8s-system"   = ["autogroup:admin"]
     }
     acls = [
       {

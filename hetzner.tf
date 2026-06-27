@@ -3,6 +3,9 @@ resource "tailscale_tailnet_key" "cluster_nodes" {
   ephemeral     = false
   preauthorized = true
   description   = "willpxxr-live Hetzner Talos node enrollment"
+  tags          = ["tag:k8s-system"]
+
+  depends_on = [tailscale_acl.main]
 }
 
 module "talos" {
