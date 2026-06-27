@@ -15,8 +15,8 @@ variable "hcloud_token" {
 
 variable "talos_version" {
   type        = string
-  default     = "v1.9.4"
-  description = "Talos Linux version to build (e.g. v1.9.4)"
+  default     = "v1.12.2"
+  description = "Talos Linux version to build (e.g. v1.12.2). Must match the talos_version set in hetzner.tf's talos module block."
 }
 
 variable "location" {

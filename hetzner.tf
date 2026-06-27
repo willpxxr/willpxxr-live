@@ -14,6 +14,11 @@ module "talos" {
   cluster_name  = "willpxxr-prod"
   location_name = "nbg1"
 
+  # Keep in sync with the talos_version default in packer/talos/talos.pkr.hcl --
+  # the snapshot image and the generated machine config must match.
+  talos_version      = "v1.12.2"
+  kubernetes_version = "1.35.0"
+
   # Firewall: restrict Kubernetes API (:6443) and Talos API (:50000) to the
   # Tailscale CGNAT range only. terraform apply must be run from a machine
   # connected to Tailscale, or via the TFC OIDC bridge for in-cluster resources.
