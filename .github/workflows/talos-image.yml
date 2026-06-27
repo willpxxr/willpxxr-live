@@ -2,10 +2,17 @@ name: Build Talos image
 
 on:
   workflow_dispatch:
+  # Picks up base-image/extension updates from the Talos Image Factory even
+  # without a version bump commit.
+  schedule:
+    - cron: "0 3 1 * *" # 03:00 UTC on the 1st of each month
   push:
     branches: ["main"]
     paths:
-      - "packer/talos/**"
+      # Scoped to exactly the files that define the image's inputs (Talos
+      # version, system extensions) -- not the whole repo.
+      - "packer/talos/talos.pkr.hcl"
+      - "packer/talos/schematic.yaml"
 
 permissions: read-all
 
