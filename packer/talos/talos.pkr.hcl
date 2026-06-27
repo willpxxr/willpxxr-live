@@ -55,6 +55,7 @@ build {
   }
 
   provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
     environment_vars = [
       "TALOS_VERSION=${var.talos_version}",
     ]
