@@ -1,0 +1,41 @@
+name: Build Talos image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "packer/talos/**"
+
+permissions: read-all
+
+jobs:
+  build:
+    name: Packer build (Hetzner)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+
+      - name: "Checkout code"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: "Setup Packer"
+        uses: hashicorp/setup-packer@ce93c3c08a6c2ff2275bf4b54ff0d9a75f6c9789 # v3.4.0
+
+      - name: "packer init"
+        working-directory: packer/talos
+        run: packer init .
+
+      - name: "packer build"
+        working-directory: packer/talos
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HETZNER_TOKEN }}
+        run: packer build -var "hcloud_token=$HCLOUD_TOKEN" .
