@@ -2,7 +2,7 @@ resource "tailscale_tailnet_key" "cluster_nodes" {
   reusable      = true
   ephemeral     = false
   preauthorized = true
-  description   = "willpxxr-live Hetzner/Talos cluster node enrollment"
+  description   = "willpxxr-live Hetzner/Talos node enrollment"
 }
 
 module "talos" {
