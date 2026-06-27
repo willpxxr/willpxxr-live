@@ -17,4 +17,4 @@ spec:
       apiServerProxyConfig:
         mode: "true"
       operatorConfig:
-        hostname: "willpxxr-live-ovh"
+        hostname: "willpxxr-live-hetzner"

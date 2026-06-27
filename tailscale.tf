@@ -16,7 +16,7 @@ resource "tailscale_acl" "main" {
 }
 
 resource "tailscale_oauth_client" "k8s_operator" {
-  description = "willpxxr-live-ovh Kubernetes operator"
+  description = "willpxxr-live-hetzner Kubernetes operator"
   scopes      = ["devices:core", "auth_keys"]
   tags        = ["tag:k8s-operator"]
 

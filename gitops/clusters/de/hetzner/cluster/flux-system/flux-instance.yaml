@@ -21,4 +21,4 @@ spec:
     kind: GitRepository
     url: "https://github.com/willpxxr/willpxxr-live.git"
     ref: "refs/heads/main"
-    path: "./gitops/clusters/uk/ovh/cluster"
+    path: "./gitops/clusters/de/hetzner/cluster"

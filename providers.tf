@@ -5,10 +5,6 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.0"
     }
-    ovh = {
-      source  = "ovh/ovh"
-      version = "~> 2.0"
-    }
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = "~> 3.0"
@@ -33,6 +29,26 @@ terraform {
       source  = "hashicorp/external"
       version = "~> 2.3"
     }
+    hcloud = {
+      source  = "hetznercloud/hcloud"
+      version = "~> 1.60"
+    }
+    talos = {
+      source  = "siderolabs/talos"
+      version = "~> 0.10"
+    }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.5"
+    }
+    kubectl = {
+      source  = "alekc/kubectl"
+      version = "~> 2.1"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.2"
+    }
   }
 }
 
@@ -48,10 +64,8 @@ provider "oci" {
   region       = "uk-london-1"
 }
 
-provider "ovh" {
-  endpoint      = "ovh-eu"
-  client_id     = var.ovh_client_id
-  client_secret = var.ovh_client_secret
+provider "hcloud" {
+  token = var.hetzner_token
 }
 
 data "external" "tailscale_identity_token" {
