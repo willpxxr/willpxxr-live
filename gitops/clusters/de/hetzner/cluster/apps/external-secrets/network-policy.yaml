@@ -61,7 +61,7 @@ spec:
         - kube-apiserver
       toPorts:
         - ports:
-            - port: "9443"
+            - port: "10250"
               protocol: TCP
 ---
 apiVersion: "cilium.io/v2"
