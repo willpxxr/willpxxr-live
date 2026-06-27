@@ -114,6 +114,24 @@ output "kubeconfig" {
   sensitive   = true
 }
 
+data "onepassword_vault" "terraform" {
+  name = "terraform"
+}
+
+resource "onepassword_item" "talosconfig" {
+  vault      = data.onepassword_vault.terraform.uuid
+  title      = "willpxxr-prod-talosconfig"
+  category   = "secure_note"
+  note_value = module.talos.talosconfig
+}
+
+resource "onepassword_item" "kubeconfig" {
+  vault      = data.onepassword_vault.terraform.uuid
+  title      = "willpxxr-prod-kubeconfig"
+  category   = "secure_note"
+  note_value = module.talos.kubeconfig
+}
+
 module "flux_operator_bootstrap" {
   source  = "controlplaneio-fluxcd/flux-operator-bootstrap/kubernetes"
   version = "0.7.0"
