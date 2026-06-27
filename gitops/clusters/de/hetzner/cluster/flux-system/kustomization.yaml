@@ -4,3 +4,9 @@ resources:
 - flux-instance.yaml
 - charts.yaml
 - network-policy.yaml
+- kustomization-policy.yaml
+- kustomization-tailscale-operator.yaml
+- kustomization-external-secrets.yaml
+- kustomization-kube-system.yaml
+- kustomization-external-secrets-secretstore.yaml
+- kustomization-tailscale-operator-secret.yaml

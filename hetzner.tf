@@ -142,5 +142,10 @@ module "flux_operator_bootstrap" {
     instance_yaml = file("${path.root}/gitops/clusters/de/hetzner/cluster/flux-system/flux-instance.yaml")
   }
 
-  depends_on = [module.talos]
+  # kubernetes_namespace_v1.external_secrets must exist before Flux's first
+  # reconcile, since apps/external-secrets/network-policy.yaml is a plain
+  # CiliumNetworkPolicy applied in the same batch as the chart's
+  # ResourceSetInputProvider -- the namespace that chart eventually creates
+  # via Helm's createNamespace isn't ready in time otherwise.
+  depends_on = [module.talos, kubernetes_namespace_v1.external_secrets, kubernetes_namespace_v1.tailscale]
 }

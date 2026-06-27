@@ -55,6 +55,12 @@ resource "kubernetes_namespace_v1" "external_secrets" {
   }
 }
 
+resource "kubernetes_namespace_v1" "tailscale" {
+  metadata {
+    name = "tailscale"
+  }
+}
+
 data "onepassword_item" "eso_service_account_token" {
   vault = data.onepassword_vault.kubernetes.uuid
   title = "Service Account Auth Token: Kubernetes Read Only"
