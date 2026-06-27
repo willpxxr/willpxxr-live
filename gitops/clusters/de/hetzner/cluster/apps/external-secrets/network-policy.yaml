@@ -51,6 +51,22 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-kube-apiserver-webhook-ingress
+  namespace: external-secrets
+spec:
+  description: "The kube-apiserver calls into the webhook pod directly (admission webhooks are server-initiated from the API server, not the other way round) to validate ClusterSecretStore/ExternalSecret objects on create/update."
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-onepassword-api-egress
   namespace: external-secrets
 spec:
