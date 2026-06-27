@@ -27,12 +27,10 @@ module "talos" {
   # version upgrade; the data source below resolves the most-recently pushed snapshot.
   talos_image_id_x86 = data.hcloud_image.talos.id
 
-  # 2x CX23 control planes.
-  # Note: a 2-member etcd cluster requires both nodes for write quorum -- losing either
-  # makes the cluster read-only. Add a third control plane for true fault tolerance.
+  # Single CX23 control plane -- no etcd quorum/HA, so losing this node takes the
+  # cluster fully down until it's back. Acceptable for this workload's usage.
   control_plane_nodes = [
     { id = 1, type = "cx23" },
-    { id = 2, type = "cx23" },
   ]
 
   # 2x CX23 workers.
