@@ -13,5 +13,4 @@ spec:
     namespace: "cert-manager"
     repoURL: "https://charts.jetstack.io"
     chart: "cert-manager"
-    values:
-      installCRDs: true
+    valuesConfigMap: "cert-manager-values"

@@ -42,7 +42,7 @@ metadata:
   name: allow-kube-apiserver-egress
   namespace: cert-manager
 spec:
-  description: "The controller reads Certificate/Issuer resources and writes Secrets via the API server."
+  description: "The controller reads Certificate/Issuer resources and writes Secrets via the API server. The cainjector also needs API server access to check for CRDs."
   endpointSelector: {}
   egress:
     - toEntities:
