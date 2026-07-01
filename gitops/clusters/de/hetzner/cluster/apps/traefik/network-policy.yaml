@@ -54,11 +54,14 @@ metadata:
   name: allow-tailscale-ingress
   namespace: traefik
 spec:
-  description: "The Tailscale ProxyGroup forwards tailnet traffic to the Traefik Service via DNAT. The DNAT preserves the original client's Tailscale IP (100.64.0.0/10 CGNAT range), so Cilium sees the source as 'world' rather than a tailscale namespace pod. Allow ingress from the CGNAT range on web (8000) and websecure (8443) entrypoints."
+  description: "Allow ingress from the Tailscale Proxy Group on web (8000) and websecure (8443) entrypoints."
   endpointSelector: {}
   ingress:
-    - fromCIDRSet:
-        - cidrRef: tailscale-cgnat
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: tailscale
+            tailscale.com/parent-resource: ingress
+            tailscale.com/parent-resource-type: proxygroup
       toPorts:
         - ports:
             - port: "8000"

@@ -1,9 +1,11 @@
 ---
-apiVersion: cilium.io/v2
+apiVersion: cilium.io/v2alpha1
 kind: CiliumCIDRGroup
 metadata:
   name: tailscale-cgnat
+  labels:
+    com.willpxxr/cidr-class: vpn
 spec:
-  description: "Tailscale CGNAT range (100.64.0.0/10) used by all tailnet devices. Referenced by network policies that need to allow ingress from Tailscale-proxied traffic, where the ProxyGroup's DNAT preserves the original client's Tailscale IP."
-  cidrs:
+  externalCIDRs:
     - 100.64.0.0/10
+
