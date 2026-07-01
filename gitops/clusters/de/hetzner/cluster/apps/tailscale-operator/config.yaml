@@ -13,8 +13,4 @@ spec:
     namespace: "tailscale"
     repoURL: "https://pkgs.tailscale.com/helmcharts"
     chart: "tailscale-operator"
-    values:
-      apiServerProxyConfig:
-        mode: "true"
-      operatorConfig:
-        hostname: "willpxxr-live-hetzner"
+    valuesConfigMap: "tailscale-operator-values"
