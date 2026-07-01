@@ -1,0 +1,22 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik-gateway
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: "./gitops/clusters/de/hetzner/cluster/apps/traefik-gateway"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+  dependsOn:
+    - name: traefik
+    - name: cert-manager
+  healthChecks:
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: traefik-gateway-tls
+      namespace: traefik

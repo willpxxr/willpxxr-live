@@ -1,0 +1,42 @@
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: traefik
+  namespace: flux-system
+  labels:
+    fluxcd.controlplane.io/resourceset: charts
+spec:
+  type: Static
+  defaultValues:
+    name: "traefik"
+    namespace: "traefik"
+    repoURL: "https://traefik.github.io/charts"
+    chart: "traefik"
+    values:
+      ingressClass:
+        enabled: false
+      providers:
+        kubernetesGateway:
+          enabled: true
+      gateway:
+        enabled: false
+      gatewayClass:
+        enabled: true
+      service:
+        spec:
+          type: LoadBalancer
+          loadBalancerClass: tailscale
+        annotations:
+          tailscale.com/hostname: "gateway"
+      ports:
+        web:
+          port: 8000
+          exposedPort: 80
+          expose:
+            default: true
+        websecure:
+          port: 8443
+          exposedPort: 443
+          expose:
+            default: true

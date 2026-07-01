@@ -1,0 +1,65 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: cert-manager
+spec:
+  description: "The controller, webhook, and cainjector components of cert-manager talk to each other within the namespace."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: cert-manager
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: cert-manager
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: cert-manager
+spec:
+  description: "DNS resolution via CoreDNS, required for general operation."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: cert-manager
+spec:
+  description: "The controller reads Certificate/Issuer resources and writes Secrets via the API server."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-webhook-ingress
+  namespace: cert-manager
+spec:
+  description: "The kube-apiserver calls into the webhook pod directly (admission webhooks are server-initiated from the API server, not the other way round) to validate Certificate/Issuer objects on create/update."
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "10250"
+              protocol: TCP
