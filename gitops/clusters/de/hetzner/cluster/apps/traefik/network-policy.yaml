@@ -58,7 +58,7 @@ spec:
   endpointSelector: {}
   ingress:
     - fromCIDRSet:
-        - cidr: 100.64.0.0/10
+        - cidrRef: tailscale-cgnat
       toPorts:
         - ports:
             - port: "8000"
