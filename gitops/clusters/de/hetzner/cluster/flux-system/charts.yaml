@@ -39,9 +39,9 @@ spec:
             kind: HelmRepository
             name: << inputs.name >>
             namespace: flux-system
-      << if inputs.values >>values: << inputs.values >>
+      << if hasKey inputs "values" >>values: << inputs.values >>
       << end >>
-      << if inputs.valuesConfigMap >>valuesFrom:
+      << if hasKey inputs "valuesConfigMap" >>valuesFrom:
         - kind: ConfigMap
           name: << inputs.valuesConfigMap >>
           valuesKey: values.yaml
