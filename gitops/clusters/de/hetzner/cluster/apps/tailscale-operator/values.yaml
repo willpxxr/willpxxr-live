@@ -2,3 +2,5 @@ apiServerProxyConfig:
   mode: "true"
 operatorConfig:
   hostname: "willpxxr-live-hetzner"
+proxyConfig:
+  firewallMode: nftables
