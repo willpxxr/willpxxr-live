@@ -13,6 +13,7 @@ service:
     loadBalancerClass: tailscale
   annotations:
     tailscale.com/hostname: "gateway"
+    tailscale.com/proxy-group: "ingress"
 ports:
   web:
     port: 8000

@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - network-policy.yaml
   - config.yaml
+  - proxygroup.yaml
 configMapGenerator:
   - name: tailscale-operator-values
     namespace: flux-system
