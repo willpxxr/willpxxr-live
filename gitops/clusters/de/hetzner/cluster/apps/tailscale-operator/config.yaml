@@ -18,4 +18,3 @@ spec:
         mode: "true"
       operatorConfig:
         hostname: "willpxxr-live-hetzner"
-        defaultTags: "tag:k8s-system"
