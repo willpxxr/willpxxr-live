@@ -65,6 +65,16 @@ module "talos" {
     enabled  = true
     auth_key = tailscale_tailnet_key.cluster_nodes.key
   }
+
+  # Custom Cilium values:
+  # - Enable bpf.socketLB.hostNetworkOnly so socket load balancing only applies to
+  #   host-network traffic, not pod namespaces. Without this, Cilium's BPF socket LB
+  #   intercepts pod-to-ClusterIP traffic before it reaches netfilter hooks, breaking
+  #   the Tailscale operator's proxy pods which use netfilter rules in their network
+  #   namespace to forward tailnet traffic to backing Services.
+  #   Ref: https://tailscale.com/docs/kubernetes-operator/reference/compatibility#cilium-kube-proxy-replacement-mode
+  # - Enable Hubble for flow observability and debugging network policy issues.
+  cilium_values = [file("${path.module}/cilium-values.yaml")]
 }
 
 # Resolve the Talos snapshot built by Packer (packer/talos/talos.pkr.hcl).

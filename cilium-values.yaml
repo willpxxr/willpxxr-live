@@ -1,0 +1,32 @@
+operator:
+  replicas: 1
+ipam:
+  mode: kubernetes
+routingMode: native
+ipv4NativeRoutingCIDR: 10.0.16.0/20
+kubeProxyReplacement: true
+bpf:
+  masquerade: false
+  lbAcceleration: best-effort
+  socketLB:
+    enabled: true
+    hostNetworkOnly: true
+encryption:
+  enabled: false
+  type: wireguard
+securityContext:
+  capabilities:
+    ciliumAgent: [CHOWN, KILL, NET_ADMIN, NET_RAW, IPC_LOCK, SYS_ADMIN, SYS_RESOURCE, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    cleanCiliumState: [NET_ADMIN, SYS_ADMIN, SYS_RESOURCE]
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+k8sServiceHost: 127.0.0.1
+k8sServicePort: 7445
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: false
