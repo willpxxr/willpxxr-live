@@ -71,6 +71,8 @@ spec:
     matchLabels:
       tailscale.com/managed: "true"
       tailscale.com/parent-resource-type: svc
+      tailscale.com/parent-resource: traefik-traefik
+      tailscale.com/parent-resource-ns: traefik
   egress:
     - toEndpoints:
         - matchLabels:
