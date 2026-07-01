@@ -59,6 +59,9 @@ resource "kubernetes_namespace_v1" "external_secrets" {
 resource "kubernetes_namespace_v1" "tailscale" {
   metadata {
     name = "tailscale"
+    labels = {
+      "pod-security.kubernetes.io/enforce" = "privileged"
+    }
   }
 }
 
