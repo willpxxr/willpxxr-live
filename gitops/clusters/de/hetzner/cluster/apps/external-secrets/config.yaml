@@ -13,5 +13,4 @@ spec:
     namespace: "external-secrets"
     repoURL: "https://charts.external-secrets.io"
     chart: "external-secrets"
-    values:
-      installCRDs: true
+    valuesConfigMap: "external-secrets-values"

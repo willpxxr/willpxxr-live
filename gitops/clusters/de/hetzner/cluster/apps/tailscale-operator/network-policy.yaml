@@ -59,3 +59,22 @@ spec:
   egress:
     - toEntities:
         - world
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-proxy-egress-traefik
+  namespace: tailscale
+spec:
+  description: "Tailscale proxy pods (created by the operator for LoadBalancer-class Services) forward tailnet traffic to their backing Services. This allows the traefik proxy to reach Traefik pods on the web (8000) and websecure (8443) entrypoints."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+            - port: "8443"
+              protocol: TCP
