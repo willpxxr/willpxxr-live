@@ -67,7 +67,10 @@ metadata:
   namespace: tailscale
 spec:
   description: "Tailscale proxy pods (created by the operator for LoadBalancer-class Services) forward tailnet traffic to their backing Services. This allows the traefik proxy to reach Traefik pods on the web (8000) and websecure (8443) entrypoints."
-  endpointSelector: {}
+  endpointSelector:
+    matchLabels:
+      tailscale.com/managed: "true"
+      tailscale.com/parent-resource-type: svc
   egress:
     - toEndpoints:
         - matchLabels:
