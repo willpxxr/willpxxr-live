@@ -7,4 +7,3 @@ metadata:
 spec:
   type: ingress
   replicas: 2
-  proxyClass: dnat-fallback-trial
