@@ -4,6 +4,7 @@ resources:
   - network-policy.yaml
   - config.yaml
   - proxygroup.yaml
+  - proxyclass-trial.yaml
 configMapGenerator:
   - name: tailscale-operator-values
     namespace: flux-system
