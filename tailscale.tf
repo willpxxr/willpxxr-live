@@ -3,17 +3,30 @@ resource "tailscale_acl" "main" {
 
   acl = jsonencode({
     tagOwners = {
-      "tag:k8s-operator" = ["autogroup:admin"]
-      "tag:k8s-system"   = ["autogroup:admin"]
-      "tag:k8s"          = ["autogroup:admin", "tag:k8s-operator"]
+      "tag:k8s-operator"   = ["autogroup:admin"]
+      "tag:k8s-system"     = ["autogroup:admin"]
+      "tag:k8s"            = ["autogroup:admin", "tag:k8s-operator"]
+      "tag:services"       = ["autogroup:admin", "tag:k8s-operator"]
+      "tag:admin-services" = ["autogroup:admin", "tag:k8s-operator"]
     }
     grants = [
       {
         src = ["*"]
-        dst = ["svc:gateway", "svc:gateway-ingress"]
+        dst = ["tag:services"]
+        ip  = ["443"]
+      },
+      {
+        src = ["autogroup:admin"]
+        dst = ["tag:admin-services"]
         ip  = ["443"]
       }
     ]
+    autoApprovers = {
+      services = {
+        "tag:services"       = ["tag:k8s"]
+        "tag:admin-services" = ["tag:k8s"]
+      }
+    }
   })
 }
 

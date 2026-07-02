@@ -14,6 +14,7 @@ service:
   annotations:
     tailscale.com/hostname: "gateway"
     tailscale.com/proxy-group: "ingress"
+    tailscale.com/tags: "tag:services"
 ports:
   web:
     port: 8000
