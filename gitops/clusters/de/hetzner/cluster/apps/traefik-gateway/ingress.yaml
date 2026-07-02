@@ -10,7 +10,7 @@ spec:
   ingressClassName: tailscale
   tls:
     - hosts:
-        - gateway
+        - gateway-ingress
   defaultBackend:
     service:
       name: traefik-traefik

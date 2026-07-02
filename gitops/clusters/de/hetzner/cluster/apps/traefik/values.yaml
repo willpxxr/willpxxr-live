@@ -7,6 +7,13 @@ gateway:
   enabled: false
 gatewayClass:
   enabled: true
+service:
+  spec:
+    type: LoadBalancer
+    loadBalancerClass: tailscale
+  annotations:
+    tailscale.com/hostname: "gateway"
+    tailscale.com/proxy-group: "ingress"
 ports:
   web:
     port: 8000
