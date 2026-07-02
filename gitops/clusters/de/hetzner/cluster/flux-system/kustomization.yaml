@@ -15,3 +15,4 @@ resources:
 - kustomization-tailscale-operator-secret.yaml
 - kustomization-traefik.yaml
 - kustomization-traefik-gateway.yaml
+- kustomization-flux-operator-route.yaml

@@ -68,3 +68,29 @@ spec:
               protocol: TCP
             - port: "8443"
               protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-backend-egress
+  namespace: traefik
+spec:
+  description: "Traefik proxies requests to UI backends routed via HTTPRoute: Hubble UI (kube-system) and the Flux Operator UI (flux-system)."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: hubble-ui
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: flux-operator
+            io.kubernetes.pod.namespace: flux-system
+      toPorts:
+        - ports:
+            - port: "9080"
+              protocol: TCP
