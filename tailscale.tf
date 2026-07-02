@@ -10,7 +10,7 @@ resource "tailscale_acl" "main" {
     grants = [
       {
         src = ["*"]
-        dst = ["svc:gateway"]
+        dst = ["svc:gateway", "svc:gateway-ingress"]
         ip  = ["443"]
       }
     ]
