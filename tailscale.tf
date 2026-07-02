@@ -7,11 +7,11 @@ resource "tailscale_acl" "main" {
       "tag:k8s-system"   = ["autogroup:admin"]
       "tag:k8s"          = ["autogroup:admin", "tag:k8s-operator"]
     }
-    acls = [
+    grants = [
       {
-        action = "accept"
-        src    = ["*"]
-        dst    = ["*:443"]
+        src = ["*"]
+        dst = ["svc:gateway"]
+        ip  = ["443"]
       }
     ]
   })
