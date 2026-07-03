@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy
+  namespace: traefik
+  annotations:
+    tailscale.com/proxy-group: "ingress"
+    tailscale.com/tags: "tag:services"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - oauth
+  defaultBackend:
+    service:
+      name: traefik-traefik
+      port:
+        number: 80

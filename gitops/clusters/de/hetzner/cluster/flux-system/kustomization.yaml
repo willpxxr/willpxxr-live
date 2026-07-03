@@ -16,3 +16,4 @@ resources:
 - kustomization-traefik.yaml
 - kustomization-traefik-gateway.yaml
 - kustomization-flux-operator-route.yaml
+- kustomization-oauth2-proxy.yaml

@@ -12,6 +12,12 @@ spec:
   hostnames:
     - "flux.tailb40090.ts.net"
   rules:
-    - backendRefs:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: oauth2-proxy-forward-auth
+      backendRefs:
         - name: flux-operator
           port: 9080

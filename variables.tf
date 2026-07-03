@@ -26,3 +26,17 @@ variable "onepassword_vault" {
   description = "Name of the 1Password vault items are created in."
   default     = "kubernetes"
 }
+
+variable "auth0_domain" {
+  description = "Auth0 tenant domain (e.g. your-tenant.us.auth0.com). Used both as the auth0 Terraform provider's Management API target and, via the oauth2-proxy-auth0 1Password item, as the OIDC issuer for oauth2-proxy."
+}
+
+variable "auth0_mgmt_client_id" {
+  sensitive   = true
+  description = "Client ID of an Auth0 Machine-to-Machine application authorized for the Auth0 Management API (needs create/read/update/delete:clients grants), used to authenticate the auth0 Terraform provider."
+}
+
+variable "auth0_mgmt_client_secret" {
+  sensitive   = true
+  description = "Client secret for the Auth0 Management API M2M application above."
+}

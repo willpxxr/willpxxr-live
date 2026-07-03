@@ -25,6 +25,14 @@ terraform {
       source  = "1Password/onepassword"
       version = "~> 3.0"
     }
+    auth0 = {
+      source  = "auth0/auth0"
+      version = "~> 1.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
     external = {
       source  = "hashicorp/external"
       version = "~> 2.3"
@@ -79,4 +87,10 @@ provider "tailscale" {
 
 provider "onepassword" {
   service_account_token = var.onepassword_terraform_service_account_token
+}
+
+provider "auth0" {
+  domain        = var.auth0_domain
+  client_id     = var.auth0_mgmt_client_id
+  client_secret = var.auth0_mgmt_client_secret
 }
