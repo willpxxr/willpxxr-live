@@ -33,7 +33,7 @@ variable "auth0_domain" {
 
 variable "auth0_mgmt_client_id" {
   sensitive   = true
-  description = "Client ID of an Auth0 Machine-to-Machine application authorized for the Auth0 Management API (needs create/read/update/delete:clients grants), used to authenticate the auth0 Terraform provider."
+  description = "Client ID of an Auth0 Machine-to-Machine application authorized for the Auth0 Management API. Needs create/read/update/delete:clients grants for auth0_client itself, plus read:client_credentials (or read:client_keys) for the auth0_client_credentials resource to read back the generated client secret. Used to authenticate the auth0 Terraform provider."
 }
 
 variable "auth0_mgmt_client_secret" {

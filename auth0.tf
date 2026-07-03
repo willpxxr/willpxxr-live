@@ -15,6 +15,15 @@ resource "auth0_client" "oauth_proxy" {
   }
 }
 
+# auth0_client has no client_secret attribute -- it's exposed only via this
+# separate resource. Requires the Management API M2M app to also have the
+# read:client_credentials (or read:client_keys) grant, in addition to the
+# client CRUD grants needed for auth0_client itself.
+resource "auth0_client_credentials" "oauth_proxy" {
+  client_id             = auth0_client.oauth_proxy.client_id
+  authentication_method = "client_secret_post"
+}
+
 resource "random_password" "oauth2_proxy_cookie_secret" {
   length  = 32
   special = false
@@ -43,7 +52,7 @@ resource "onepassword_item" "oauth2_proxy" {
         }
         client_secret = {
           type  = "CONCEALED"
-          value = auth0_client.oauth_proxy.client_secret
+          value = auth0_client_credentials.oauth_proxy.client_secret
         }
         cookie_secret = {
           type  = "CONCEALED"
