@@ -94,3 +94,11 @@ spec:
         - ports:
             - port: "9080"
               protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app: oauth2-proxy
+            io.kubernetes.pod.namespace: oauth2-proxy
+      toPorts:
+        - ports:
+            - port: "4180"
+              protocol: TCP
