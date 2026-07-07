@@ -33,6 +33,33 @@ resource "auth0_client_credentials" "envoy_gateway_oidc" {
   authentication_method = "client_secret_post"
 }
 
+# Native/public client for the opencode auth plugin's Authorization Code +
+# PKCE login -- deliberately separate from envoy_gateway_oidc, which is a
+# confidential (regular_web) client for the browser-based hubble/flux
+# flows. PKCE public clients authenticate with a code_verifier instead of a
+# secret, so intentionally no auth0_client_credentials resource for this
+# one -- there's nothing to store.
+resource "auth0_client" "ai_gateway_llm" {
+  name        = "willpxxr-live-ai-gateway-llm"
+  description = "Native/public client used by the opencode auth plugin for the self-hosted LLM gateway (ai.tailb40090.ts.net)."
+  app_type    = "native"
+
+  oidc_conformant = true
+  grant_types     = ["authorization_code", "refresh_token"]
+
+  # Loopback redirect per RFC 8252 (OAuth for native apps) -- the opencode
+  # plugin runs a local HTTP listener on this port during login to catch
+  # the authorization code. Port/path must stay in sync with the plugin
+  # implementation.
+  callbacks = [
+    "http://localhost:51703/callback",
+  ]
+
+  jwt_configuration {
+    alg = "RS256"
+  }
+}
+
 resource "auth0_role" "cicd_get" {
   name        = "cicd:get"
   description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net)."
@@ -41,6 +68,11 @@ resource "auth0_role" "cicd_get" {
 resource "auth0_role" "network_admin" {
   name        = "network:admin"
   description = "Grants access to the Hubble UI (hubble.tailb40090.ts.net)."
+}
+
+resource "auth0_role" "llm_use" {
+  name        = "llm:use"
+  description = "Grants access to the self-hosted LLM gateway (ai.tailb40090.ts.net), proxying to the OpenCode Go subscription."
 }
 
 data "auth0_user" "will" {
@@ -55,6 +87,7 @@ resource "auth0_user_roles" "will" {
   roles = [
     auth0_role.cicd_get.id,
     auth0_role.network_admin.id,
+    auth0_role.llm_use.id,
   ]
 }
 
@@ -128,6 +161,24 @@ resource "auth0_resource_server_scopes" "cicd" {
   }
 }
 
+resource "auth0_resource_server" "ai_llm" {
+  name       = "willpxxr-live ai-llm"
+  identifier = "https://ai.tailb40090.ts.net"
+
+  enforce_policies                                = true
+  token_dialect                                   = "access_token_authz"
+  skip_consent_for_verifiable_first_party_clients = false
+}
+
+resource "auth0_resource_server_scopes" "ai_llm" {
+  resource_server_identifier = auth0_resource_server.ai_llm.identifier
+
+  scopes {
+    name        = "llm:use"
+    description = "Use the self-hosted LLM gateway"
+  }
+}
+
 # Links each role to the permission (scope) it actually grants -- the RBAC
 # gate: a user can request/consent to a scope, but Auth0 only issues it if
 # they're entitled via a role like this.
@@ -160,6 +211,17 @@ resource "auth0_role_permissions" "network_admin" {
   depends_on = [auth0_resource_server_scopes.networking]
 }
 
+resource "auth0_role_permissions" "llm_use" {
+  role_id = auth0_role.llm_use.id
+
+  permissions {
+    name                       = "llm:use"
+    resource_server_identifier = auth0_resource_server.ai_llm.identifier
+  }
+
+  depends_on = [auth0_resource_server_scopes.ai_llm]
+}
+
 resource "onepassword_item" "envoy_gateway_oidc" {
   vault    = data.onepassword_vault.kubernetes.uuid
   title    = "envoy-gateway-oidc"
@@ -187,5 +249,32 @@ resource "onepassword_item" "envoy_gateway_oidc" {
         }
       }
     }
+  }
+}
+
+# Unlike envoy_gateway_oidc above, this key has no Terraform-computed
+# source -- it's a manually-obtained OpenCode Go subscription key (from
+# https://opencode.ai/auth), pasted in by hand after this resource creates
+# the item shell. ignore_changes on section_map is required: without it,
+# every `terraform apply` would reset the real key back to this placeholder,
+# silently breaking the LLM gateway.
+resource "onepassword_item" "opencode_go" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "opencode-go"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        api_key = {
+          type  = "CONCEALED"
+          value = "REPLACE_ME_MANUALLY_FROM_OPENCODE_AI_AUTH_CONSOLE"
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [section_map]
   }
 }
