@@ -44,3 +44,19 @@ spec:
         - ports:
             - port: "1063"
               protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-webhook-ingress
+  namespace: envoy-ai-gateway-system
+spec:
+  description: "The kube-apiserver calls into the mutating webhook pod directly (admission webhooks are server-initiated from the API server, not the other way round) to inject the ext_proc sidecar into new Envoy data-plane pods."
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
