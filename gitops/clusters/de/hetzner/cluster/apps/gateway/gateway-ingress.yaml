@@ -19,6 +19,6 @@ spec:
     #   kubectl get svc -n envoy-gateway-system \
     #     --selector=gateway.envoyproxy.io/owning-gateway-namespace=envoy-gateway-system,gateway.envoyproxy.io/owning-gateway-name=gateway
     service:
-      name: REPLACE_WITH_DISCOVERED_ENVOY_SERVICE_NAME
+      name: placeholder-fixme
       port:
         number: 80
