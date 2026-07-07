@@ -14,13 +14,16 @@ resource "openrouter_api_key" "gateway" {
 # flash/pro specifically -- confirmed via OpenRouter's live /models API
 # that neither currently has a $0 :free variant, but both are extremely
 # cheap (fractions of a cent per 1K tokens), which is why "cost effective"
-# rather than strictly free is the framing here. allowed_models takes
-# exact model IDs, no :free-suffix wildcard exists, so this needs manual
-# updates if the model lineup changes. limit_usd is a backstop on top of
-# that, plus PII redaction on common sensitive patterns. "redact" rather
-# than "block" for the PII filters so a false-positive match (e.g. code
-# that happens to look like an SSN) scrubs the match rather than failing
-# the whole request outright.
+# rather than strictly free is the framing here. Uses the dated snapshot
+# IDs (not the bare alias) since OpenRouter resolves allowed_models to
+# the specific dated model internally -- specifying the bare alias caused
+# a plan/apply mismatch (planned the alias, actual came back dated).
+# Needs manual updates if OpenRouter reassigns the dated snapshot or the
+# model lineup changes. limit_usd is a backstop on top of that, plus PII
+# redaction on common sensitive patterns. "redact" rather than "block"
+# for the PII filters so a false-positive match (e.g. code that happens
+# to look like an SSN) scrubs the match rather than failing the whole
+# request outright.
 #
 # Prompt injection defense is separate: "flag" is the only action
 # OpenRouter actually supports for regex-prompt-injection (confirmed in
@@ -37,8 +40,8 @@ resource "openrouter_guardrail" "gateway" {
   reset_interval = "monthly"
 
   allowed_models = [
-    "deepseek/deepseek-v4-flash",
-    "deepseek/deepseek-v4-pro",
+    "deepseek/deepseek-v4-flash-20260423",
+    "deepseek/deepseek-v4-pro-20260423",
   ]
 
   content_filter_builtins = [
