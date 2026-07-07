@@ -1,3 +1,14 @@
+# Scope naming convention for this file, applied consistently to every
+# service protected by Auth0 (kept here since it's the one place all
+# scopes are defined): "<resource>:<tier>", where <tier> is one of:
+#   - get   -- read-only/view access to the resource's data (cicd:get)
+#   - admin -- full administrative/management access (network:admin)
+#   - use   -- invoke the resource's core function, for resources that
+#              are fundamentally action-oriented rather than data-oriented
+#              (llm:use -- an LLM gateway isn't "read", it's invoked)
+# New scopes should fit one of these three tiers rather than inventing a
+# new verb, unless a resource genuinely needs a permission level none of
+# the three capture.
 resource "auth0_client" "envoy_gateway_oidc" {
   name        = "willpxxr-live-envoy-gateway-oidc"
   description = "Confidential client used by Envoy Gateway SecurityPolicy (native OIDC) for hubble/flux-operator"
