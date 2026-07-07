@@ -99,3 +99,29 @@ moved {
   from = onepassword_item.oauth2_proxy
   to   = onepassword_item.envoy_gateway_oidc
 }
+
+# hubble access was originally scoped under the abstract "network:admin"
+# name; renamed to match the actual-service-name + get/admin/use tier
+# convention (hubble:use) once that pattern was made explicit. The scope
+# string value change itself still requires re-consent (a fresh login) --
+# these moved blocks only avoid an unnecessary destroy/recreate of the
+# underlying Terraform-tracked objects for the address rename.
+moved {
+  from = auth0_role.network_admin
+  to   = auth0_role.hubble_use
+}
+
+moved {
+  from = auth0_resource_server.networking
+  to   = auth0_resource_server.hubble
+}
+
+moved {
+  from = auth0_resource_server_scopes.networking
+  to   = auth0_resource_server_scopes.hubble
+}
+
+moved {
+  from = auth0_role_permissions.network_admin
+  to   = auth0_role_permissions.hubble_use
+}

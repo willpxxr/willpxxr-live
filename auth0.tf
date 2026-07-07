@@ -1,14 +1,22 @@
 # Scope naming convention for this file, applied consistently to every
 # service protected by Auth0 (kept here since it's the one place all
-# scopes are defined): "<resource>:<tier>", where <tier> is one of:
+# scopes are defined): "<resource>:<tier>", where <resource> is the actual
+# service being protected (not an abstract domain -- hubble, not
+# "network"), and <tier> is one of:
 #   - get   -- read-only/view access to the resource's data (cicd:get)
-#   - admin -- full administrative/management access (network:admin)
+#   - admin -- full administrative/management access
 #   - use   -- invoke the resource's core function, for resources that
 #              are fundamentally action-oriented rather than data-oriented
-#              (llm:use -- an LLM gateway isn't "read", it's invoked)
-# New scopes should fit one of these three tiers rather than inventing a
-# new verb, unless a resource genuinely needs a permission level none of
-# the three capture.
+#              (llm:use, hubble:use -- neither is "read" in a CRUD sense,
+#              they're dashboards/tools you use)
+# These three are deliberately route-level access tiers, not CRUD
+# operation-level permissions (get/list/create/update/delete) -- Envoy
+# Gateway's SecurityPolicy authorization gates access to a whole route as
+# one unit, not by HTTP method within it, so CRUD-style verbs would only
+# make sense for a resource that genuinely needs per-operation splitting,
+# and should replace (not sit alongside) admin for that resource to avoid
+# overlap/ambiguity. New scopes should fit one of the three tiers above
+# rather than inventing a new verb by default.
 resource "auth0_client" "envoy_gateway_oidc" {
   name        = "willpxxr-live-envoy-gateway-oidc"
   description = "Confidential client used by Envoy Gateway SecurityPolicy (native OIDC) for hubble/flux-operator"
@@ -78,9 +86,9 @@ resource "auth0_role" "cicd_get" {
   description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net)."
 }
 
-resource "auth0_role" "network_admin" {
-  name        = "network:admin"
-  description = "Grants access to the Hubble UI (hubble.tailb40090.ts.net)."
+resource "auth0_role" "hubble_use" {
+  name        = "hubble:use"
+  description = "Grants access to the Hubble UI (hubble.tailb40090.ts.net) -- a network flow observability dashboard, not something administered through it."
 }
 
 resource "auth0_role" "llm_use" {
@@ -99,7 +107,7 @@ resource "auth0_user_roles" "will" {
   user_id = data.auth0_user.will.id
   roles = [
     auth0_role.cicd_get.id,
-    auth0_role.network_admin.id,
+    auth0_role.hubble_use.id,
     auth0_role.llm_use.id,
   ]
 }
@@ -118,24 +126,24 @@ resource "auth0_tenant" "main" {
   flags {
     # By default Auth0's consent screen auto-generates its permission text
     # from the scope name alone (splitting on ':' and guessing a verb/noun),
-    # which renders badly for names like "network:admin" (e.g. "Admin:
-    # network your admin"). This makes it use the scopes' own description
-    # text below instead.
+    # which renders badly for scope names like these (e.g. the original
+    # "network:admin" rendered as "Admin: network your admin"). This makes
+    # it use the scopes' own description text below instead.
     use_scope_descriptions_for_consent = true
   }
 }
 
-# Dedicated Resource Server per logical service domain (rather than one
-# shared "internal-services" API) -- networking and cicd are unrelated
-# domains that happen to share a client today; splitting them now keeps
+# Dedicated Resource Server per service (rather than one shared
+# "internal-services" API) -- hubble and flux-operator are unrelated
+# services that happen to share a client today; splitting them now keeps
 # each API's scope list scoped to just its own concerns as more get added,
 # and shows as two clearly-named entries in Auth0's dashboard instead of
 # one ambiguous shared one. A real API/Resource Server is what makes
 # Auth0's consent screen show actual scope names in the first place --
 # there's no way to get genuine user consent from a bare custom token
 # claim, which is what the previous (now-removed) Action-based approach did.
-resource "auth0_resource_server" "networking" {
-  name       = "willpxxr-live networking"
+resource "auth0_resource_server" "hubble" {
+  name       = "willpxxr-live hubble"
   identifier = "https://hubble.tailb40090.ts.net"
 
   enforce_policies = true
@@ -147,12 +155,12 @@ resource "auth0_resource_server" "networking" {
   skip_consent_for_verifiable_first_party_clients = false
 }
 
-resource "auth0_resource_server_scopes" "networking" {
-  resource_server_identifier = auth0_resource_server.networking.identifier
+resource "auth0_resource_server_scopes" "hubble" {
+  resource_server_identifier = auth0_resource_server.hubble.identifier
 
   scopes {
-    name        = "network:admin"
-    description = "View and administer network traffic data"
+    name        = "hubble:use"
+    description = "View network flow data in Hubble"
   }
 }
 
@@ -199,7 +207,7 @@ resource "auth0_resource_server_scopes" "ai_llm" {
 # depends_on is required here: these resources only reference
 # auth0_resource_server (the API itself) by identifier, a plain string --
 # there's no attribute reference to auth0_resource_server_scopes (the
-# resource that actually creates the cicd:get/network:admin permissions),
+# resource that actually creates the cicd:get/hubble:use permissions),
 # so Terraform has no implicit edge forcing the scopes to exist first and
 # can otherwise try to link a permission that doesn't exist yet.
 resource "auth0_role_permissions" "cicd_get" {
@@ -213,15 +221,15 @@ resource "auth0_role_permissions" "cicd_get" {
   depends_on = [auth0_resource_server_scopes.cicd]
 }
 
-resource "auth0_role_permissions" "network_admin" {
-  role_id = auth0_role.network_admin.id
+resource "auth0_role_permissions" "hubble_use" {
+  role_id = auth0_role.hubble_use.id
 
   permissions {
-    name                       = "network:admin"
-    resource_server_identifier = auth0_resource_server.networking.identifier
+    name                       = "hubble:use"
+    resource_server_identifier = auth0_resource_server.hubble.identifier
   }
 
-  depends_on = [auth0_resource_server_scopes.networking]
+  depends_on = [auth0_resource_server_scopes.hubble]
 }
 
 resource "auth0_role_permissions" "llm_use" {
