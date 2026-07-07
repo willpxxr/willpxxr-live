@@ -18,3 +18,22 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: envoy-gateway
+  # Works around a real v1.0.0 bug (confirmed against the actual tagged
+  # source, internal/controller/gateway.go): the gateway-mutator's object
+  # lookup queries [gw.Namespace, envoyGatewayNamespace] with no
+  # deduplication, so when they're the same namespace (the chart's own
+  # documented default setup -- both envoy-gateway and this Gateway live
+  # in envoy-gateway-system) it double-counts and false-positives on
+  # "found gateway-labeled objects in multiple namespaces", which blocks
+  # the mutating webhook from ever creating the filter config secret the
+  # ext_proc sidecar injection depends on. Fixed on main (unreleased at
+  # v1.0.0, the latest tag as of this writing) via a proper dedup check.
+  # Workaround: point envoyGateway.namespace at a namespace guaranteed to
+  # have no gateway-owned pods (this controller's own namespace) so the
+  # second lookup always comes back empty. This value is also used to
+  # build quotaRateLimitServiceAddr, which would now point at a
+  # non-existent service in the wrong namespace -- harmless since quota
+  # rate limiting isn't configured anywhere in this repo.
+  values:
+    envoyGateway:
+      namespace: envoy-ai-gateway-system
