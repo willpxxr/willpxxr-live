@@ -25,14 +25,12 @@ resource "openrouter_api_key" "gateway" {
 # to look like an SSN) scrubs the match rather than failing the whole
 # request outright.
 #
-# Prompt injection defense is separate: "flag" is the only action
-# OpenRouter actually supports for regex-prompt-injection (confirmed in
-# the provider's own docs/example -- "block"/"redact" are valid for the
-# other builtins but not this one), so it's log/detect rather than
-# outright block. scan_scope=all_messages rather than the default
-# user_only, since this is a coding agent that processes tool outputs and
-# file contents, not just what you type -- exactly where hidden injected
-# instructions get smuggled in.
+# Prompt injection defense is separate and set to "block" -- this is a
+# coding agent that processes tool outputs and file contents, not just
+# what you type, exactly where hidden injected instructions get smuggled
+# in, so outright blocking is warranted rather than just flagging.
+# scan_scope=all_messages rather than the default user_only for the same
+# reason -- the risk is specifically in non-user (tool/file) content.
 resource "openrouter_guardrail" "gateway" {
   name           = "willpxxr-live-ai-gateway"
   description    = "Model allowlist + spending cap + PII redaction + prompt injection defense for the self-hosted LLM gateway (ai.tailb40090.ts.net)."
@@ -49,7 +47,10 @@ resource "openrouter_guardrail" "gateway" {
     { slug = "phone", action = "redact" },
     { slug = "ssn", action = "redact" },
     { slug = "credit-card", action = "redact" },
-    { slug = "regex-prompt-injection", action = "flag", scan_scope = "all_messages" },
+    { slug = "ip-address", action = "redact" },
+    { slug = "person-name", action = "redact" },
+    { slug = "address", action = "redact" },
+    { slug = "regex-prompt-injection", action = "block", scan_scope = "all_messages" },
   ]
 }
 
