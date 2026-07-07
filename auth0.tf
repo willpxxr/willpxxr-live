@@ -103,6 +103,13 @@ resource "auth0_resource_server_scopes" "internal_services" {
 # Links each role to the permission (scope) it actually grants -- the RBAC
 # gate: a user can request/consent to a scope, but Auth0 only issues it if
 # they're entitled via a role like this.
+#
+# depends_on is required here: these resources only reference
+# auth0_resource_server (the API itself) by identifier, a plain string --
+# there's no attribute reference to auth0_resource_server_scopes (the
+# resource that actually creates the cicd:get/network:admin permissions),
+# so Terraform has no implicit edge forcing the scopes to exist first and
+# can otherwise try to link a permission that doesn't exist yet.
 resource "auth0_role_permissions" "cicd_get" {
   role_id = auth0_role.cicd_get.id
 
@@ -110,6 +117,8 @@ resource "auth0_role_permissions" "cicd_get" {
     name                       = "cicd:get"
     resource_server_identifier = auth0_resource_server.internal_services.identifier
   }
+
+  depends_on = [auth0_resource_server_scopes.internal_services]
 }
 
 resource "auth0_role_permissions" "network_admin" {
@@ -119,6 +128,8 @@ resource "auth0_role_permissions" "network_admin" {
     name                       = "network:admin"
     resource_server_identifier = auth0_resource_server.internal_services.identifier
   }
+
+  depends_on = [auth0_resource_server_scopes.internal_services]
 }
 
 resource "onepassword_item" "envoy_gateway_oidc" {
