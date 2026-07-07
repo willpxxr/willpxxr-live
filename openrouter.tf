@@ -16,6 +16,13 @@ data "openrouter_workspaces" "all" {}
 resource "openrouter_api_key" "gateway" {
   name         = "willpxxr-live-ai-gateway"
   workspace_id = data.openrouter_workspaces.all.items[0].id
+
+  # Confirmed via the provider's own governance example (examples/
+  # governance/main.tf): the guardrail must exist before the key is
+  # created for it to actually apply -- sharing a workspace_id alone
+  # doesn't guarantee that ordering, since without this Terraform could
+  # create both in parallel.
+  depends_on = [openrouter_guardrail.gateway]
 }
 
 # Explicit workspace_id (see the data source comment above) to guarantee
