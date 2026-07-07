@@ -67,6 +67,32 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-backend-egress
+  namespace: envoy-gateway-system
+spec:
+  description: "Envoy proxies requests to the actual backends routed via HTTPRoute: Hubble UI (kube-system) and the Flux Operator UI (flux-system)."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: hubble-ui
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: flux-operator
+            io.kubernetes.pod.namespace: flux-system
+      toPorts:
+        - ports:
+            - port: "9080"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-tailscale-ingress
   namespace: envoy-gateway-system
 spec:
