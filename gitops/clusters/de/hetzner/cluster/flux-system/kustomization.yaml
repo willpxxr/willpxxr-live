@@ -17,3 +17,4 @@ resources:
 - kustomization-oauth2-proxy.yaml
 - kustomization-envoy-gateway.yaml
 - kustomization-envoy-gateway-config.yaml
+- kustomization-gateway.yaml

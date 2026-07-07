@@ -1,0 +1,16 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gateway-tls
+  namespace: envoy-gateway-system
+spec:
+  secretName: gateway-tls
+  duration: 8760h
+  renewBefore: 720h
+  issuerRef:
+    name: self-signed
+    kind: Issuer
+  commonName: "*.tailb40090.ts.net"
+  dnsNames:
+    - "*.tailb40090.ts.net"

@@ -1,0 +1,24 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway-ingress
+  namespace: envoy-gateway-system
+  annotations:
+    tailscale.com/proxy-group: "ingress"
+    tailscale.com/tags: "tag:services"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - gateway-ingress
+  defaultBackend:
+    # PLACEHOLDER: replaced with the actual auto-provisioned Envoy Service
+    # name once the Gateway above is live (see task: discover Envoy Service
+    # name). Envoy Gateway names it dynamically; find it via:
+    #   kubectl get svc -n envoy-gateway-system \
+    #     --selector=gateway.envoyproxy.io/owning-gateway-namespace=envoy-gateway-system,gateway.envoyproxy.io/owning-gateway-name=gateway
+    service:
+      name: REPLACE_WITH_DISCOVERED_ENVOY_SERVICE_NAME
+      port:
+        number: 80
