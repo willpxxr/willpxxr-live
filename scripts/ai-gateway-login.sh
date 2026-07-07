@@ -60,8 +60,16 @@ build_template() {
 
 do_full_login() {
   echo "No usable stored refresh token -- opening browser for login..." >&2
+  # response-types/response-mode/grant-type/auth-method aren't inferred
+  # from --pkce alone -- oauth2c errors without them explicitly set.
+  # auth-method=none matches ai_gateway_llm being a public/native client
+  # (no client secret).
   oauth2c "$issuer" \
     --client-id "$client_id" \
+    --response-types code \
+    --response-mode query \
+    --grant-type authorization_code \
+    --auth-method none \
     --scopes openid,llm:use \
     --audience "$audience" \
     --pkce --silent
@@ -72,6 +80,7 @@ do_refresh() {
   oauth2c "$issuer" \
     --client-id "$client_id" \
     --grant-type refresh_token \
+    --auth-method none \
     --refresh-token "$refresh_token" \
     --silent
 }
