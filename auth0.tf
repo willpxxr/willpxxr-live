@@ -64,10 +64,19 @@ resource "auth0_user_roles" "will" {
 # tenant-wide compatibility profile is set. Per Auth0's own docs this is
 # additive: if both audience and resource are present, audience still wins,
 # so this doesn't change behavior for anything already using audience.
-# auth0_tenant is a singleton resource; only this one field is declared so
-# Terraform only touches it, not the whole tenant configuration.
+# auth0_tenant is a singleton resource; only these fields are declared so
+# Terraform only touches them, not the whole tenant configuration.
 resource "auth0_tenant" "main" {
   resource_parameter_profile = "compatibility"
+
+  flags {
+    # By default Auth0's consent screen auto-generates its permission text
+    # from the scope name alone (splitting on ':' and guessing a verb/noun),
+    # which renders badly for names like "network:admin" (e.g. "Admin:
+    # network your admin"). This makes it use the scopes' own description
+    # text below instead.
+    use_scope_descriptions_for_consent = true
+  }
 }
 
 # A real API/Resource Server is what makes Auth0's consent screen show
@@ -92,11 +101,11 @@ resource "auth0_resource_server_scopes" "internal_services" {
 
   scopes {
     name        = "cicd:get"
-    description = "Access to the flux-operator UI (flux.tailb40090.ts.net)."
+    description = "View deployment and CI/CD pipeline status"
   }
   scopes {
     name        = "network:admin"
-    description = "Access to the Hubble UI (hubble.tailb40090.ts.net)."
+    description = "View and administer network traffic data"
   }
 }
 
