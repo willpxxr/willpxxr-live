@@ -33,6 +33,67 @@ resource "auth0_client_credentials" "envoy_gateway_oidc" {
   authentication_method = "client_secret_post"
 }
 
+resource "auth0_role" "cicd_get" {
+  name        = "cicd:get"
+  description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net)."
+}
+
+resource "auth0_role" "network_admin" {
+  name        = "network:admin"
+  description = "Grants access to the Hubble UI (hubble.tailb40090.ts.net)."
+}
+
+data "auth0_user" "will" {
+  query = "email:\"williamparr96@gmail.com\""
+}
+
+resource "auth0_user_roles" "will" {
+  # The data source only populates the implicit .id via data.SetId() when
+  # looked up by query (not the separate user_id schema field, which stays
+  # empty unless user_id -- not query -- was the lookup input).
+  user_id = data.auth0_user.will.id
+  roles = [
+    auth0_role.cicd_get.id,
+    auth0_role.network_admin.id,
+  ]
+}
+
+# Injects the user's Auth0 role names verbatim as a custom claim on both the
+# ID and access tokens, so Envoy Gateway's SecurityPolicy authorization rules
+# can match on them directly with no separate Resource Server/audience setup
+# -- see auth0.tf's SecurityPolicy usage in apps/kube-system and
+# apps/flux-operator-route for the consuming side.
+resource "auth0_action" "inject_roles_claim" {
+  name = "inject-roles-claim"
+
+  supported_triggers {
+    id      = "post-login"
+    version = "v3"
+  }
+
+  runtime = "node22"
+  deploy  = true
+
+  code = <<-JS
+    exports.onExecutePostLogin = async (event, api) => {
+      const namespace = 'https://willpxxr.com';
+      if (event.authorization) {
+        api.idToken.setCustomClaim(`$${namespace}/scope`, event.authorization.roles);
+        api.accessToken.setCustomClaim(`$${namespace}/scope`, event.authorization.roles);
+      }
+    };
+  JS
+}
+
+resource "auth0_trigger_actions" "post_login" {
+  trigger = "post-login"
+
+  actions {
+    id           = auth0_action.inject_roles_claim.id
+    display_name = auth0_action.inject_roles_claim.name
+  }
+}
+
 resource "onepassword_item" "envoy_gateway_oidc" {
   vault    = data.onepassword_vault.kubernetes.uuid
   title    = "envoy-gateway-oidc"

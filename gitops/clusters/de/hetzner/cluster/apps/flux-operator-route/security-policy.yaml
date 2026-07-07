@@ -19,3 +19,28 @@ spec:
     redirectURL: "https://flux.tailb40090.ts.net/oauth2/callback"
     logoutPath: "/oauth2/logout"
     cookieDomain: "tailb40090.ts.net"
+    # Puts the access token in the Authorization header, which is also
+    # where the jwt provider below looks by default -- required for the
+    # authorization rule to have a token to validate/inspect claims from.
+    forwardAccessToken: true
+  jwt:
+    providers:
+      # Note: the real token 'iss' claim keeps the trailing slash (unlike
+      # oidc.provider.issuer above, which is used to build the discovery
+      # URL and 404s with one -- see the earlier fix for that).
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            claims:
+              - name: "https://willpxxr.com/scope"
+                valueType: StringArray
+                values:
+                  - "cicd:get"
