@@ -8,6 +8,48 @@ resource "openrouter_api_key" "gateway" {
   name = "willpxxr-live-ai-gateway"
 }
 
+# Safety net for the personal AI gateway: applies to the default
+# workspace (no workspace_id set, matching the API key above -- neither
+# specifies one). allowed_models is a hard restriction to deepseek-v4
+# flash/pro specifically -- confirmed via OpenRouter's live /models API
+# that neither currently has a $0 :free variant, but both are extremely
+# cheap (fractions of a cent per 1K tokens), which is why "cost effective"
+# rather than strictly free is the framing here. allowed_models takes
+# exact model IDs, no :free-suffix wildcard exists, so this needs manual
+# updates if the model lineup changes. limit_usd is a backstop on top of
+# that, plus PII redaction on common sensitive patterns. "redact" rather
+# than "block" for the PII filters so a false-positive match (e.g. code
+# that happens to look like an SSN) scrubs the match rather than failing
+# the whole request outright.
+#
+# Prompt injection defense is separate: "flag" is the only action
+# OpenRouter actually supports for regex-prompt-injection (confirmed in
+# the provider's own docs/example -- "block"/"redact" are valid for the
+# other builtins but not this one), so it's log/detect rather than
+# outright block. scan_scope=all_messages rather than the default
+# user_only, since this is a coding agent that processes tool outputs and
+# file contents, not just what you type -- exactly where hidden injected
+# instructions get smuggled in.
+resource "openrouter_guardrail" "gateway" {
+  name           = "willpxxr-live-ai-gateway"
+  description    = "Model allowlist + spending cap + PII redaction + prompt injection defense for the self-hosted LLM gateway (ai.tailb40090.ts.net)."
+  limit_usd      = 5
+  reset_interval = "monthly"
+
+  allowed_models = [
+    "deepseek/deepseek-v4-flash",
+    "deepseek/deepseek-v4-pro",
+  ]
+
+  content_filter_builtins = [
+    { slug = "email", action = "redact" },
+    { slug = "phone", action = "redact" },
+    { slug = "ssn", action = "redact" },
+    { slug = "credit-card", action = "redact" },
+    { slug = "regex-prompt-injection", action = "flag", scan_scope = "all_messages" },
+  ]
+}
+
 resource "onepassword_item" "openrouter" {
   vault    = data.onepassword_vault.kubernetes.uuid
   title    = "openrouter"
