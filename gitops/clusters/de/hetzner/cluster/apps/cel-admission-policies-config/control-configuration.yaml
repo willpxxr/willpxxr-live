@@ -1,0 +1,130 @@
+# Based on kubescape/cel-admission-library's basic-control-configuration.yaml
+# (v0.11), with imageRepositoryAllowList/publicRegistries updated to this
+# cluster's actual registries (checked via `kubectl get pods -A -o
+# jsonpath=...image`: docker.io, ghcr.io, quay.io, registry.k8s.io) instead
+# of the upstream GKE-oriented defaults (which only listed gcr.io and
+# omitted ghcr.io/registry.k8s.io entirely). Only used by the curated
+# bindings.yaml subset today (c-0009, c-0046); the registry-allowlist
+# policies (c-0001, c-0078) that would consume imageRepositoryAllowList are
+# intentionally not yet bound -- see bindings.yaml.
+---
+apiVersion: "kubescape.io/v1"
+kind: ControlConfiguration
+metadata:
+  name: basic-control-configuration
+settings:
+  cpuLimitMax: 5
+  cpuLimitMin: 0.5
+  cpuRequestMax: 5
+  cpuRequestMin: 0.1
+  imageRepositoryAllowList:
+    - docker.io
+    - ghcr.io
+    - quay.io
+    - registry.k8s.io
+  insecureCapabilities:
+    - SETPCAP
+    - NET_ADMIN
+    - NET_RAW
+    - SYS_MODULE
+    - SYS_RAWIO
+    - SYS_PTRACE
+    - SYS_ADMIN
+    - SYS_BOOT
+    - MAC_OVERRIDE
+    - MAC_ADMIN
+    - PERFMON
+    - ALL
+    - BPF
+  k8sRecommendedLabels:
+    - app.kubernetes.io/name
+    - app.kubernetes.io/instance
+    - app.kubernetes.io/version
+    - app.kubernetes.io/component
+    - app.kubernetes.io/part-of
+    - app.kubernetes.io/managed-by
+    - app.kubernetes.io/created-by
+  listOfDangerousArtifacts:
+    - bin/bash
+    - sbin/sh
+    - bin/ksh
+    - bin/tcsh
+    - bin/zsh
+    - usr/bin/scsh
+    - bin/csh
+    - bin/busybox
+    - usr/bin/busybox
+  maxCriticalVulnerabilities:
+    - 5
+  maxHighVulnerabilities:
+    - 10
+  memoryLimitMax: 4294967296
+  memoryLimitMin: 0
+  memoryRequestMax: 4294967296
+  memoryRequestMin: 0
+  publicRegistries:
+    - docker.io
+    - ghcr.io
+    - quay.io
+    - registry.k8s.io
+  recommendedLabels:
+    - app
+    - tier
+    - phase
+    - version
+    - owner
+    - env
+  sensitiveInterfaces:
+    - nifi
+    - argo-server
+    - weave-scope-app
+    - kubeflow
+    - kubernetes-dashboard
+    - jenkins
+    - prometheus-deployment
+  sensitiveKeyNames:
+    - aws_access_key_id
+    - aws_secret_access_key
+    - azure_batchai_storage_account
+    - azure_batchai_storage_key
+    - azure_batch_account
+    - azure_batch_key
+    - secret
+    - key
+    - password
+    - pwd
+    - token
+    - jwt
+    - bearer
+    - credential
+  sensitiveValues:
+    - 'BEGIN \w+ PRIVATE KEY'
+    - PRIVATE KEY
+    - eyJhbGciO
+    - JWT
+    - Bearer
+    - _key_
+    - _secret_
+  sensitiveValuesAllowed:
+    - ''
+  servicesNames:
+    - nifi-service
+    - argo-server
+    - minio
+    - postgres
+    - workflow-controller-metrics
+    - weave-scope-app
+    - kubernetes-dashboard
+  untrustedRegistries:
+    - docker.io
+    - gcr.io
+    - quay.io
+    - registry.hub.docker.com
+  wlKnownNames:
+    - coredns
+    - kube-proxy
+    - kube-dns
+    - metrics-server
+    - cilium
+    - cilium-envoy
+    - cilium-operator

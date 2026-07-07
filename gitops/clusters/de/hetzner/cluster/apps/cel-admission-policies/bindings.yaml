@@ -1,0 +1,218 @@
+# Curated "core" subset of the 31 vendored policies (see policies.yaml) --
+# privilege/host-access/capability/resource-limit concerns. Registry
+# allowlisting (c-0001, c-0078) and label-requirement policies are
+# intentionally not bound yet -- deliberate follow-up, see the plan.
+#
+# All bindings use validationActions: [Warn, Audit] (non-blocking) rather
+# than Deny -- staged rollout on a cluster with live traffic. kube-system
+# and tailscale are excluded since both run pods that legitimately need
+# elevated privileges (Cilium CNI, Tailscale's network stack).
+#
+# Bindings only need matchResources.namespaceSelector here: the resource
+# *kinds* each policy applies to (Pods, Deployments, etc.) are already
+# defined by each policy's own spec.matchConstraints -- the binding just
+# narrows further, it doesn't need to restate them.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0016-binding
+spec:
+  policyName: kubescape-c-0016-allow-privilege-escalation
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0057-binding
+spec:
+  policyName: kubescape-c-0057-privileged-container-denied
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0038-binding
+spec:
+  policyName: kubescape-c-0038-deny-resources-with-host-ipc-or-pid-privileges
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0041-binding
+spec:
+  policyName: kubescape-c-0041-deny-resources-with-host-network-access
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0044-binding
+spec:
+  policyName: kubescape-c-0044-deny-resources-with-host-port
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0045-binding
+spec:
+  policyName: kubescape-c-0045-deny-workloads-with-hostpath-volumes-readonly-not-false
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0048-binding
+spec:
+  policyName: kubescape-c-0048-deny-workloads-with-hostpath-mounts
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0046-binding
+spec:
+  policyName: kubescape-c-0046-deny-resources-with-insecure-capabilities
+  paramRef:
+    name: basic-control-configuration
+    parameterNotFoundAction: Deny
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0034-binding
+spec:
+  policyName: kubescape-c-0034-deny-resources-with-automount-service-account-token-enabled
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0055-binding
+spec:
+  policyName: kubescape-c-0055-linux-hardening
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: c0009-binding
+spec:
+  policyName: kubescape-c-0009-deny-resources-with-memory-or-cpu-limit-not-set
+  paramRef:
+    name: basic-control-configuration
+    parameterNotFoundAction: Deny
+  validationActions:
+    - Warn
+    - Audit
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - tailscale
