@@ -63,3 +63,24 @@ spec:
         - ports:
             - port: "443"
               protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-tailscale-ingress
+  namespace: envoy-gateway-system
+spec:
+  description: "Allow ingress from the Tailscale Proxy Group to the Envoy data-plane pods on their actual listener ports (Envoy Gateway shifts the Gateway's declared 80/443 to non-privileged 10080/10443 internally)."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: tailscale
+            tailscale.com/parent-resource: ingress
+            tailscale.com/parent-resource-type: proxygroup
+      toPorts:
+        - ports:
+            - port: "10080"
+              protocol: TCP
+            - port: "10443"
+              protocol: TCP

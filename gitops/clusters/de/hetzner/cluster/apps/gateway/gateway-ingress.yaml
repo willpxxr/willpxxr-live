@@ -13,12 +13,12 @@ spec:
     - hosts:
         - gateway-ingress
   defaultBackend:
-    # PLACEHOLDER: replaced with the actual auto-provisioned Envoy Service
-    # name once the Gateway above is live (see task: discover Envoy Service
-    # name). Envoy Gateway names it dynamically; find it via:
+    # Envoy Gateway auto-provisions this Service name dynamically per
+    # Gateway (see gateway.yaml); it isn't stable across a delete/recreate
+    # of that Gateway object. Rediscover via:
     #   kubectl get svc -n envoy-gateway-system \
     #     --selector=gateway.envoyproxy.io/owning-gateway-namespace=envoy-gateway-system,gateway.envoyproxy.io/owning-gateway-name=gateway
     service:
-      name: placeholder-fixme
+      name: envoy-envoy-gateway-system-gateway-4864c4ea
       port:
         number: 80
