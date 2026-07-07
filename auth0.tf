@@ -84,9 +84,12 @@ resource "auth0_client" "ai_gateway_llm" {
 # Not a secret (public/native clients have no client_secret -- that's the
 # whole point of PKCE), but persisted here anyway so it's easy to find
 # for oauth2c logins/refreshes without digging through the Auth0
-# dashboard each time.
+# dashboard each time. Lives in the terraform vault (same as
+# talosconfig/kubeconfig in hetzner.tf), not the kubernetes vault --
+# this is for local/operator use only, the cluster has no business
+# reading it.
 resource "onepassword_item" "ai_gateway_llm" {
-  vault    = data.onepassword_vault.kubernetes.uuid
+  vault    = data.onepassword_vault.terraform.uuid
   title    = "ai-gateway-llm-oauth2c"
   category = "login"
 
