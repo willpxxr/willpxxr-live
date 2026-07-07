@@ -1,0 +1,19 @@
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: plaintext
+  hostnames:
+    - "ai.tailb40090.ts.net"
+  rules:
+    # No matches -- a single catch-all rule to the only backend configured
+    # so far. Add header-based matches (x-ai-eg-model) here if/when a
+    # second backend is added.
+    - backendRefs:
+        - name: opencode-go

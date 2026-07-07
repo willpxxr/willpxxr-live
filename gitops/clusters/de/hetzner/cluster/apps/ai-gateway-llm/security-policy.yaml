@@ -1,0 +1,37 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ai-gateway-llm
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    # AIGatewayRoute generates an underlying HTTPRoute with the same
+    # name/namespace (confirmed via the ai-gateway controller source,
+    # internal/controller/ai_gateway_route.go) -- targeting that directly
+    # rather than the AIGatewayRoute kind itself, since SecurityPolicy is a
+    # base Envoy Gateway CRD with no confirmed support for AI Gateway's
+    # extension kinds.
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm
+  # No oidc block, deliberately -- this route is called programmatically
+  # (oauth2c / crush), not by a browser, so there's no request to redirect.
+  # The client carries a pre-obtained Auth0 access token directly.
+  jwt:
+    providers:
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://ai.tailb40090.ts.net"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "llm:use"

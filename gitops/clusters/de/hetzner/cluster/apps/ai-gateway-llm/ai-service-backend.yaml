@@ -1,0 +1,17 @@
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: opencode-go
+  namespace: envoy-gateway-system
+spec:
+  # Matches OpenCode Go's /chat/completions endpoint family (GLM, Kimi,
+  # DeepSeek, MiMo models). Its /messages (Anthropic-schema) models aren't
+  # covered by this pass -- see the plan for why that's a deliberate
+  # follow-up rather than guessed-at now.
+  schema:
+    name: OpenAI
+  backendRef:
+    name: opencode-go
+    kind: Backend
+    group: gateway.envoyproxy.io
