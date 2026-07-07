@@ -33,26 +33,28 @@ resource "auth0_client_credentials" "envoy_gateway_oidc" {
   authentication_method = "client_secret_post"
 }
 
-# Native/public client for the opencode auth plugin's Authorization Code +
-# PKCE login -- deliberately separate from envoy_gateway_oidc, which is a
-# confidential (regular_web) client for the browser-based hubble/flux
-# flows. PKCE public clients authenticate with a code_verifier instead of a
-# secret, so intentionally no auth0_client_credentials resource for this
-# one -- there's nothing to store.
+# Native/public client for oauth2c (github.com/cloudentity/oauth2c) --
+# a mature, actively maintained OAuth2 CLI, not custom-built code -- to
+# perform the Authorization Code + PKCE login (and later, refresh-token
+# grant) against Auth0 on behalf of the crush CLI, which has no built-in
+# support for arbitrary custom OAuth issuers. Deliberately separate from
+# envoy_gateway_oidc, which is a confidential (regular_web) client for the
+# browser-based hubble/flux flows. PKCE public clients authenticate with a
+# code_verifier instead of a secret, so intentionally no
+# auth0_client_credentials resource for this one -- there's nothing to
+# store.
 resource "auth0_client" "ai_gateway_llm" {
   name        = "willpxxr-live-ai-gateway-llm"
-  description = "Native/public client used by the opencode auth plugin for the self-hosted LLM gateway (ai.tailb40090.ts.net)."
+  description = "Native/public client used by oauth2c for the self-hosted LLM gateway (ai.tailb40090.ts.net), consumed by the crush CLI."
   app_type    = "native"
 
   oidc_conformant = true
   grant_types     = ["authorization_code", "refresh_token"]
 
-  # Loopback redirect per RFC 8252 (OAuth for native apps) -- the opencode
-  # plugin runs a local HTTP listener on this port during login to catch
-  # the authorization code. Port/path must stay in sync with the plugin
-  # implementation.
+  # oauth2c's own default redirect/callback listener -- using it as-is
+  # avoids needing any custom code or non-default flags for the flow.
   callbacks = [
-    "http://localhost:51703/callback",
+    "http://localhost:9876/callback",
   ]
 
   jwt_configuration {
