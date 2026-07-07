@@ -19,17 +19,17 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
-  name: allow-traefik-ingress
+  name: allow-envoy-gateway-ingress
   namespace: flux-system
 spec:
-  description: "Allow Traefik to reach the Flux Operator UI, routed via HTTPRoute."
+  description: "Allow the Envoy data-plane pods to reach the Flux Operator UI, routed via HTTPRoute."
   endpointSelector:
     matchLabels:
       app.kubernetes.io/name: flux-operator
   ingress:
     - fromEndpoints:
         - matchLabels:
-            io.kubernetes.pod.namespace: traefik
+            io.kubernetes.pod.namespace: envoy-gateway-system
       toPorts:
         - ports:
             - port: "9080"

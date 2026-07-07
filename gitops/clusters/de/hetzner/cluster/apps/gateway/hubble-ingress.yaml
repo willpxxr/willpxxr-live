@@ -2,18 +2,18 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: oauth2-proxy
-  namespace: traefik
+  name: hubble
+  namespace: envoy-gateway-system
   annotations:
     tailscale.com/proxy-group: "ingress"
-    tailscale.com/tags: "tag:services"
+    tailscale.com/tags: "tag:admin-services"
 spec:
   ingressClassName: tailscale
   tls:
     - hosts:
-        - oauth
+        - hubble
   defaultBackend:
     service:
-      name: traefik-traefik
+      name: envoy-envoy-gateway-system-gateway-4864c4ea
       port:
         number: 80
