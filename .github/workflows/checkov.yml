@@ -36,8 +36,12 @@ jobs:
           directory: .
           framework: terraform
           soft_fail: true
-          output_format: cli,sarif
-          output_file_path: console,results.sarif
+          # The pinned checkov-action version's underlying checkov build
+          # only accepts a single -o value (comma-separated multi-format
+          # output errored out with "invalid choice"), so sarif only --
+          # findings are visible via the Security tab instead of job logs.
+          output_format: sarif
+          output_file_path: results.sarif
           container_user: 1000
 
       - name: 'Upload SARIF file'
