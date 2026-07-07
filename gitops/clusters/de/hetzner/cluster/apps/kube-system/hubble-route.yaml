@@ -6,18 +6,12 @@ metadata:
   namespace: kube-system
 spec:
   parentRefs:
-    - name: traefik-gateway
-      namespace: traefik
-      sectionName: web
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: plaintext
   hostnames:
     - "hubble.tailb40090.ts.net"
   rules:
-    - filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: oauth2-proxy-forward-auth
-      backendRefs:
+    - backendRefs:
         - name: hubble-ui
           port: 80

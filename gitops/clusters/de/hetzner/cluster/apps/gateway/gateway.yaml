@@ -7,13 +7,13 @@ metadata:
 spec:
   gatewayClassName: eg
   listeners:
-    - name: web
+    - name: plaintext
       port: 80
       protocol: HTTP
       allowedRoutes:
         namespaces:
           from: All
-    - name: websecure
+    - name: tls
       port: 443
       protocol: HTTPS
       hostname: "gateway.tailb40090.ts.net"

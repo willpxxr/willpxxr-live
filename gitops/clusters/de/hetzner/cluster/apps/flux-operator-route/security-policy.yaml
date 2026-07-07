@@ -1,0 +1,21 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: flux-operator-oidc
+  namespace: flux-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: flux-operator
+  oidc:
+    provider:
+      issuer: "https://auth.willpxxr.com/"
+    clientIDRef:
+      name: envoy-gateway-oidc
+    clientSecret:
+      name: envoy-gateway-oidc
+    redirectURL: "https://flux.tailb40090.ts.net/oauth2/callback"
+    logoutPath: "/oauth2/logout"
+    cookieDomain: "tailb40090.ts.net"

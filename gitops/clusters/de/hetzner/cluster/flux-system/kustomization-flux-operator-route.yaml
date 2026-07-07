@@ -14,3 +14,4 @@ spec:
   wait: true
   dependsOn:
     - name: gateway
+    - name: external-secrets-secretstore
