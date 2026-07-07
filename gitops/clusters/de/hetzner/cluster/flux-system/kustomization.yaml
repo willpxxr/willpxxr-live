@@ -4,8 +4,6 @@ resources:
 - flux-instance.yaml
 - charts.yaml
 - network-policy.yaml
-- gateway-api-sync.yaml
-- gateway-api-kustomization.yaml
 - kustomization-policy.yaml
 - kustomization-cert-manager.yaml
 - kustomization-tailscale-operator.yaml
