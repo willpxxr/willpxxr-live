@@ -63,20 +63,20 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
-  name: allow-proxy-egress-traefik
+  name: allow-proxy-egress-envoy-gateway
   namespace: tailscale
 spec:
-  description: "Tailscale proxy pods (created by the operator via ProxyGroup or standalone StatefulSets) forward tailnet traffic to their backing Services. This allows proxies to reach Traefik pods on the web (8000) and websecure (8443) entrypoints."
+  description: "Tailscale proxy pods (created by the operator via ProxyGroup or standalone StatefulSets) forward tailnet traffic to their backing Services. This allows proxies to reach the Envoy data-plane pods on their actual listener ports (Envoy Gateway shifts the Gateway's declared 80/443 to non-privileged 10080/10443 internally)."
   endpointSelector:
     matchLabels:
       tailscale.com/managed: "true"
   egress:
     - toEndpoints:
         - matchLabels:
-            io.kubernetes.pod.namespace: traefik
+            io.kubernetes.pod.namespace: envoy-gateway-system
       toPorts:
         - ports:
-            - port: "8000"
+            - port: "10080"
               protocol: TCP
-            - port: "8443"
+            - port: "10443"
               protocol: TCP
