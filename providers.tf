@@ -57,6 +57,10 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.2"
     }
+    openrouter = {
+      source  = "cloudopsworks/openrouter"
+      version = "~> 0.2"
+    }
   }
 }
 
@@ -93,4 +97,8 @@ provider "auth0" {
   domain        = var.auth0_domain
   client_id     = var.auth0_mgmt_client_id
   client_secret = var.auth0_mgmt_client_secret
+}
+
+provider "openrouter" {
+  api_key = var.openrouter_api_key
 }

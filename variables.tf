@@ -40,3 +40,8 @@ variable "auth0_mgmt_client_secret" {
   sensitive   = true
   description = "Client secret for the Auth0 Management API M2M application above."
 }
+
+variable "openrouter_api_key" {
+  sensitive   = true
+  description = "OpenRouter provisioning/management API key (from OpenRouter's dashboard), used to authenticate the openrouter Terraform provider so it can create scoped API keys via openrouter_api_key. Distinct from any regular per-app API key."
+}

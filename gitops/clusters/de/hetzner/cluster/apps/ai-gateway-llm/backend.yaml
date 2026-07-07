@@ -2,24 +2,24 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: opencode-go
+  name: openrouter
   namespace: envoy-gateway-system
 spec:
   endpoints:
     - fqdn:
-        hostname: opencode.ai
+        hostname: openrouter.ai
         port: 443
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
-  name: opencode-go-tls
+  name: openrouter-tls
   namespace: envoy-gateway-system
 spec:
   targetRefs:
     - group: "gateway.envoyproxy.io"
       kind: Backend
-      name: opencode-go
+      name: openrouter
   validation:
     wellKnownCACertificates: "System"
-    hostname: opencode.ai
+    hostname: openrouter.ai

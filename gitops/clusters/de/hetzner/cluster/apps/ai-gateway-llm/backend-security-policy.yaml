@@ -2,15 +2,15 @@
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: BackendSecurityPolicy
 metadata:
-  name: opencode-go-apikey
+  name: openrouter-apikey
   namespace: envoy-gateway-system
 spec:
   targetRefs:
     - group: aigateway.envoyproxy.io
       kind: AIServiceBackend
-      name: opencode-go
+      name: openrouter
   type: APIKey
   apiKey:
     secretRef:
-      name: opencode-go
+      name: openrouter
       namespace: envoy-gateway-system

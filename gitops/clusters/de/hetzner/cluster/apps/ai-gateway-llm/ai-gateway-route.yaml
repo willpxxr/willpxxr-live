@@ -16,4 +16,4 @@ spec:
     # so far. Add header-based matches (x-ai-eg-model) here if/when a
     # second backend is added.
     - backendRefs:
-        - name: opencode-go
+        - name: openrouter

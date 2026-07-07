@@ -272,30 +272,3 @@ resource "onepassword_item" "envoy_gateway_oidc" {
     }
   }
 }
-
-# Unlike envoy_gateway_oidc above, this key has no Terraform-computed
-# source -- it's a manually-obtained OpenCode Go subscription key (from
-# https://opencode.ai/auth), pasted in by hand after this resource creates
-# the item shell. ignore_changes on section_map is required: without it,
-# every `terraform apply` would reset the real key back to this placeholder,
-# silently breaking the LLM gateway.
-resource "onepassword_item" "opencode_go" {
-  vault    = data.onepassword_vault.kubernetes.uuid
-  title    = "opencode-go"
-  category = "login"
-
-  section_map = {
-    credentials = {
-      field_map = {
-        api_key = {
-          type  = "CONCEALED"
-          value = "REPLACE_ME_MANUALLY_FROM_OPENCODE_AI_AUTH_CONSOLE"
-        }
-      }
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [section_map]
-  }
-}

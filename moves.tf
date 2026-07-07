@@ -125,3 +125,13 @@ moved {
   from = auth0_role_permissions.network_admin
   to   = auth0_role_permissions.hubble_use
 }
+
+# LLM gateway backend switched from OpenCode Go (manual-paste placeholder
+# key) to OpenRouter's free tier (real Terraform-managed key via the
+# openrouter provider) -- the 1Password item itself is the same conceptual
+# resource (the LLM gateway's upstream API key), just now in openrouter.tf
+# with actually-computed content instead of a placeholder.
+moved {
+  from = onepassword_item.opencode_go
+  to   = onepassword_item.openrouter
+}

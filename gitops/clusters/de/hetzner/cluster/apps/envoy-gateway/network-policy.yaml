@@ -54,7 +54,7 @@ metadata:
   name: allow-auth0-egress
   namespace: envoy-gateway-system
 spec:
-  description: "The Envoy data-plane pods talk to Auth0's OIDC endpoints (authorization, token exchange, JWKS) directly for SecurityPolicy OIDC; Auth0's IPs aren't enumerable so this allows general internet egress on 443. Also covers proxied traffic to external AI backends (e.g. opencode.ai) for the same reason -- their IPs aren't enumerable/stable either."
+  description: "The Envoy data-plane pods talk to Auth0's OIDC endpoints (authorization, token exchange, JWKS) directly for SecurityPolicy OIDC; Auth0's IPs aren't enumerable so this allows general internet egress on 443. Also covers proxied traffic to external AI backends (e.g. openrouter.ai) for the same reason -- their IPs aren't enumerable/stable either."
   endpointSelector: {}
   egress:
     - toEntities:
