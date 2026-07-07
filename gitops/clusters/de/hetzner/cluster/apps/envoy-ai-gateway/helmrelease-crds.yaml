@@ -1,0 +1,21 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ai-gateway-crds
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  targetNamespace: envoy-ai-gateway-system
+  install:
+    createNamespace: true
+  chart:
+    spec:
+      chart: ai-gateway-crds-helm
+      version: "v1.0.0"
+      sourceRef:
+        # Reuses the same OCI registry namespace (docker.io/envoyproxy) as
+        # the base envoy-gateway HelmRepository -- AI Gateway's charts are
+        # published under the same org.
+        kind: HelmRepository
+        name: envoy-gateway

@@ -1,0 +1,46 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: envoy-ai-gateway-system
+spec:
+  description: "The ai-gateway controller and its own webhook/admission components communicate with each other within the namespace."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-ai-gateway-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-ai-gateway-system
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: envoy-ai-gateway-system
+spec:
+  description: "The ai-gateway controller watches AI Gateway CRDs and Gateway API resources via the API server."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-envoy-gateway-ingress
+  namespace: envoy-ai-gateway-system
+spec:
+  description: "The envoy-gateway controller calls this controller's extension server (gRPC) to modify xDS config before it reaches Envoy proxies."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway-system
+      toPorts:
+        - ports:
+            - port: "1063"
+              protocol: TCP

@@ -17,3 +17,4 @@ resources:
 - kustomization-gateway.yaml
 - kustomization-cel-admission-policies.yaml
 - kustomization-cel-admission-policies-config.yaml
+- kustomization-envoy-ai-gateway.yaml
