@@ -23,6 +23,17 @@ spec:
     # where the jwt provider below looks by default -- required for the
     # authorization rule to have a token to validate/inspect claims from.
     forwardAccessToken: true
+    # Requests the network:admin scope from Auth0's own API/RBAC model
+    # (auth0.tf: auth0_resource_server.internal_services) -- this is what
+    # actually shows the user a real consent screen for this scope, gated
+    # by whether they're entitled to it via role membership.
+    scopes:
+      - "network:admin"
+    # RFC 8707 resource-indicator param, requires the tenant's
+    # resource_parameter_profile = "compatibility" (auth0.tf) to be honored
+    # -- tells Auth0 which API this token request is for.
+    resources:
+      - "https://willpxxr-live/internal-services"
   jwt:
     providers:
       # Note: the real token 'iss' claim keeps the trailing slash (unlike
@@ -32,6 +43,9 @@ spec:
         issuer: "https://auth.willpxxr.com/"
         remoteJWKS:
           uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        # Rejects tokens not actually issued for this API.
+        audiences:
+          - "https://willpxxr-live/internal-services"
   authorization:
     defaultAction: Deny
     rules:
@@ -39,8 +53,8 @@ spec:
         principal:
           jwt:
             provider: auth0
-            claims:
-              - name: "https://willpxxr.com/scope"
-                valueType: StringArray
-                values:
-                  - "network:admin"
+            # Standard RFC 6749 scope/scp claim matcher -- valid now that
+            # RBAC (auth0_resource_server.enforce_policies) makes the token
+            # carry a real, standards-compliant scope claim.
+            scopes:
+              - "network:admin"

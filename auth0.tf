@@ -58,39 +58,66 @@ resource "auth0_user_roles" "will" {
   ]
 }
 
-# Injects the user's Auth0 role names verbatim as a custom claim on both the
-# ID and access tokens, so Envoy Gateway's SecurityPolicy authorization rules
-# can match on them directly with no separate Resource Server/audience setup
-# -- see auth0.tf's SecurityPolicy usage in apps/kube-system and
-# apps/flux-operator-route for the consuming side.
-resource "auth0_action" "inject_roles_claim" {
-  name = "inject-roles-claim"
-
-  supported_triggers {
-    id      = "post-login"
-    version = "v3"
-  }
-
-  runtime = "node22"
-  deploy  = true
-
-  code = <<-JS
-    exports.onExecutePostLogin = async (event, api) => {
-      const namespace = 'https://willpxxr.com';
-      if (event.authorization) {
-        api.idToken.setCustomClaim(`$${namespace}/scope`, event.authorization.roles);
-        api.accessToken.setCustomClaim(`$${namespace}/scope`, event.authorization.roles);
-      }
-    };
-  JS
+# Required for Envoy Gateway's oidc.resources field, which sends the RFC
+# 8707 'resource' authorization-request parameter -- Auth0's native
+# equivalent is 'audience', and it only also honors 'resource' when this
+# tenant-wide compatibility profile is set. Per Auth0's own docs this is
+# additive: if both audience and resource are present, audience still wins,
+# so this doesn't change behavior for anything already using audience.
+# auth0_tenant is a singleton resource; only this one field is declared so
+# Terraform only touches it, not the whole tenant configuration.
+resource "auth0_tenant" "main" {
+  resource_parameter_profile = "compatibility"
 }
 
-resource "auth0_trigger_actions" "post_login" {
-  trigger = "post-login"
+# A real API/Resource Server is what makes Auth0's consent screen show
+# actual scope names ("this app wants: cicd:get") -- there's no way to get
+# genuine user consent from a bare custom token claim, which is what the
+# previous (now-removed) Action-based approach did.
+resource "auth0_resource_server" "internal_services" {
+  name       = "willpxxr-live internal services"
+  identifier = "https://willpxxr-live/internal-services"
 
-  actions {
-    id           = auth0_action.inject_roles_claim.id
-    display_name = auth0_action.inject_roles_claim.name
+  enforce_policies = true
+  token_dialect    = "access_token_authz"
+
+  # Explicit: this app is first-party, and Auth0's default for first-party
+  # apps is to silently skip consent -- which would defeat the entire point
+  # of this change if left at its default.
+  skip_consent_for_verifiable_first_party_clients = false
+}
+
+resource "auth0_resource_server_scopes" "internal_services" {
+  resource_server_identifier = auth0_resource_server.internal_services.identifier
+
+  scopes {
+    name        = "cicd:get"
+    description = "Access to the flux-operator UI (flux.tailb40090.ts.net)."
+  }
+  scopes {
+    name        = "network:admin"
+    description = "Access to the Hubble UI (hubble.tailb40090.ts.net)."
+  }
+}
+
+# Links each role to the permission (scope) it actually grants -- the RBAC
+# gate: a user can request/consent to a scope, but Auth0 only issues it if
+# they're entitled via a role like this.
+resource "auth0_role_permissions" "cicd_get" {
+  role_id = auth0_role.cicd_get.id
+
+  permissions {
+    name                       = "cicd:get"
+    resource_server_identifier = auth0_resource_server.internal_services.identifier
+  }
+}
+
+resource "auth0_role_permissions" "network_admin" {
+  role_id = auth0_role.network_admin.id
+
+  permissions {
+    name                       = "network:admin"
+    resource_server_identifier = auth0_resource_server.internal_services.identifier
   }
 }
 
