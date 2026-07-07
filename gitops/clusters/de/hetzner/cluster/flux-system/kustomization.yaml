@@ -18,3 +18,4 @@ resources:
 - kustomization-flux-operator-route.yaml
 - kustomization-oauth2-proxy.yaml
 - kustomization-envoy-gateway.yaml
+- kustomization-envoy-gateway-config.yaml
