@@ -81,6 +81,35 @@ resource "auth0_client" "ai_gateway_llm" {
   }
 }
 
+# Not a secret (public/native clients have no client_secret -- that's the
+# whole point of PKCE), but persisted here anyway so it's easy to find
+# for oauth2c logins/refreshes without digging through the Auth0
+# dashboard each time.
+resource "onepassword_item" "ai_gateway_llm" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "ai-gateway-llm-oauth2c"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        client_id = {
+          type  = "CONCEALED"
+          value = auth0_client.ai_gateway_llm.client_id
+        }
+        issuer = {
+          type  = "CONCEALED"
+          value = "https://auth.willpxxr.com"
+        }
+        audience = {
+          type  = "CONCEALED"
+          value = "https://ai.tailb40090.ts.net"
+        }
+      }
+    }
+  }
+}
+
 resource "auth0_role" "cicd_get" {
   name        = "cicd:get"
   description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net)."
