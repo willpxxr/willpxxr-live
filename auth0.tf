@@ -79,13 +79,18 @@ resource "auth0_tenant" "main" {
   }
 }
 
-# A real API/Resource Server is what makes Auth0's consent screen show
-# actual scope names ("this app wants: cicd:get") -- there's no way to get
-# genuine user consent from a bare custom token claim, which is what the
-# previous (now-removed) Action-based approach did.
-resource "auth0_resource_server" "internal_services" {
-  name       = "willpxxr-live internal services"
-  identifier = "https://willpxxr-live/internal-services"
+# Dedicated Resource Server per logical service domain (rather than one
+# shared "internal-services" API) -- networking and cicd are unrelated
+# domains that happen to share a client today; splitting them now keeps
+# each API's scope list scoped to just its own concerns as more get added,
+# and shows as two clearly-named entries in Auth0's dashboard instead of
+# one ambiguous shared one. A real API/Resource Server is what makes
+# Auth0's consent screen show actual scope names in the first place --
+# there's no way to get genuine user consent from a bare custom token
+# claim, which is what the previous (now-removed) Action-based approach did.
+resource "auth0_resource_server" "networking" {
+  name       = "willpxxr-live networking"
+  identifier = "https://hubble.tailb40090.ts.net"
 
   enforce_policies = true
   token_dialect    = "access_token_authz"
@@ -96,16 +101,30 @@ resource "auth0_resource_server" "internal_services" {
   skip_consent_for_verifiable_first_party_clients = false
 }
 
-resource "auth0_resource_server_scopes" "internal_services" {
-  resource_server_identifier = auth0_resource_server.internal_services.identifier
+resource "auth0_resource_server_scopes" "networking" {
+  resource_server_identifier = auth0_resource_server.networking.identifier
+
+  scopes {
+    name        = "network:admin"
+    description = "View and administer network traffic data"
+  }
+}
+
+resource "auth0_resource_server" "cicd" {
+  name       = "willpxxr-live cicd"
+  identifier = "https://flux.tailb40090.ts.net"
+
+  enforce_policies                                = true
+  token_dialect                                   = "access_token_authz"
+  skip_consent_for_verifiable_first_party_clients = false
+}
+
+resource "auth0_resource_server_scopes" "cicd" {
+  resource_server_identifier = auth0_resource_server.cicd.identifier
 
   scopes {
     name        = "cicd:get"
     description = "View deployment and CI/CD pipeline status"
-  }
-  scopes {
-    name        = "network:admin"
-    description = "View and administer network traffic data"
   }
 }
 
@@ -124,10 +143,10 @@ resource "auth0_role_permissions" "cicd_get" {
 
   permissions {
     name                       = "cicd:get"
-    resource_server_identifier = auth0_resource_server.internal_services.identifier
+    resource_server_identifier = auth0_resource_server.cicd.identifier
   }
 
-  depends_on = [auth0_resource_server_scopes.internal_services]
+  depends_on = [auth0_resource_server_scopes.cicd]
 }
 
 resource "auth0_role_permissions" "network_admin" {
@@ -135,10 +154,10 @@ resource "auth0_role_permissions" "network_admin" {
 
   permissions {
     name                       = "network:admin"
-    resource_server_identifier = auth0_resource_server.internal_services.identifier
+    resource_server_identifier = auth0_resource_server.networking.identifier
   }
 
-  depends_on = [auth0_resource_server_scopes.internal_services]
+  depends_on = [auth0_resource_server_scopes.networking]
 }
 
 resource "onepassword_item" "envoy_gateway_oidc" {
