@@ -1,9 +1,11 @@
 # Checkov Terraform Misconfiguration Scanning
 #
 # Scans the repo's Terraform code for security misconfigurations on every
-# push to main. Running in report-only mode (soft_fail) initially since the
-# existing .tf files haven't been scanned before and may have pre-existing
-# findings worth triaging before this starts failing CI outright.
+# push to main, landing results in the repo's Code Scanning (Security tab)
+# via SARIF upload. Running in report-only mode (soft_fail) initially since
+# the existing .tf files haven't been scanned before and may have
+# pre-existing findings worth triaging before this starts failing CI
+# outright.
 #
 # Source repository: https://github.com/bridgecrewio/checkov-action
 name: 'Checkov'
@@ -14,6 +16,8 @@ on:
 
 permissions:
   contents: read
+  security-events: write # for github/codeql-action/upload-sarif
+  actions: read # only required for a private repository, per upload-sarif docs
 
 jobs:
   checkov:
@@ -32,3 +36,15 @@ jobs:
           directory: .
           framework: terraform
           soft_fail: true
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+          container_user: 1000
+
+      - name: 'Upload SARIF file'
+        uses: github/codeql-action/upload-sarif@8533807ff379ac610d2b2c389c47e7c629d31d13 # v4.36.3
+        # Checkov's soft_fail keeps the job from hard-failing on findings,
+        # but run this regardless in case the scan step errors for some
+        # other reason -- otherwise a failed scan silently uploads nothing.
+        if: success() || failure()
+        with:
+          sarif_file: results.sarif
