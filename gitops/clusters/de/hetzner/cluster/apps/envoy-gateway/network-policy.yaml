@@ -1,0 +1,65 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: envoy-gateway-system
+spec:
+  description: "The envoy-gateway controller and the Envoy data-plane pods it provisions communicate with each other within the namespace."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway-system
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: envoy-gateway-system
+spec:
+  description: "DNS resolution via CoreDNS, required to resolve the Auth0 issuer for SecurityPolicy OIDC discovery/token exchange."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: envoy-gateway-system
+spec:
+  description: "The envoy-gateway controller watches Gateway API and its own CRDs via the API server."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-auth0-egress
+  namespace: envoy-gateway-system
+spec:
+  description: "The Envoy data-plane pods talk to Auth0's OIDC endpoints (authorization, token exchange, JWKS) directly for SecurityPolicy OIDC; Auth0's IPs aren't enumerable so this allows general internet egress on 443."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

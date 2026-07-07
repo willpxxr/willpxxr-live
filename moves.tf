@@ -81,3 +81,21 @@ moved {
   from = cloudflare_ruleset.main
   to   = cloudflare_ruleset.redirect
 }
+
+# Envoy Gateway replaces Traefik + oauth2-proxy: the confidential Auth0
+# client is repurposed in place for Envoy Gateway's native SecurityPolicy
+# OIDC rather than destroyed and recreated.
+moved {
+  from = auth0_client.oauth_proxy
+  to   = auth0_client.envoy_gateway_oidc
+}
+
+moved {
+  from = auth0_client_credentials.oauth_proxy
+  to   = auth0_client_credentials.envoy_gateway_oidc
+}
+
+moved {
+  from = onepassword_item.oauth2_proxy
+  to   = onepassword_item.envoy_gateway_oidc
+}
