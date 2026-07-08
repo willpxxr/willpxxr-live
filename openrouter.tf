@@ -55,6 +55,17 @@ resource "openrouter_guardrail" "gateway" {
   limit_usd      = 5
   reset_interval = "monthly"
 
+  # Defense in depth on top of allowed_models -- guarantees these
+  # deepseek models never route to a data-retaining/training endpoint,
+  # independent of whatever the account-wide privacy setting ends up
+  # being (which the free workspace's models need enabled). Guardrails
+  # can only ever be more restrictive than that account-wide baseline,
+  # never less, so this is a real, enforced narrowing, not just intent.
+  enforce_zdr_anthropic = true
+  enforce_zdr_google    = true
+  enforce_zdr_openai    = true
+  enforce_zdr_other     = true
+
   # deepseek only -- the free models moved to their own workspace/guardrail
   # below (openrouter_guardrail.gateway_free), gated behind the gateway's
   # separate llm-free:use Auth0 scope (see auth0.tf and gitops:
