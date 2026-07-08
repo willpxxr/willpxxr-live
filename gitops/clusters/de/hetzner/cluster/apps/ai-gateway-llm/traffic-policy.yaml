@@ -1,0 +1,43 @@
+---
+# Envoy's default connection buffer limit is 32768 bytes (32KB) in both
+# directions -- far too small for a coding agent's requests (full tool
+# schemas alone push a simple message well past that -- confirmed live,
+# a basic crush request was 46187 bytes) or for LLM completions/large
+# tool-call responses coming back. 10Mi is generous headroom without
+# being unbounded.
+#
+# Targets the whole Gateway (not just this route) since ClientTrafficPolicy
+# is a listener/connection-level concern in Envoy Gateway, not
+# route-scoped -- this also benefits hubble/flux, which is harmless (a
+# larger buffer ceiling isn't a security concern, just resource
+# headroom).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: ai-gateway-buffer-limit
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway
+  connection:
+    bufferLimit: 10Mi
+---
+# Backend-side equivalent -- without this, even once the request gets
+# through, a large response from openrouter.ai (a substantial completion,
+# or one of the larger max_tokens values in crush.json) hits the same
+# 32KB default on the upstream connection and comes back as a 500
+# (response_payload_too_large), confirmed live.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: openrouter-buffer-limit
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: openrouter
+  connection:
+    bufferLimit: 10Mi
