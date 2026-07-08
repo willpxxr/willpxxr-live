@@ -360,6 +360,24 @@ resource "auth0_resource_server_scopes" "ai_mcp" {
   }
 }
 
+# Required for opencode's DCR-created client to access this API at all --
+# confirmed live via an actual Auth0 log entry ("Client ... is not
+# authorized to access resource server ..."): Auth0 has no way to
+# configure per-application client grants during the DCR flow itself
+# (there's no application to attach a grant to until after registration),
+# so third-party/DCR clients need a default_for grant instead, applied to
+# ALL such clients rather than one specific client_id (mutually exclusive
+# with client_id). This is scoped to just llm:use's mcp equivalent
+# (mcp:use), matching the scope already granted to the user via their
+# role -- DCR clients still only work for a user who's actually entitled.
+resource "auth0_client_grant" "ai_mcp_third_party_default" {
+  default_for = "third_party_clients"
+  audience    = auth0_resource_server.ai_mcp.identifier
+  scopes      = ["mcp:use"]
+
+  depends_on = [auth0_resource_server_scopes.ai_mcp]
+}
+
 # Links each role to the permission (scope) it actually grants -- the RBAC
 # gate: a user can request/consent to a scope, but Auth0 only issues it if
 # they're entitled via a role like this.
