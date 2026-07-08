@@ -1,11 +1,13 @@
-# "Default workspace" for a created resource isn't guaranteed to resolve
-# to the same workspace across different resource types when left
-# implicit (observed directly: a guardrail created without workspace_id
-# didn't end up applied to a key also created without workspace_id) --
-# looking this up explicitly and setting it on both resources below
-# removes that ambiguity. A personal account has exactly one workspace,
-# so items[0] is reliable here.
-data "openrouter_workspaces" "all" {}
+# Dedicated workspace for the hardened/paid models -- symmetric with
+# openrouter_workspace.free below, rather than this side implicitly
+# using whatever workspace pre-existed on the account (the earlier
+# version of this file used a data.openrouter_workspaces lookup instead,
+# which wasn't a real dedicated workspace, just the account's default).
+resource "openrouter_workspace" "hardened" {
+  name        = "willpxxr-live-ai-gateway-hardened"
+  slug        = "willpxxr-live-ai-gateway-hardened"
+  description = "Cost-effective (not free) models for the self-hosted LLM gateway, isolated from the free-tier workspace -- gated behind llm:use alone in auth0.tf, no llm-free:use needed."
+}
 
 # Backend for the self-hosted LLM gateway (gitops:
 # apps/ai-gateway-llm/), replacing the earlier OpenCode Go plan --
@@ -15,7 +17,7 @@ data "openrouter_workspaces" "all" {}
 # manually-obtained key pasted in by hand.
 resource "openrouter_api_key" "gateway" {
   name         = "willpxxr-live-ai-gateway"
-  workspace_id = data.openrouter_workspaces.all.items[0].id
+  workspace_id = openrouter_workspace.hardened.id
 
   # Confirmed via the provider's own governance example (examples/
   # governance/main.tf): the guardrail must exist before the key is
@@ -25,13 +27,11 @@ resource "openrouter_api_key" "gateway" {
   depends_on = [openrouter_guardrail.gateway]
 }
 
-# Explicit workspace_id (see the data source comment above) to guarantee
-# this actually applies to the api_key above. allowed_models is a hard
-# restriction to deepseek-v4 flash/pro specifically -- confirmed via
-# OpenRouter's live /models API that neither currently has a $0 :free
-# variant, but both are extremely cheap (fractions of a cent per 1K
-# tokens), which is why "cost effective" rather than strictly free is
-# the framing here. Uses the dated snapshot
+# allowed_models is a hard restriction to deepseek-v4 flash/pro
+# specifically -- confirmed via OpenRouter's live /models API that
+# neither currently has a $0 :free variant, but both are extremely cheap
+# (fractions of a cent per 1K tokens), which is why "cost effective"
+# rather than strictly free is the framing here. Uses the dated snapshot
 # IDs (not the bare alias) since OpenRouter resolves allowed_models to
 # the specific dated model internally -- specifying the bare alias caused
 # a plan/apply mismatch (planned the alias, actual came back dated).
@@ -51,7 +51,7 @@ resource "openrouter_api_key" "gateway" {
 resource "openrouter_guardrail" "gateway" {
   name           = "willpxxr-live-ai-gateway"
   description    = "Model allowlist + spending cap + PII redaction + prompt injection defense for the self-hosted LLM gateway (ai.tailb40090.ts.net)."
-  workspace_id   = data.openrouter_workspaces.all.items[0].id
+  workspace_id   = openrouter_workspace.hardened.id
   limit_usd      = 5
   reset_interval = "monthly"
 
