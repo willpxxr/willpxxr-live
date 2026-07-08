@@ -5,12 +5,17 @@ metadata:
   name: openrouter
   namespace: envoy-gateway-system
 spec:
-  # OpenRouter's chat completions API is OpenAI-compatible. Model selection
-  # for the free tier happens in the request body (model IDs suffixed
-  # ":free", e.g. "openrouter/some-model:free") -- not something this
-  # backend config needs to know about, it's purely a client-side choice.
+  # OpenRouter's chat completions API is OpenAI-compatible in body shape,
+  # but lives at /api/v1/chat/completions, not the bare /v1/chat/completions
+  # the OpenAI schema assumes by default (confirmed live: without this
+  # version field, requests reached openrouter.ai at the wrong path and
+  # got a 404 from Cloudflare's edge). schema.version="api/v1" is the
+  # documented way to handle this -- confirmed against
+  # envoyproxy/ai-gateway's own OpenRouter reference config
+  # (internal/autoconfig/testdata/openrouter.yaml), not guessed.
   schema:
     name: OpenAI
+    version: "api/v1"
   backendRef:
     name: openrouter
     kind: Backend
