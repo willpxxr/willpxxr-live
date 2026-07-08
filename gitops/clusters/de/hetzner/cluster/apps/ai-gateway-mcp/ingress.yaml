@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-gateway-mcp
+  namespace: envoy-gateway-system
+  annotations:
+    tailscale.com/proxy-group: "ingress"
+    tailscale.com/tags: "tag:services"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - mcp
+  defaultBackend:
+    service:
+      name: envoy-envoy-gateway-system-gateway-4864c4ea
+      port:
+        number: 80

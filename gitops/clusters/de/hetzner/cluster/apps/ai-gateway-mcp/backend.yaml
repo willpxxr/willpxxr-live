@@ -1,0 +1,31 @@
+---
+# Public, no-auth-needed demo MCP server (used in Envoy AI Gateway's own
+# examples/mcp/mcp_example.yaml) -- a real, working backend to bootstrap
+# this gateway with rather than something fabricated, since MCPRoute
+# requires at least one backend (spec.backendRefs has minItems: 1,
+# confirmed via the live CRD schema). Swap/add real backends here once
+# you have specific MCP servers in mind.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: kiwi
+  namespace: envoy-gateway-system
+spec:
+  endpoints:
+    - fqdn:
+        hostname: mcp.kiwi.com
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: kiwi-tls
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: "gateway.envoyproxy.io"
+      kind: Backend
+      name: kiwi
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: mcp.kiwi.com

@@ -1,0 +1,25 @@
+---
+# No securityPolicy yet, deliberately -- MCPRoute's OAuth mechanism is MCP
+# spec's own (OAuth 2.1 + Dynamic Client Registration + Protected Resource
+# Metadata discovery), a genuinely different mechanism from the JWT-bearer
+# approach used for the LLM gateway, and whether Auth0 supports DCR out of
+# the box is unverified. Fine to leave open for now: the only backend
+# behind it is a public, no-auth demo server with no sensitive data. Add
+# auth (mcp:use scope, matching the get/admin/use convention in auth0.tf)
+# once real backends with anything worth protecting are added.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: MCPRoute
+metadata:
+  name: ai-gateway-mcp
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: plaintext
+  path: "/mcp"
+  backendRefs:
+    - name: kiwi
+      kind: Backend
+      group: gateway.envoyproxy.io
+      path: "/"
