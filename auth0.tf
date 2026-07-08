@@ -370,10 +370,21 @@ resource "auth0_resource_server_scopes" "ai_mcp" {
 # with client_id). This is scoped to just llm:use's mcp equivalent
 # (mcp:use), matching the scope already granted to the user via their
 # role -- DCR clients still only work for a user who's actually entitled.
-resource "auth0_client_grant" "ai_mcp_third_party_default" {
-  default_for = "third_party_clients"
-  audience    = auth0_resource_server.ai_mcp.identifier
-  scopes      = ["mcp:use"]
+#
+# subject_type = "user" specifically (not the default "client") -- Auth0's
+# dashboard splits default third-party permissions into two independent
+# categories, User-delegated Access and Client Access. opencode's MCP
+# OAuth is Authorization Code + PKCE, a real user login, never
+# client_credentials/M2M, so only the "user" grant is needed; a "client"
+# one would just be unused scope creep for a flow that's never exercised
+# here. Confirmed live: the first attempt (without subject_type, which
+# defaults to "client") granted Client Access but left User-delegated
+# Access at 0/1 in the dashboard, which is what actually blocked opencode.
+resource "auth0_client_grant" "ai_mcp_third_party_default_user" {
+  default_for  = "third_party_clients"
+  audience     = auth0_resource_server.ai_mcp.identifier
+  scopes       = ["mcp:use"]
+  subject_type = "user"
 
   depends_on = [auth0_resource_server_scopes.ai_mcp]
 }
