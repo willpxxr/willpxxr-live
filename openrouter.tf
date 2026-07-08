@@ -57,20 +57,24 @@ resource "openrouter_guardrail" "gateway" {
 
   # The four :free entries are genuinely $0/$0 per OpenRouter's live
   # /models pricing -- confirmed via the API, not assumed from the name.
-  # Bare :free IDs used here, not canonical_slug -- unlike deepseek above,
-  # :free is a distinct pricing-tier selector actually used in API calls,
-  # not just an alias for the same dated snapshot. If OpenRouter's
-  # provider produces the same plan/apply mismatch seen with deepseek,
-  # switch the affected ones to their canonical_slug (confirmed via
-  # /models: qwen3-coder:free -> qwen/qwen3-coder-480b-a35b-07-25,
-  # nemotron-3-ultra-550b-a55b:free -> ...-20260604).
+  # qwen3-coder and nemotron-3-ultra use their canonical_slug rather than
+  # the bare :free id -- confirmed live (same "Provider produced
+  # inconsistent result after apply" bug as deepseek above): OpenRouter's
+  # provider resolves allowed_models entries to their canonical form
+  # internally regardless of which alias/tier-tag was requested, and
+  # neither canonical_slug appears as its own separately-priced /models
+  # listing -- it's purely the underlying snapshot the :free entry points
+  # to, not a different (paid) model. The client (opencode config) still
+  # calls with the bare :free id to actually get free-tier pricing --
+  # this is only about matching what Terraform's state holds, same split
+  # already proven working for deepseek's dated IDs above.
   allowed_models = [
     "deepseek/deepseek-v4-flash-20260423",
     "deepseek/deepseek-v4-pro-20260423",
-    "qwen/qwen3-coder:free",
+    "qwen/qwen3-coder-480b-a35b-07-25",
     "openai/gpt-oss-120b:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3-ultra-550b-a55b-20260604",
   ]
 
   content_filter_builtins = [
