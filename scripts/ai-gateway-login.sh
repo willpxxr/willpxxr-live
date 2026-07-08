@@ -24,7 +24,12 @@ case "$SERVICE" in
   llm)
     CONFIG_ITEM="ai-gateway-llm-oauth2c"
     TOKEN_ITEM="ai-gateway-llm-token"
-    SCOPE="llm:use"
+    # llm-free:use in addition to llm:use -- gates the privacy-sensitive
+    # free models (ai-gateway-route-free.yaml's SecurityPolicy requires
+    # both together, AND semantics). Granted to the user's Auth0 account
+    # already (auth0.tf); requesting it here is what actually gets it
+    # into the issued token.
+    SCOPE="llm:use,llm-free:use"
     ;;
   mcp)
     CONFIG_ITEM="ai-gateway-mcp-oauth2c"
