@@ -113,6 +113,53 @@ resource "onepassword_item" "ai_gateway_llm" {
   }
 }
 
+# Same shape as ai_gateway_llm above, for the MCP gateway. MCPRoute's own
+# OAuth mechanism (MCP spec's RFC 8414/9728-based discovery) supports
+# Dynamic Client Registration for generic clients that don't already have
+# credentials, but that's not needed here -- this is a pre-registered
+# client for personal/single-user oauth2c use, same as the LLM gateway.
+resource "auth0_client" "ai_gateway_mcp" {
+  name        = "willpxxr-live-ai-gateway-mcp"
+  description = "Native/public client used by oauth2c for the self-hosted MCP gateway (mcp.tailb40090.ts.net)."
+  app_type    = "native"
+
+  oidc_conformant = true
+  grant_types     = ["authorization_code", "refresh_token"]
+
+  callbacks = [
+    "http://localhost:9876/callback",
+  ]
+
+  jwt_configuration {
+    alg = "RS256"
+  }
+}
+
+resource "onepassword_item" "ai_gateway_mcp" {
+  vault    = data.onepassword_vault.terraform.uuid
+  title    = "ai-gateway-mcp-oauth2c"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        client_id = {
+          type  = "CONCEALED"
+          value = auth0_client.ai_gateway_mcp.client_id
+        }
+        issuer = {
+          type  = "CONCEALED"
+          value = "https://auth.willpxxr.com"
+        }
+        audience = {
+          type  = "CONCEALED"
+          value = "https://mcp.tailb40090.ts.net"
+        }
+      }
+    }
+  }
+}
+
 resource "auth0_role" "cicd_get" {
   name        = "cicd:get"
   description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net)."
@@ -128,6 +175,11 @@ resource "auth0_role" "llm_use" {
   description = "Grants access to the self-hosted LLM gateway (ai.tailb40090.ts.net), proxying to the OpenCode Go subscription."
 }
 
+resource "auth0_role" "mcp_use" {
+  name        = "mcp:use"
+  description = "Grants access to the self-hosted MCP gateway (mcp.tailb40090.ts.net)."
+}
+
 data "auth0_user" "will" {
   query = "email:\"williamparr96@gmail.com\""
 }
@@ -141,6 +193,7 @@ resource "auth0_user_roles" "will" {
     auth0_role.cicd_get.id,
     auth0_role.hubble_use.id,
     auth0_role.llm_use.id,
+    auth0_role.mcp_use.id,
   ]
 }
 
@@ -232,6 +285,24 @@ resource "auth0_resource_server_scopes" "ai_llm" {
   }
 }
 
+resource "auth0_resource_server" "ai_mcp" {
+  name       = "willpxxr-live ai-mcp"
+  identifier = "https://mcp.tailb40090.ts.net"
+
+  enforce_policies                                = true
+  token_dialect                                   = "access_token_authz"
+  skip_consent_for_verifiable_first_party_clients = false
+}
+
+resource "auth0_resource_server_scopes" "ai_mcp" {
+  resource_server_identifier = auth0_resource_server.ai_mcp.identifier
+
+  scopes {
+    name        = "mcp:use"
+    description = "Use the self-hosted MCP gateway"
+  }
+}
+
 # Links each role to the permission (scope) it actually grants -- the RBAC
 # gate: a user can request/consent to a scope, but Auth0 only issues it if
 # they're entitled via a role like this.
@@ -273,6 +344,17 @@ resource "auth0_role_permissions" "llm_use" {
   }
 
   depends_on = [auth0_resource_server_scopes.ai_llm]
+}
+
+resource "auth0_role_permissions" "mcp_use" {
+  role_id = auth0_role.mcp_use.id
+
+  permissions {
+    name                       = "mcp:use"
+    resource_server_identifier = auth0_resource_server.ai_mcp.identifier
+  }
+
+  depends_on = [auth0_resource_server_scopes.ai_mcp]
 }
 
 resource "onepassword_item" "envoy_gateway_oidc" {

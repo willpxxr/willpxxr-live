@@ -1,12 +1,4 @@
 ---
-# No securityPolicy yet, deliberately -- MCPRoute's OAuth mechanism is MCP
-# spec's own (OAuth 2.1 + Dynamic Client Registration + Protected Resource
-# Metadata discovery), a genuinely different mechanism from the JWT-bearer
-# approach used for the LLM gateway, and whether Auth0 supports DCR out of
-# the box is unverified. Fine to leave open for now: the only backend
-# behind it is a public, no-auth demo server with no sensitive data. Add
-# auth (mcp:use scope, matching the get/admin/use convention in auth0.tf)
-# once real backends with anything worth protecting are added.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: MCPRoute
 metadata:
@@ -23,3 +15,37 @@ spec:
       kind: Backend
       group: gateway.envoyproxy.io
       path: "/"
+      # Deliberately no forwardHeaders here -- the incoming client's Auth0
+      # bearer token (validated below) must not reach kiwi, a public demo
+      # server with no business seeing it. forwardHeaders is opt-in per
+      # MCPRouteBackendRef, so simply omitting it keeps this backend
+      # credential-blind by default.
+  securityPolicy:
+    # MCPRoute's own OAuth mechanism (MCP spec's RFC 8414/9728-based
+    # discovery), not the SecurityPolicy.oidc block used for hubble/flux --
+    # this validates a pre-obtained bearer token (via oauth2c, same as the
+    # LLM gateway) rather than doing a browser redirect. Dynamic Client
+    # Registration is supported by Auth0 and by this MCP mechanism for
+    # generic clients with no pre-existing credentials, but isn't needed
+    # here -- this uses a pre-registered client (auth0_client.ai_gateway_mcp
+    # in auth0.tf), same pattern as the LLM gateway.
+    oauth:
+      issuer: "https://auth.willpxxr.com/"
+      audiences:
+        - "https://mcp.tailb40090.ts.net"
+      protectedResourceMetadata:
+        resource: "https://mcp.tailb40090.ts.net/mcp"
+        resourceName: "willpxxr AI Gateway MCP"
+        scopesSupported:
+          - "mcp:use"
+      # No claimToHeaders -- nothing from the validated token gets forwarded
+      # to backends via this mechanism either, consistent with the
+      # forwardHeaders omission above.
+    authorization:
+      defaultAction: Deny
+      rules:
+        - action: Allow
+          source:
+            jwt:
+              scopes:
+                - "mcp:use"
