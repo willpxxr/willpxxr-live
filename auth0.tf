@@ -284,6 +284,12 @@ resource "auth0_resource_server" "ai_llm" {
   enforce_policies                                = true
   token_dialect                                   = "access_token_authz"
   skip_consent_for_verifiable_first_party_clients = false
+
+  # Confirmed live: without this, Auth0 silently drops the offline_access
+  # scope from issued tokens regardless of what the client requests --
+  # refresh tokens can't be issued for a resource server that doesn't
+  # allow it, no matter how the authorization request is shaped.
+  allow_offline_access = true
 }
 
 resource "auth0_resource_server_scopes" "ai_llm" {
@@ -302,6 +308,10 @@ resource "auth0_resource_server" "ai_mcp" {
   enforce_policies                                = true
   token_dialect                                   = "access_token_authz"
   skip_consent_for_verifiable_first_party_clients = false
+
+  # Same fix as ai_llm above -- opencode's native MCP OAuth also needs
+  # real refresh tokens to actually work.
+  allow_offline_access = true
 }
 
 resource "auth0_resource_server_scopes" "ai_mcp" {
