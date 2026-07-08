@@ -76,3 +76,23 @@ spec:
         - ports:
             - port: "443"
               protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: envoy-ai-gateway-system
+spec:
+  description: "DNS resolution via CoreDNS, required to resolve auth.willpxxr.com before the HTTPS call in allow-auth0-egress above can even be attempted -- confirmed live, the JWKS auto-discovery call kept timing out even after allow-auth0-egress was added, because without this the hostname never resolved in the first place. Same rule as apps/envoy-gateway/'s own allow-dns-egress."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
