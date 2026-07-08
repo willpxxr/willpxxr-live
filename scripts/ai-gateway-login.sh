@@ -88,7 +88,7 @@ do_full_login() {
     --response-mode query \
     --grant-type authorization_code \
     --auth-method none \
-    --scopes "openid,${SCOPE}" \
+    --scopes "openid,offline_access,${SCOPE}" \
     --audience "$audience" \
     --pkce --silent
 }
@@ -127,6 +127,11 @@ new_refresh_token=$(echo "$result" | jq -r '.refresh_token')
 
 if [[ -z "$access_token" || "$access_token" == "null" ]]; then
   echo "error: no access_token in oauth2c's response" >&2
+  exit 1
+fi
+
+if [[ -z "$new_refresh_token" || "$new_refresh_token" == "null" ]]; then
+  echo "error: no refresh_token in oauth2c's response (missing offline_access scope?) -- not overwriting any existing stored refresh token with this." >&2
   exit 1
 fi
 
