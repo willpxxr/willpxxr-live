@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Logs into a self-hosted AI gateway and stores the resulting access token
-# in 1Password, where crush.json reads it from via `op read` at request
-# time -- see gitops/clusters/de/hetzner/cluster/apps/ai-gateway-llm/ and
-# apps/ai-gateway-mcp/, and auth0.tf's ai_gateway_llm/ai_gateway_mcp
-# clients, for the infra this talks to.
+# in 1Password -- consumed either via `op read` at request time (crush,
+# and opencode's MCP client, which has native OAuth) or exported into the
+# calling shell by an opencode wrapper function for opencode's LLM
+# provider config, which has no live command-substitution for
+# credentials, only a plain env var. See gitops/clusters/de/hetzner/
+# cluster/apps/ai-gateway-llm/ and apps/ai-gateway-mcp/, and auth0.tf's
+# ai_gateway_llm/ai_gateway_mcp clients, for the infra this talks to.
 #
 # On first run (no stored refresh token yet) this opens a browser for the
 # real Auth0 consent screen (PKCE). On every later run it tries the stored
