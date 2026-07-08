@@ -12,25 +12,24 @@ spec:
   hostnames:
     - "ai.tailb40090.ts.net"
   rules:
-    # Explicit per-model matches (x-ai-eg-model, extracted from the
-    # request body's model field before routing) rather than a catch-all
-    # -- required so the privacy-sensitive free models in
+    # Explicit model matches (x-ai-eg-model, extracted from the request
+    # body's model field before routing) rather than a catch-all --
+    # required so the privacy-sensitive free models in
     # ai-gateway-route-free.yaml can be gated by a separate SecurityPolicy
     # (llm-free:use) without this route's catch-all also matching them.
     # AIGatewayRoute rules have no name/sectionName field to target rules
     # individually within one route (confirmed via the live CRD schema),
     # so the split is across two AIGatewayRoute resources instead, each
     # generating its own independently-targetable HTTPRoute (same
-    # hostname/parentRef, disambiguated by these header matches).
+    # hostname/parentRef, disambiguated by these header matches). Single
+    # rule via RegularExpression matching (RE2 syntax, confirmed
+    # supported via the live CRD schema) rather than one rule per model,
+    # same pattern as ai-gateway-route-free.yaml. Keep in sync with
+    # allowed_models in openrouter.tf's openrouter_guardrail.gateway.
     - matches:
         - headers:
             - name: x-ai-eg-model
-              value: deepseek/deepseek-v4-flash
-      backendRefs:
-        - name: openrouter
-    - matches:
-        - headers:
-            - name: x-ai-eg-model
-              value: deepseek/deepseek-v4-pro
+              type: RegularExpression
+              value: '^deepseek/deepseek-v4-(flash|pro)$'
       backendRefs:
         - name: openrouter
