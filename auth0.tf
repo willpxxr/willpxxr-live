@@ -79,6 +79,18 @@ resource "auth0_client" "ai_gateway_llm" {
   jwt_configuration {
     alg = "RS256"
   }
+
+  # Confirmed live (and matching a known Auth0 community issue): without
+  # this block explicitly set, refresh tokens were never actually issued
+  # at all, even with offline_access requested, allow_offline_access
+  # enabled on the resource server, and a forced consent screen. rotating
+  # matches how the login script already behaves (it writes back the new
+  # refresh token every time, per rotation's invalidate-on-use model) --
+  # rotating requires expiration_type=expiring.
+  refresh_token {
+    rotation_type   = "rotating"
+    expiration_type = "expiring"
+  }
 }
 
 # Not a secret (public/native clients have no client_secret -- that's the
@@ -132,6 +144,16 @@ resource "auth0_client" "ai_gateway_mcp" {
 
   jwt_configuration {
     alg = "RS256"
+  }
+
+  # Same fix as ai_gateway_llm above. Note this only helps if
+  # scripts/ai-gateway-login.sh mcp (using this pre-registered client) is
+  # used directly -- opencode's own native MCP OAuth uses a separately
+  # DCR-created client instead, which this Terraform resource doesn't
+  # manage, so this fix may not apply to that path.
+  refresh_token {
+    rotation_type   = "rotating"
+    expiration_type = "expiring"
   }
 }
 
