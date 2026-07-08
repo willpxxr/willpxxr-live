@@ -7,15 +7,18 @@ metadata:
 spec:
   # OpenRouter's chat completions API is OpenAI-compatible in body shape,
   # but lives at /api/v1/chat/completions, not the bare /v1/chat/completions
-  # the OpenAI schema assumes by default (confirmed live: without this
-  # version field, requests reached openrouter.ai at the wrong path and
-  # got a 404 from Cloudflare's edge). schema.version="api/v1" is the
-  # documented way to handle this -- confirmed against
-  # envoyproxy/ai-gateway's own OpenRouter reference config
-  # (internal/autoconfig/testdata/openrouter.yaml), not guessed.
+  # the OpenAI schema assumes by default (confirmed live: requests reached
+  # openrouter.ai at the wrong path and got a 404 from Cloudflare's edge).
+  # `prefix` is the correct field, confirmed directly against the live
+  # AIServiceBackend CRD's schema description on this cluster (v1.0.0):
+  # "This field is ignored for OpenAI... For OpenAI and Anthropic, use
+  # prefix". A `version`-as-prefix field existed in older releases but was
+  # removed in v0.6.0 -- an upstream testdata reference file I initially
+  # copied from hadn't been updated to match, which is why that first
+  # attempt silently did nothing.
   schema:
     name: OpenAI
-    version: "api/v1"
+    prefix: "/api/v1"
   backendRef:
     name: openrouter
     kind: Backend
