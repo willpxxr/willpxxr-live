@@ -482,3 +482,36 @@ resource "onepassword_item" "envoy_gateway_oidc" {
     }
   }
 }
+
+# The Google social connection you actually log in with (hubble/flux/llm/
+# mcp all rely on it) was created manually via the dashboard, not
+# Terraform -- this imports it as a MINIMAL stub deliberately, setting
+# only is_domain_connection, not the connection's full configuration
+# (client_id/secret, allowed clients, etc). Confirmed live via an actual
+# Auth0 log entry ("no connections enabled for the client"): DCR-created
+# clients get no identity provider connections enabled by default, and
+# per Auth0 staff (community forum), there's no way to set a default
+# connection for future applications generally -- marking a specific
+# connection as domain-level is the only confirmed-working mechanism.
+# enable_client_connections (tenant flag, see flags block above) does
+# NOT cover DCR-created clients specifically, confirmed live -- it was
+# insufficient on its own.
+#
+# IMPORTANT: review the plan output carefully before applying this --
+# `name` is ForceNew, so if it doesn't exactly match the live connection,
+# Terraform will want to destroy and recreate a connection that
+# EVERYTHING (hubble, flux, the LLM gateway, the MCP gateway) actually
+# depends on for login. Everything below other than is_domain_connection
+# is intentionally omitted rather than guessed, to let Terraform/Auth0's
+# provider read the real values on import instead.
+import {
+  to = auth0_connection.google
+  id = "con_MtURC6dEAyIsh3No"
+}
+
+resource "auth0_connection" "google" {
+  name     = "google-oauth2"
+  strategy = "google-oauth2"
+
+  is_domain_connection = true
+}
