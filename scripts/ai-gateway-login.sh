@@ -81,7 +81,11 @@ do_full_login() {
   # response-types/response-mode/grant-type/auth-method aren't inferred
   # from --pkce alone -- oauth2c errors without them explicitly set.
   # auth-method=none matches both clients being public/native (no client
-  # secret).
+  # secret). --prompt consent forces a fresh consent screen every time --
+  # confirmed live: without it, Auth0 can silently skip re-issuing a
+  # refresh token if it treats the login as already-authorized (e.g. an
+  # existing SSO session), even with offline_access requested and
+  # allow_offline_access enabled on the resource server.
   oauth2c "$issuer" \
     --client-id "$client_id" \
     --response-types code \
@@ -90,6 +94,7 @@ do_full_login() {
     --auth-method none \
     --scopes "openid,offline_access,${SCOPE}" \
     --audience "$audience" \
+    --prompt consent \
     --pkce --silent
 }
 
