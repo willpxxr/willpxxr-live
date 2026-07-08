@@ -139,4 +139,4 @@ else
   echo "$template" | op item create --vault="$TOKEN_VAULT" --title="$TOKEN_ITEM" - >/dev/null
 fi
 
-echo "Done -- crush (via op read op://${TOKEN_VAULT}/${TOKEN_ITEM}/password) now has a fresh token." >&2
+echo "Done -- available via op read op://${TOKEN_VAULT}/${TOKEN_ITEM}/password now has a fresh token." >&2
