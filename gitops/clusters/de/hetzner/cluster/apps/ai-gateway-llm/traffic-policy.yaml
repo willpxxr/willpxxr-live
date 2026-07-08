@@ -29,6 +29,12 @@ spec:
 # or one of the larger max_tokens values in crush.json) hits the same
 # 32KB default on the upstream connection and comes back as a 500
 # (response_payload_too_large), confirmed live.
+#
+# BackendTrafficPolicy can only target Gateway/HTTPRoute/GRPCRoute/
+# TCPRoute/UDPRoute/TLSRoute under gateway.networking.k8s.io (confirmed
+# via a live validation rejection when this targeted the Backend object
+# directly) -- targets the underlying generated HTTPRoute instead, same
+# one SecurityPolicy targets elsewhere in this app (see security-policy.yaml).
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -36,8 +42,8 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   targetRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: openrouter
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm
   connection:
     bufferLimit: 10Mi
