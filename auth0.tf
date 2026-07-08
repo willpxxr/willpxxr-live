@@ -215,6 +215,16 @@ resource "auth0_tenant" "main" {
     # "network:admin" rendered as "Admin: network your admin"). This makes
     # it use the scopes' own description text below instead.
     use_scope_descriptions_for_consent = true
+
+    # Required for opencode's native MCP OAuth (RFC 7591 Dynamic Client
+    # Registration) -- confirmed live: without this, DCR attempts against
+    # /oidc/register fail even though the endpoint is advertised in the
+    # authorization server metadata, since Auth0 disables DCR tenant-wide
+    # by default regardless of what's advertised. This is a genuinely
+    # tenant-wide toggle, not scoped to the MCP resource server alone --
+    # per Auth0's own docs, anyone can register a new application without
+    # a token once this is on.
+    enable_dynamic_client_registration = true
   }
 }
 
