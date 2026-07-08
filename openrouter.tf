@@ -75,6 +75,7 @@ resource "openrouter_guardrail" "gateway" {
     "openai/gpt-oss-120b:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "nvidia/nemotron-3-ultra-550b-a55b-20260604",
+    "tencent/hy3-20260706",
   ]
 
   content_filter_builtins = [
