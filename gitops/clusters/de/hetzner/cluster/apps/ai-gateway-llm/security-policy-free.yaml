@@ -1,0 +1,33 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ai-gateway-llm-free
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm-free
+  jwt:
+    providers:
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://ai.tailb40090.ts.net"
+  authorization:
+    defaultAction: Deny
+    rules:
+      # Both scopes required (confirmed via the live CRD field
+      # description: "If multiple scopes are specified, all scopes must
+      # match") -- llm:use alone (sufficient for the standard models in
+      # security-policy.yaml) is not enough here.
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "llm:use"
+              - "llm-free:use"

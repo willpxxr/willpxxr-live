@@ -205,6 +205,14 @@ resource "auth0_role" "llm_use" {
   description = "Grants access to the self-hosted LLM gateway (ai.tailb40090.ts.net), proxying to the OpenCode Go subscription."
 }
 
+# Deliberately separate from llm_use, not folded into it -- explicit
+# consent to the models this gates (see auth0_resource_server_scopes.ai_llm
+# above) shouldn't be implied just by having general gateway access.
+resource "auth0_role" "llm_free_use" {
+  name        = "llm-free:use"
+  description = "Grants access to the self-hosted LLM gateway's free-tier models, which are served in exchange for prompt logging/training by the underlying provider (OpenRouter) -- a separate consent from general gateway access."
+}
+
 resource "auth0_role" "mcp_use" {
   name        = "mcp:use"
   description = "Grants access to the self-hosted MCP gateway (mcp.tailb40090.ts.net)."
@@ -223,6 +231,7 @@ resource "auth0_user_roles" "will" {
     auth0_role.cicd_get.id,
     auth0_role.hubble_use.id,
     auth0_role.llm_use.id,
+    auth0_role.llm_free_use.id,
     auth0_role.mcp_use.id,
   ]
 }
@@ -339,6 +348,21 @@ resource "auth0_resource_server_scopes" "ai_llm" {
     name        = "llm:use"
     description = "Use the self-hosted LLM gateway"
   }
+
+  # Separate scope (not folded into llm:use) gating the specific models
+  # OpenRouter only serves in exchange for prompt logging/training data
+  # usage -- confirmed live via OpenRouter's own "no endpoints available
+  # matching your ... data policy" error. Named as its own resource
+  # (llm-free, not a new tier on llm) to keep the <resource>:<tier>
+  # convention at the top of this file intact rather than inventing a
+  # fourth tier. Enforced by security-policy-free.yaml, which requires
+  # both llm:use and llm-free:use together (AND semantics, confirmed via
+  # the live SecurityPolicy CRD field description) -- holding llm:use
+  # alone must not imply consent to this.
+  scopes {
+    name        = "llm-free:use"
+    description = "Use the self-hosted LLM gateway's free-tier models (served in exchange for prompt logging/training by the underlying provider)"
+  }
 }
 
 resource "auth0_resource_server" "ai_mcp" {
@@ -436,6 +460,17 @@ resource "auth0_role_permissions" "llm_use" {
 
   permissions {
     name                       = "llm:use"
+    resource_server_identifier = auth0_resource_server.ai_llm.identifier
+  }
+
+  depends_on = [auth0_resource_server_scopes.ai_llm]
+}
+
+resource "auth0_role_permissions" "llm_free_use" {
+  role_id = auth0_role.llm_free_use.id
+
+  permissions {
+    name                       = "llm-free:use"
     resource_server_identifier = auth0_resource_server.ai_llm.identifier
   }
 

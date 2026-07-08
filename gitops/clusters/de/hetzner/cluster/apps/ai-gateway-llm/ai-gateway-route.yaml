@@ -12,8 +12,25 @@ spec:
   hostnames:
     - "ai.tailb40090.ts.net"
   rules:
-    # No matches -- a single catch-all rule to the only backend configured
-    # so far. Add header-based matches (x-ai-eg-model) here if/when a
-    # second backend is added.
-    - backendRefs:
+    # Explicit per-model matches (x-ai-eg-model, extracted from the
+    # request body's model field before routing) rather than a catch-all
+    # -- required so the privacy-sensitive free models in
+    # ai-gateway-route-free.yaml can be gated by a separate SecurityPolicy
+    # (llm-free:use) without this route's catch-all also matching them.
+    # AIGatewayRoute rules have no name/sectionName field to target rules
+    # individually within one route (confirmed via the live CRD schema),
+    # so the split is across two AIGatewayRoute resources instead, each
+    # generating its own independently-targetable HTTPRoute (same
+    # hostname/parentRef, disambiguated by these header matches).
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: deepseek/deepseek-v4-flash
+      backendRefs:
+        - name: openrouter
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: deepseek/deepseek-v4-pro
+      backendRefs:
         - name: openrouter

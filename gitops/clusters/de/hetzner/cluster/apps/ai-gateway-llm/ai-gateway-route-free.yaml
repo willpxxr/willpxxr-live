@@ -1,0 +1,52 @@
+---
+# Separate AIGatewayRoute (not a rule within ai-gateway-route.yaml) so
+# these models get their own independently-targetable HTTPRoute for
+# security-policy-free.yaml, requiring llm-free:use in addition to
+# llm:use. These specific models are only served by OpenRouter in
+# exchange for prompt logging/training data usage (confirmed live via
+# OpenRouter's own "no endpoints available matching your ... data
+# policy" error) -- gating them behind a dedicated scope means holding
+# llm:use alone doesn't imply consent to that.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm-free
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: plaintext
+  hostnames:
+    - "ai.tailb40090.ts.net"
+  rules:
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: qwen/qwen3-coder:free
+      backendRefs:
+        - name: openrouter
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: openai/gpt-oss-120b:free
+      backendRefs:
+        - name: openrouter
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: meta-llama/llama-3.3-70b-instruct:free
+      backendRefs:
+        - name: openrouter
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: nvidia/nemotron-3-ultra-550b-a55b:free
+      backendRefs:
+        - name: openrouter
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: tencent/hy3:free
+      backendRefs:
+        - name: openrouter
