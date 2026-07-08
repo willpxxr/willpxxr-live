@@ -31,8 +31,14 @@ spec:
     # in auth0.tf), same pattern as the LLM gateway.
     oauth:
       issuer: "https://auth.willpxxr.com/"
+      # Must match protectedResourceMetadata.resource and
+      # auth0_resource_server.ai_mcp.identifier (auth0.tf) exactly -- this
+      # was inconsistent with protectedResourceMetadata.resource below
+      # (bare host here vs full /mcp path there), which is what caused
+      # Auth0 to reject the resource parameter opencode correctly sent
+      # ("Service not found: https://mcp.tailb40090.ts.net/mcp").
       audiences:
-        - "https://mcp.tailb40090.ts.net"
+        - "https://mcp.tailb40090.ts.net/mcp"
       protectedResourceMetadata:
         resource: "https://mcp.tailb40090.ts.net/mcp"
         resourceName: "willpxxr AI Gateway MCP"

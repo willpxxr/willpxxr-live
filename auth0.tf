@@ -86,10 +86,15 @@ resource "auth0_client" "ai_gateway_llm" {
   # enabled on the resource server, and a forced consent screen. rotating
   # matches how the login script already behaves (it writes back the new
   # refresh token every time, per rotation's invalidate-on-use model) --
-  # rotating requires expiration_type=expiring.
+  # rotating requires expiration_type=expiring, which itself requires an
+  # explicit token_lifetime -- leaving it computed/unset produced an
+  # inconsistent client that broke the authorize flow entirely (Auth0's
+  # own generic "Oops! something went wrong" error page). 30 days is a
+  # reasonable lifetime for personal use, not guessed at length.
   refresh_token {
     rotation_type   = "rotating"
     expiration_type = "expiring"
+    token_lifetime  = 2592000
   }
 }
 
@@ -146,7 +151,9 @@ resource "auth0_client" "ai_gateway_mcp" {
     alg = "RS256"
   }
 
-  # Same fix as ai_gateway_llm above. Note this only helps if
+  # Same fix as ai_gateway_llm above, including the explicit
+  # token_lifetime (required alongside expiration_type=expiring, missing
+  # it broke the authorize flow entirely). Note this only helps if
   # scripts/ai-gateway-login.sh mcp (using this pre-registered client) is
   # used directly -- opencode's own native MCP OAuth uses a separately
   # DCR-created client instead, which this Terraform resource doesn't
@@ -154,6 +161,7 @@ resource "auth0_client" "ai_gateway_mcp" {
   refresh_token {
     rotation_type   = "rotating"
     expiration_type = "expiring"
+    token_lifetime  = 2592000
   }
 }
 
@@ -324,8 +332,15 @@ resource "auth0_resource_server_scopes" "ai_llm" {
 }
 
 resource "auth0_resource_server" "ai_mcp" {
-  name       = "willpxxr-live ai-mcp"
-  identifier = "https://mcp.tailb40090.ts.net"
+  name = "willpxxr-live ai-mcp"
+  # Must match MCPRoute.spec.securityPolicy.oauth.protectedResourceMetadata.resource
+  # exactly (gitops apps/ai-gateway-mcp/mcp-route.yaml) -- confirmed live via an
+  # actual Auth0 log entry ("Service not found: https://mcp.tailb40090.ts.net/mcp"):
+  # the MCP spec (RFC 9728) requires the resource to be the full MCP endpoint URL
+  # including its path, not just the bare host the LLM gateway uses. identifier is
+  # ForceNew, so this replaces the resource server (and its dependent scopes/
+  # role_permissions, handled automatically).
+  identifier = "https://mcp.tailb40090.ts.net/mcp"
 
   enforce_policies                                = true
   token_dialect                                   = "access_token_authz"
