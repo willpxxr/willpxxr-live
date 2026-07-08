@@ -255,6 +255,16 @@ resource "auth0_tenant" "main" {
     # per Auth0's own docs, anyone can register a new application without
     # a token once this is on.
     enable_dynamic_client_registration = true
+
+    # Required alongside DCR above -- confirmed live via an actual Auth0
+    # log entry ("no connections enabled for the client"): a
+    # dynamically-registered client doesn't automatically get any identity
+    # provider connections (e.g. the Google social connection you actually
+    # log in with) enabled for it, and there's no way to configure that
+    # per-client during DCR itself, same class of problem as the client
+    # grant fix above. This is also genuinely tenant-wide -- it applies to
+    # every future client, not just DCR-created ones.
+    enable_client_connections = true
   }
 }
 
