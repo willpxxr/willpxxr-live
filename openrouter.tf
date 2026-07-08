@@ -55,9 +55,22 @@ resource "openrouter_guardrail" "gateway" {
   limit_usd      = 5
   reset_interval = "monthly"
 
+  # The four :free entries are genuinely $0/$0 per OpenRouter's live
+  # /models pricing -- confirmed via the API, not assumed from the name.
+  # Bare :free IDs used here, not canonical_slug -- unlike deepseek above,
+  # :free is a distinct pricing-tier selector actually used in API calls,
+  # not just an alias for the same dated snapshot. If OpenRouter's
+  # provider produces the same plan/apply mismatch seen with deepseek,
+  # switch the affected ones to their canonical_slug (confirmed via
+  # /models: qwen3-coder:free -> qwen/qwen3-coder-480b-a35b-07-25,
+  # nemotron-3-ultra-550b-a55b:free -> ...-20260604).
   allowed_models = [
     "deepseek/deepseek-v4-flash-20260423",
     "deepseek/deepseek-v4-pro-20260423",
+    "qwen/qwen3-coder:free",
+    "openai/gpt-oss-120b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
   ]
 
   content_filter_builtins = [
