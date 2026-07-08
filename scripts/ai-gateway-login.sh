@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Logs into the self-hosted AI gateway (ai.tailb40090.ts.net) and stores the
-# resulting access token in 1Password, where crush.json reads it from via
-# `op read` at request time -- see gitops/clusters/de/hetzner/cluster/apps/
-# ai-gateway-llm/ and auth0.tf's ai_gateway_llm client for the infra this
-# talks to.
+# Logs into a self-hosted AI gateway and stores the resulting access token
+# in 1Password, where crush.json reads it from via `op read` at request
+# time -- see gitops/clusters/de/hetzner/cluster/apps/ai-gateway-llm/ and
+# apps/ai-gateway-mcp/, and auth0.tf's ai_gateway_llm/ai_gateway_mcp
+# clients, for the infra this talks to.
 #
 # On first run (no stored refresh token yet) this opens a browser for the
 # real Auth0 consent screen (PKCE). On every later run it tries the stored
@@ -12,14 +12,29 @@
 # so the new one always gets written back -- never reuse a refresh token
 # after this script has consumed it.
 #
-# Usage: scripts/ai-gateway-login.sh
+# Usage: scripts/ai-gateway-login.sh <llm|mcp>
 
 set -euo pipefail
 
+SERVICE="${1:-}"
+case "$SERVICE" in
+  llm)
+    CONFIG_ITEM="ai-gateway-llm-oauth2c"
+    TOKEN_ITEM="ai-gateway-llm-token"
+    SCOPE="llm:use"
+    ;;
+  mcp)
+    CONFIG_ITEM="ai-gateway-mcp-oauth2c"
+    TOKEN_ITEM="ai-gateway-mcp-token"
+    SCOPE="mcp:use"
+    ;;
+  *)
+    echo "usage: $0 <llm|mcp>" >&2
+    exit 1
+    ;;
+esac
 CONFIG_VAULT="terraform"
-CONFIG_ITEM="ai-gateway-llm-oauth2c"
 TOKEN_VAULT="terraform"
-TOKEN_ITEM="ai-gateway-llm-token"
 
 for bin in oauth2c op jq; do
   if ! command -v "$bin" >/dev/null 2>&1; then
@@ -62,15 +77,15 @@ do_full_login() {
   echo "No usable stored refresh token -- opening browser for login..." >&2
   # response-types/response-mode/grant-type/auth-method aren't inferred
   # from --pkce alone -- oauth2c errors without them explicitly set.
-  # auth-method=none matches ai_gateway_llm being a public/native client
-  # (no client secret).
+  # auth-method=none matches both clients being public/native (no client
+  # secret).
   oauth2c "$issuer" \
     --client-id "$client_id" \
     --response-types code \
     --response-mode query \
     --grant-type authorization_code \
     --auth-method none \
-    --scopes openid,llm:use \
+    --scopes "openid,${SCOPE}" \
     --audience "$audience" \
     --pkce --silent
 }
