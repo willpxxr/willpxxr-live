@@ -55,27 +55,21 @@ resource "openrouter_guardrail" "gateway" {
   limit_usd      = 5
   reset_interval = "monthly"
 
-  # The four :free entries are genuinely $0/$0 per OpenRouter's live
-  # /models pricing -- confirmed via the API, not assumed from the name.
-  # qwen3-coder and nemotron-3-ultra use their canonical_slug rather than
-  # the bare :free id -- confirmed live (same "Provider produced
-  # inconsistent result after apply" bug as deepseek above): OpenRouter's
-  # provider resolves allowed_models entries to their canonical form
-  # internally regardless of which alias/tier-tag was requested, and
-  # neither canonical_slug appears as its own separately-priced /models
-  # listing -- it's purely the underlying snapshot the :free entry points
-  # to, not a different (paid) model. The client (opencode config) still
-  # calls with the bare :free id to actually get free-tier pricing --
-  # this is only about matching what Terraform's state holds, same split
-  # already proven working for deepseek's dated IDs above.
+  # deepseek only -- the free models moved to their own workspace/guardrail
+  # below (openrouter_guardrail.gateway_free), gated behind the gateway's
+  # separate llm-free:use Auth0 scope (see auth0.tf and gitops:
+  # apps/ai-gateway-llm/ai-gateway-route-free.yaml +
+  # security-policy-free.yaml). Kept as separate workspaces (not just a
+  # shared guardrail's allowed_models) for real operational isolation --
+  # separate API keys, separate spending/usage tracking -- not to work
+  # around OpenRouter's privacy/data policy, which is account-wide and
+  # NOT configurable per-workspace (confirmed via OpenRouter's own docs)
+  # -- the free models still separately need data publication enabled at
+  # openrouter.ai/settings/privacy regardless of which workspace calls
+  # them.
   allowed_models = [
     "deepseek/deepseek-v4-flash-20260423",
     "deepseek/deepseek-v4-pro-20260423",
-    "qwen/qwen3-coder-480b-a35b-07-25",
-    "openai/gpt-oss-120b:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "nvidia/nemotron-3-ultra-550b-a55b-20260604",
-    "tencent/hy3-20260706",
   ]
 
   content_filter_builtins = [
@@ -101,6 +95,82 @@ resource "onepassword_item" "openrouter" {
         api_key = {
           type  = "CONCEALED"
           value = openrouter_api_key.gateway.key
+        }
+      }
+    }
+  }
+}
+
+# Separate workspace for the privacy-sensitive free models (see
+# allowed_models comment above) -- real operational isolation from the
+# hardened deepseek workspace: its own API key, spending/usage tracking,
+# and guardrail, even though the underlying account-wide privacy policy
+# is shared regardless of workspace.
+resource "openrouter_workspace" "free" {
+  name        = "willpxxr-live-ai-gateway-free"
+  slug        = "willpxxr-live-ai-gateway-free"
+  description = "Free-tier models for the self-hosted LLM gateway, isolated from the hardened deepseek workspace -- gated behind llm-free:use in auth0.tf."
+}
+
+# Same PII redaction + prompt injection defense as the hardened
+# guardrail above -- user explicitly chose to keep full protection here
+# rather than relax it, since redaction/blocking cost nothing regardless
+# of the underlying models being free. limit_usd is a small nominal
+# backstop (not a real cost control, since every allowed model here is
+# genuinely $0/$0) purely in case OpenRouter's pricing changes
+# unexpectedly or the allowlist is ever bypassed.
+resource "openrouter_guardrail" "gateway_free" {
+  name           = "willpxxr-live-ai-gateway-free"
+  description    = "Model allowlist + PII redaction + prompt injection defense for the self-hosted LLM gateway's free-tier models (ai.tailb40090.ts.net)."
+  workspace_id   = openrouter_workspace.free.id
+  limit_usd      = 1
+  reset_interval = "monthly"
+
+  # Canonical_slug used for qwen3-coder/nemotron-3-ultra/hy3, bare :free
+  # id for openai/meta-llama -- same distinction as the hardened
+  # guardrail's earlier deepseek fix: OpenRouter's provider resolves
+  # allowed_models to canonical form internally, and only the entries
+  # whose canonical_slug differs from their bare id hit the "inconsistent
+  # result after apply" bug.
+  allowed_models = [
+    "qwen/qwen3-coder-480b-a35b-07-25",
+    "openai/gpt-oss-120b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "nvidia/nemotron-3-ultra-550b-a55b-20260604",
+    "tencent/hy3-20260706",
+  ]
+
+  content_filter_builtins = [
+    { slug = "email", action = "redact" },
+    { slug = "phone", action = "redact" },
+    { slug = "ssn", action = "redact" },
+    { slug = "credit-card", action = "redact" },
+    { slug = "ip-address", action = "redact" },
+    { slug = "person-name", action = "redact" },
+    { slug = "address", action = "redact" },
+    { slug = "regex-prompt-injection", action = "block", scan_scope = "all_messages" },
+  ]
+}
+
+resource "openrouter_api_key" "gateway_free" {
+  name         = "willpxxr-live-ai-gateway-free"
+  workspace_id = openrouter_workspace.free.id
+
+  # Same ordering fix as openrouter_api_key.gateway above.
+  depends_on = [openrouter_guardrail.gateway_free]
+}
+
+resource "onepassword_item" "openrouter_free" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "openrouter-free"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        api_key = {
+          type  = "CONCEALED"
+          value = openrouter_api_key.gateway_free.key
         }
       }
     }

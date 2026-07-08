@@ -25,28 +25,28 @@ spec:
             - name: x-ai-eg-model
               value: qwen/qwen3-coder:free
       backendRefs:
-        - name: openrouter
+        - name: openrouter-free
     - matches:
         - headers:
             - name: x-ai-eg-model
               value: openai/gpt-oss-120b:free
       backendRefs:
-        - name: openrouter
+        - name: openrouter-free
     - matches:
         - headers:
             - name: x-ai-eg-model
               value: meta-llama/llama-3.3-70b-instruct:free
       backendRefs:
-        - name: openrouter
+        - name: openrouter-free
     - matches:
         - headers:
             - name: x-ai-eg-model
               value: nvidia/nemotron-3-ultra-550b-a55b:free
       backendRefs:
-        - name: openrouter
+        - name: openrouter-free
     - matches:
         - headers:
             - name: x-ai-eg-model
               value: tencent/hy3:free
       backendRefs:
-        - name: openrouter
+        - name: openrouter-free

@@ -1,0 +1,19 @@
+---
+# Separate AIServiceBackend for the free-tier workspace's API key
+# (backend-security-policy-free.yaml), reusing the same underlying
+# Backend (backend.yaml) since it's the same openrouter.ai:443 endpoint
+# -- only the authentication differs, which BackendSecurityPolicy
+# applies per-AIServiceBackend, not per-Backend.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: openrouter-free
+  namespace: envoy-gateway-system
+spec:
+  schema:
+    name: OpenAI
+    prefix: "/api/v1"
+  backendRef:
+    name: openrouter
+    kind: Backend
+    group: gateway.envoyproxy.io
