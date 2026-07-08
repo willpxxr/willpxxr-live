@@ -20,17 +20,30 @@ spec:
   hostnames:
     - "ai.tailb40090.ts.net"
   rules:
-    # Single rule via RegularExpression header matching (RE2 syntax,
-    # Envoy's engine) rather than one rule per model -- confirmed
-    # supported via the live CRD schema (HTTPHeaderMatch's type field:
-    # "Support: Implementation-specific (RegularExpression)"). Anchored
-    # (^...$) so e.g. "meta-llama/llama-3.3-70b-instruct-preview:free"
-    # wouldn't accidentally match too. Keep in sync with allowed_models
-    # in openrouter.tf's openrouter_guardrail.gateway_free.
+    # Single rule, multiple matches[] entries ORed together (per Gateway
+    # API semantics: https://gateway-api.sigs.k8s.io/guides/user-guides/
+    # http-method-matching/#oring-matches -- conditions within one
+    # HTTPRouteMatch are ANDed, but separate entries in matches[] are
+    # ORed) rather than one rule per model, or a hand-escaped regex.
+    # Exact is Core support (guaranteed by the spec), unlike
+    # RegularExpression which is implementation-specific -- no
+    # escaping/anchoring concerns either. Keep in sync with
+    # allowed_models in openrouter.tf's openrouter_guardrail.gateway_free.
     - matches:
         - headers:
             - name: x-ai-eg-model
-              type: RegularExpression
-              value: '^(qwen/qwen3-coder|openai/gpt-oss-120b|meta-llama/llama-3\.3-70b-instruct|nvidia/nemotron-3-ultra-550b-a55b|tencent/hy3):free$'
+              value: qwen/qwen3-coder:free
+        - headers:
+            - name: x-ai-eg-model
+              value: openai/gpt-oss-120b:free
+        - headers:
+            - name: x-ai-eg-model
+              value: meta-llama/llama-3.3-70b-instruct:free
+        - headers:
+            - name: x-ai-eg-model
+              value: nvidia/nemotron-3-ultra-550b-a55b:free
+        - headers:
+            - name: x-ai-eg-model
+              value: tencent/hy3:free
       backendRefs:
         - name: openrouter-free
