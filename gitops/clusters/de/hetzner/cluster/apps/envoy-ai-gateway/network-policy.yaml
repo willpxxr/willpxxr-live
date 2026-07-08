@@ -60,3 +60,19 @@ spec:
         - ports:
             - port: "9443"
               protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-auth0-egress
+  namespace: envoy-ai-gateway-system
+spec:
+  description: "The ai-gateway controller itself (not just the data-plane Envoy pods, which already have their own allow-auth0-egress in apps/envoy-gateway/) calls out to fetch OAuth authorization server metadata for MCPRoute securityPolicy.oauth's JWKS auto-discovery (RFC 8414). Confirmed live: this call failed with a context-deadline-exceeded timeout before this rule existed. Auth0's IPs aren't enumerable so this allows general internet egress on 443."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
