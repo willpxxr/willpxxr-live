@@ -1,0 +1,33 @@
+---
+# Separate AIGatewayRoute (not a rule within ai-gateway-route.yaml) for
+# Claude Code's Anthropic Messages API requests, matching
+# envoyproxy/ai-gateway's own examples/basic/anthropic-openai-local.yaml
+# pattern -- the gateway listens on /v1/messages automatically for
+# Anthropic-format requests, confirmed via that example, with no
+# route-level schema field needed (AIGatewayRoute.spec has none). Same
+# hostname/parentRef as ai-gateway-route.yaml -- disambiguated from it by
+# path (/v1/messages vs /v1/chat/completions), not by these header
+# matches alone, since both routes match on the same deepseek model
+# names.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm-anthropic
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: plaintext
+  hostnames:
+    - "ai.tailb40090.ts.net"
+  rules:
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: deepseek/deepseek-v4-flash
+        - headers:
+            - name: x-ai-eg-model
+              value: deepseek/deepseek-v4-pro
+      backendRefs:
+        - name: openrouter-anthropic

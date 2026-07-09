@@ -1,0 +1,32 @@
+---
+# Same requirement as security-policy.yaml (llm:use, no llm-free:use --
+# these are still the hardened/deepseek models, just accessed via a
+# different wire format), just targeting the new route's generated
+# HTTPRoute.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ai-gateway-llm-anthropic
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm-anthropic
+  jwt:
+    providers:
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://ai.tailb40090.ts.net"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "llm:use"

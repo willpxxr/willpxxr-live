@@ -1,0 +1,24 @@
+---
+# Separate AIServiceBackend for Claude Code, which speaks the Anthropic
+# Messages API (/v1/messages), not the OpenAI-compatible format the
+# existing openrouter backend uses. schema.name: Anthropic (not OpenAI)
+# deliberately -- OpenRouter natively speaks Anthropic Messages format
+# too (confirmed live via OpenRouter's own docs/API), so this is a pure
+# pass-through with no gateway-side translation, letting OpenRouter's own
+# purpose-built Anthropic-compatibility layer handle the underlying
+# model translation in a single hop. Reuses the same underlying Backend
+# (same openrouter.ai:443 endpoint, same hardened workspace/API key) --
+# only the wire format differs, not the account/credentials.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: openrouter-anthropic
+  namespace: envoy-gateway-system
+spec:
+  schema:
+    name: Anthropic
+    prefix: "/api/v1"
+  backendRef:
+    name: openrouter
+    kind: Backend
+    group: gateway.envoyproxy.io

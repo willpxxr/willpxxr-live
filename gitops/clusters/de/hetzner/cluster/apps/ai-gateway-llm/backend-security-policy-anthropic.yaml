@@ -1,0 +1,19 @@
+---
+# Reuses the same openrouter Secret as backend-security-policy.yaml --
+# same hardened-workspace API key, just applied to the new
+# Anthropic-schema AIServiceBackend too.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: openrouter-anthropic-apikey
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: openrouter-anthropic
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: openrouter
+      namespace: envoy-gateway-system
