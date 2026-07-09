@@ -1,14 +1,24 @@
 ---
 # Separate AIGatewayRoute (not a rule within ai-gateway-route.yaml) for
-# Claude Code's Anthropic Messages API requests, matching
-# envoyproxy/ai-gateway's own examples/basic/anthropic-openai-local.yaml
-# pattern -- the gateway listens on /v1/messages automatically for
-# Anthropic-format requests, confirmed via that example, with no
-# route-level schema field needed (AIGatewayRoute.spec has none). Same
-# hostname/parentRef as ai-gateway-route.yaml -- disambiguated from it by
-# path (/v1/messages vs /v1/chat/completions), not by these header
-# matches alone, since both routes match on the same deepseek model
-# names.
+# Claude Code's Anthropic Messages API requests. Confirmed live via the
+# actual extproc deployment flags (--endpointPrefixes=openai:,cohere:/cohere,
+# anthropic:/anthropic): Anthropic requests are registered at
+# /anthropic/v1/messages, not bare /v1/messages -- the official
+# examples/basic/anthropic-openai-local.yaml doesn't show this since its
+# own flags/values differ from this cluster's Helm values.
+#
+# Match values here are prefixed "anthropic:" and distinct from
+# ai-gateway-route.yaml's plain model names, with modelNameOverride
+# mapping back to the real OpenRouter model name on each backendRef.
+# This is required, not cosmetic -- confirmed live: AIGatewayRoute only
+# supports header matching (no path), and the generated HTTPRoute's path
+# match is a hardcoded catch-all (PathPrefix: /) regardless of backend
+# schema, so a plain (non-prefixed) model name used by both an
+# OpenAI-facing and an Anthropic-facing route is genuinely ambiguous at
+# the Gateway API routing layer -- confirmed live via a real request that
+# got misrouted to the OpenAI-schema free route and 404'd upstream.
+# Each model needs its own rule (not ORed matches sharing one backendRef)
+# since modelNameOverride is per-backendRef, not per-match.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
@@ -25,9 +35,14 @@ spec:
     - matches:
         - headers:
             - name: x-ai-eg-model
-              value: deepseek/deepseek-v4-flash
-        - headers:
-            - name: x-ai-eg-model
-              value: deepseek/deepseek-v4-pro
+              value: anthropic:deepseek/deepseek-v4-flash
       backendRefs:
         - name: openrouter-anthropic
+          modelNameOverride: deepseek/deepseek-v4-flash
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:deepseek/deepseek-v4-pro
+      backendRefs:
+        - name: openrouter-anthropic
+          modelNameOverride: deepseek/deepseek-v4-pro

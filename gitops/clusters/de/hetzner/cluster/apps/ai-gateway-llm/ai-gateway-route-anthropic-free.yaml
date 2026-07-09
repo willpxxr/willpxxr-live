@@ -3,6 +3,10 @@
 # route (not a rule within ai-gateway-route-anthropic.yaml) since it
 # needs its own SecurityPolicy requiring llm-free:use in addition to
 # llm:use, same reasoning as the OpenAI-format free route.
+#
+# Same anthropic: prefix + modelNameOverride + one-rule-per-model
+# pattern as ai-gateway-route-anthropic.yaml -- see that file's comment
+# for why this is required, not stylistic.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
@@ -19,18 +23,35 @@ spec:
     - matches:
         - headers:
             - name: x-ai-eg-model
-              value: qwen/qwen3-coder:free
-        - headers:
-            - name: x-ai-eg-model
-              value: openai/gpt-oss-120b:free
-        - headers:
-            - name: x-ai-eg-model
-              value: meta-llama/llama-3.3-70b-instruct:free
-        - headers:
-            - name: x-ai-eg-model
-              value: nvidia/nemotron-3-ultra-550b-a55b:free
-        - headers:
-            - name: x-ai-eg-model
-              value: tencent/hy3:free
+              value: "anthropic:qwen/qwen3-coder:free"
       backendRefs:
         - name: openrouter-anthropic-free
+          modelNameOverride: "qwen/qwen3-coder:free"
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: "anthropic:openai/gpt-oss-120b:free"
+      backendRefs:
+        - name: openrouter-anthropic-free
+          modelNameOverride: "openai/gpt-oss-120b:free"
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: "anthropic:meta-llama/llama-3.3-70b-instruct:free"
+      backendRefs:
+        - name: openrouter-anthropic-free
+          modelNameOverride: "meta-llama/llama-3.3-70b-instruct:free"
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: "anthropic:nvidia/nemotron-3-ultra-550b-a55b:free"
+      backendRefs:
+        - name: openrouter-anthropic-free
+          modelNameOverride: "nvidia/nemotron-3-ultra-550b-a55b:free"
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: "anthropic:tencent/hy3:free"
+      backendRefs:
+        - name: openrouter-anthropic-free
+          modelNameOverride: "tencent/hy3:free"
