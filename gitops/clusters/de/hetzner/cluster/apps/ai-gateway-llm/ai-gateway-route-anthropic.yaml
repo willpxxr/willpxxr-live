@@ -19,6 +19,13 @@
 # got misrouted to the OpenAI-schema free route and 404'd upstream.
 # Each model needs its own rule (not ORed matches sharing one backendRef)
 # since modelNameOverride is per-backendRef, not per-match.
+#
+# bodyMutation injects provider.allow_fallbacks=true -- see
+# ai-gateway-route-anthropic-free.yaml's comment for the full
+# explanation (confirmed live via the actual OpenRouter error body:
+# "No allowed providers are available for the selected model",
+# requested_providers: ["anthropic"] -- an implicit restriction
+# requests hitting /v1/messages get unless explicitly overridden).
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
@@ -39,6 +46,10 @@ spec:
       backendRefs:
         - name: openrouter-anthropic
           modelNameOverride: deepseek/deepseek-v4-flash
+          bodyMutation:
+            set:
+              - path: "provider"
+                value: '{"allow_fallbacks": true}'
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -46,3 +57,7 @@ spec:
       backendRefs:
         - name: openrouter-anthropic
           modelNameOverride: deepseek/deepseek-v4-pro
+          bodyMutation:
+            set:
+              - path: "provider"
+                value: '{"allow_fallbacks": true}'

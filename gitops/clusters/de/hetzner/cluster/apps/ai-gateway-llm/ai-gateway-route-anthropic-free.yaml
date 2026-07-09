@@ -7,6 +7,19 @@
 # Same anthropic: prefix + modelNameOverride + one-rule-per-model
 # pattern as ai-gateway-route-anthropic.yaml -- see that file's comment
 # for why this is required, not stylistic.
+#
+# bodyMutation injects provider.allow_fallbacks=true -- confirmed live,
+# via the actual OpenRouter error body (only visible after fixing a
+# debug proxy to strip Accept-Encoding so the response wasn't
+# gzip-garbled): OpenRouter's /v1/messages endpoint was rejecting these
+# non-Anthropic free models with "No allowed providers are available for
+# the selected model" (requested_providers: ["anthropic"],
+# available_providers: ["venice"] etc) -- an implicit provider
+# restriction to Anthropic-named providers that requests hitting this
+# endpoint apparently get unless explicitly overridden. Setting any
+# explicit provider field (even just allow_fallbacks, no provider
+# pinned) overrides that default and lets OpenRouter's normal routing
+# logic reach the actual serving provider.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
@@ -27,6 +40,10 @@ spec:
       backendRefs:
         - name: openrouter-anthropic-free
           modelNameOverride: "qwen/qwen3-coder:free"
+          bodyMutation:
+            set:
+              - path: "provider"
+                value: '{"allow_fallbacks": true}'
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -34,6 +51,10 @@ spec:
       backendRefs:
         - name: openrouter-anthropic-free
           modelNameOverride: "openai/gpt-oss-120b:free"
+          bodyMutation:
+            set:
+              - path: "provider"
+                value: '{"allow_fallbacks": true}'
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -41,6 +62,10 @@ spec:
       backendRefs:
         - name: openrouter-anthropic-free
           modelNameOverride: "meta-llama/llama-3.3-70b-instruct:free"
+          bodyMutation:
+            set:
+              - path: "provider"
+                value: '{"allow_fallbacks": true}'
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -48,6 +73,10 @@ spec:
       backendRefs:
         - name: openrouter-anthropic-free
           modelNameOverride: "nvidia/nemotron-3-ultra-550b-a55b:free"
+          bodyMutation:
+            set:
+              - path: "provider"
+                value: '{"allow_fallbacks": true}'
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -55,3 +84,7 @@ spec:
       backendRefs:
         - name: openrouter-anthropic-free
           modelNameOverride: "tencent/hy3:free"
+          bodyMutation:
+            set:
+              - path: "provider"
+                value: '{"allow_fallbacks": true}'
