@@ -1,0 +1,36 @@
+---
+# Anthropic-schema counterpart to ai-gateway-route-free.yaml -- separate
+# route (not a rule within ai-gateway-route-anthropic.yaml) since it
+# needs its own SecurityPolicy requiring llm-free:use in addition to
+# llm:use, same reasoning as the OpenAI-format free route.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm-anthropic-free
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: plaintext
+  hostnames:
+    - "ai.tailb40090.ts.net"
+  rules:
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: qwen/qwen3-coder:free
+        - headers:
+            - name: x-ai-eg-model
+              value: openai/gpt-oss-120b:free
+        - headers:
+            - name: x-ai-eg-model
+              value: meta-llama/llama-3.3-70b-instruct:free
+        - headers:
+            - name: x-ai-eg-model
+              value: nvidia/nemotron-3-ultra-550b-a55b:free
+        - headers:
+            - name: x-ai-eg-model
+              value: tencent/hy3:free
+      backendRefs:
+        - name: openrouter-anthropic-free

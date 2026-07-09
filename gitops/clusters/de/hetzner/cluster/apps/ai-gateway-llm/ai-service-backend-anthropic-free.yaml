@@ -1,0 +1,20 @@
+---
+# Anthropic-schema counterpart to ai-service-backend-free.yaml -- same
+# free workspace/API key, just the Anthropic Messages wire format for
+# Claude Code instead of OpenAI-compatible for opencode. Same reasoning
+# as ai-service-backend-anthropic.yaml: pure pass-through, no
+# gateway-side translation, since OpenRouter itself natively speaks
+# Anthropic Messages format.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: openrouter-anthropic-free
+  namespace: envoy-gateway-system
+spec:
+  schema:
+    name: Anthropic
+    prefix: "/api/v1"
+  backendRef:
+    name: openrouter
+    kind: Backend
+    group: gateway.envoyproxy.io
