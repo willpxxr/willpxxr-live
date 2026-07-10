@@ -182,8 +182,15 @@ resource "onepassword_item" "ai_gateway_mcp" {
           value = "https://auth.willpxxr.com"
         }
         audience = {
-          type  = "CONCEALED"
-          value = "https://mcp.tailb40090.ts.net"
+          type = "CONCEALED"
+          # Was a hardcoded literal string -- went stale when
+          # auth0_resource_server.ai_mcp.identifier was changed to add
+          # the /mcp path (fixing the earlier "Service not found" bug)
+          # and this dependent value was never updated, causing
+          # access_denied on login (requesting an audience that no
+          # longer matched any resource server). Real Terraform
+          # reference now, so it can't drift out of sync again.
+          value = auth0_resource_server.ai_mcp.identifier
         }
       }
     }
