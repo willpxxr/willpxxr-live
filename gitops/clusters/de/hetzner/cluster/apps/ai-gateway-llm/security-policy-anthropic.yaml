@@ -21,6 +21,14 @@ spec:
           uri: "https://auth.willpxxr.com/.well-known/jwks.json"
         audiences:
           - "https://ai.tailb40090.ts.net"
+        # See security-policy-anthropic-free.yaml's comment -- crush's
+        # native Anthropic provider sends the token via x-api-key, not
+        # Authorization:Bearer.
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "
+            - name: x-api-key
   authorization:
     defaultAction: Deny
     rules:

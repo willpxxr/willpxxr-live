@@ -17,6 +17,19 @@ spec:
           uri: "https://auth.willpxxr.com/.well-known/jwks.json"
         audiences:
           - "https://ai.tailb40090.ts.net"
+        # Explicit extractFrom replaces (not adds to) the default
+        # Authorization:Bearer-only behavior, so both sources need
+        # listing here -- confirmed live: crush's native Anthropic
+        # provider type sends the token via x-api-key (the standard
+        # Anthropic SDK convention), not Authorization:Bearer, causing
+        # jwt_authn_access_denied{Jwt_is_missing} even with a valid
+        # token, since Claude Code/opencode use Authorization and this
+        # policy previously only accepted that.
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "
+            - name: x-api-key
   authorization:
     defaultAction: Deny
     rules:
