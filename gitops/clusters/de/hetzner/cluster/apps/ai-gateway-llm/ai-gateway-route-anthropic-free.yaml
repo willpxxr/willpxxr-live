@@ -20,6 +20,16 @@
 # explicit provider field (even just allow_fallbacks, no provider
 # pinned) overrides that default and lets OpenRouter's normal routing
 # logic reach the actual serving provider.
+#
+# headerMutation strips the client's original x-api-key -- confirmed
+# live this is required too, not just bodyMutation. See
+# ai-gateway-route-anthropic.yaml's comment for the full explanation:
+# BackendSecurityPolicy always injects the real OpenRouter key into
+# Authorization specifically, never x-api-key, so a client
+# authenticating via x-api-key (crush's native Anthropic provider)
+# left its own Auth0 JWT sitting in x-api-key all the way through to
+# OpenRouter, unreplaced -- which itself triggers this same
+# "anthropic-only" restriction independent of bodyMutation.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
@@ -44,6 +54,9 @@ spec:
             set:
               - path: "provider"
                 value: '{"allow_fallbacks": true}'
+          headerMutation:
+            remove:
+              - x-api-key
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -55,6 +68,9 @@ spec:
             set:
               - path: "provider"
                 value: '{"allow_fallbacks": true}'
+          headerMutation:
+            remove:
+              - x-api-key
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -66,6 +82,9 @@ spec:
             set:
               - path: "provider"
                 value: '{"allow_fallbacks": true}'
+          headerMutation:
+            remove:
+              - x-api-key
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -77,6 +96,9 @@ spec:
             set:
               - path: "provider"
                 value: '{"allow_fallbacks": true}'
+          headerMutation:
+            remove:
+              - x-api-key
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -88,3 +110,6 @@ spec:
             set:
               - path: "provider"
                 value: '{"allow_fallbacks": true}'
+          headerMutation:
+            remove:
+              - x-api-key

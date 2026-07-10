@@ -26,6 +26,17 @@
 # "No allowed providers are available for the selected model",
 # requested_providers: ["anthropic"] -- an implicit restriction
 # requests hitting /v1/messages get unless explicitly overridden).
+#
+# headerMutation strips the client's original x-api-key -- confirmed
+# live this is required too, not just bodyMutation: BackendSecurityPolicy
+# always injects the real OpenRouter key into Authorization
+# specifically (confirmed via the live CRD field description), never
+# x-api-key, so a client authenticating to THIS gateway via x-api-key
+# (crush's native Anthropic provider; Claude Code sends both headers)
+# left its own Auth0 JWT sitting in x-api-key all the way through to
+# OpenRouter, unreplaced. OpenRouter apparently prioritizes x-api-key
+# when present, and an invalid one there triggers this same
+# "anthropic-only" restriction independent of bodyMutation.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
@@ -50,6 +61,9 @@ spec:
             set:
               - path: "provider"
                 value: '{"allow_fallbacks": true}'
+          headerMutation:
+            remove:
+              - x-api-key
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -61,3 +75,6 @@ spec:
             set:
               - path: "provider"
                 value: '{"allow_fallbacks": true}'
+          headerMutation:
+            remove:
+              - x-api-key
