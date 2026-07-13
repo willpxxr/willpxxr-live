@@ -15,3 +15,16 @@ spec:
           tailscale.com/hostname: "gateway"
           tailscale.com/proxy-group: "ingress"
           tailscale.com/tags: "tag:services"
+  # Sends traces for every route handled by this Gateway (including the
+  # AI gateway and Auth0-protected routes) to the gateway collector's otlp
+  # receiver -- see apps/otel-collector-gateway/. Cross-namespace backendRef
+  # requires the ReferenceGrant in apps/otel-collector-gateway/referencegrant.yaml.
+  telemetry:
+    tracing:
+      samplingRate: 10
+      provider:
+        type: OpenTelemetry
+        backendRefs:
+          - name: otel-collector-gateway
+            namespace: otel-collector
+            port: 4317

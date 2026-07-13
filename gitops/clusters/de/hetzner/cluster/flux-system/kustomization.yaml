@@ -20,3 +20,6 @@ resources:
 - kustomization-envoy-ai-gateway.yaml
 - kustomization-ai-gateway-llm.yaml
 - kustomization-ai-gateway-mcp.yaml
+- kustomization-otel-collector.yaml
+- kustomization-otel-collector-agent.yaml
+- kustomization-otel-collector-gateway.yaml

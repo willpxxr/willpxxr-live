@@ -50,5 +50,6 @@ This repository contains the infrastructure-as-code for [willpxxr.com](https://w
 
 - `var.cloudflare_api_token` — Cloudflare API token
 - `var.oci_rsa_private_key_base64enc` — OCI RSA private key (base64-encoded)
+- `var.betterstack_api_token` — Better Stack Telemetry API token
 
 These must never appear in plain text in any file.

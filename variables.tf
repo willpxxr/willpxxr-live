@@ -45,3 +45,8 @@ variable "openrouter_api_key" {
   sensitive   = true
   description = "OpenRouter provisioning/management API key (from OpenRouter's dashboard), used to authenticate the openrouter Terraform provider so it can create scoped API keys via openrouter_api_key. Distinct from any regular per-app API key."
 }
+
+variable "betterstack_api_token" {
+  sensitive   = true
+  description = "Better Stack Telemetry API token (from https://betterstack.com/docs/logs/api/getting-started/#get-an-logs-api-token), used to authenticate the logtail Terraform provider so it can create the OTel Collector's Source via logtail_source. Distinct from the source token that resource then produces."
+}

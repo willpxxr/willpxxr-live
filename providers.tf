@@ -61,6 +61,10 @@ terraform {
       source  = "cloudopsworks/openrouter"
       version = "~> 0.2"
     }
+    logtail = {
+      source  = "BetterStackHQ/logtail"
+      version = "~> 10.9"
+    }
   }
 }
 
@@ -101,4 +105,8 @@ provider "auth0" {
 
 provider "openrouter" {
   api_key = var.openrouter_api_key
+}
+
+provider "logtail" {
+  api_token = var.betterstack_api_token
 }
