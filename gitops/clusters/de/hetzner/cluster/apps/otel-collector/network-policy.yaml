@@ -86,6 +86,40 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-prometheus-scrape-egress
+  namespace: otel-collector
+spec:
+  description: "Gateway's Prometheus receiver scrapes annotated pods cluster-wide. One rule per target namespace/port: cert-manager (9402), envoy-gateway-system (19001), and Cilium/Hubble in kube-system (9965). kube-system has no strict ingress policy so only the egress side is needed for Hubble."
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector-gateway
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: cert-manager
+      toPorts:
+        - ports:
+            - port: "9402"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway-system
+      toPorts:
+        - ports:
+            - port: "19001"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: cilium
+      toPorts:
+        - ports:
+            - port: "9965"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-envoy-gateway-tracing-ingress
   namespace: otel-collector
 spec:

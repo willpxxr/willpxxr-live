@@ -110,6 +110,24 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-otel-scrape-ingress
+  namespace: envoy-gateway-system
+spec:
+  description: "The otel-collector gateway's Prometheus receiver scrapes the envoy-gateway controller's metrics endpoint (port 19001)."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: otel-collector
+            app.kubernetes.io/name: otel-collector-gateway
+      toPorts:
+        - ports:
+            - port: "19001"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-tailscale-ingress
   namespace: envoy-gateway-system
 spec:
