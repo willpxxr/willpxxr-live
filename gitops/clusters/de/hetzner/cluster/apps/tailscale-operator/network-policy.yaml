@@ -51,6 +51,26 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-otel-scrape-ingress
+  namespace: tailscale
+spec:
+  description: "The otel-collector gateway's Prometheus receiver scrapes the tailscale operator's metrics endpoint (port 8080)."
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: tailscale-operator
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: otel-collector
+            app.kubernetes.io/name: otel-collector-gateway
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-tailscale-control-plane-egress
   namespace: tailscale
 spec:

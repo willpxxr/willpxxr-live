@@ -2,5 +2,9 @@ apiServerProxyConfig:
   mode: "true"
 operatorConfig:
   hostname: "willpxxr-live-hetzner"
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
 proxyConfig:
   firewallMode: nftables

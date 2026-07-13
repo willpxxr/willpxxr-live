@@ -682,6 +682,7 @@ resource "logtail_dashboard_chart" "cert_manager_reconcile_errors" {
       FROM {{source}}
       WHERE dt BETWEEN {{start_time}} AND {{end_time}}
         AND name = 'controller_runtime_reconcile_errors_total'
+        AND label('k8s.namespace.name') = 'cert-manager'
       GROUP BY time ORDER BY time
     SQL
   }
@@ -997,6 +998,152 @@ resource "logtail_dashboard_chart" "k8s_disk_io" {
       FROM {{source}}
       WHERE dt BETWEEN {{start_time}} AND {{end_time}}
         AND name = 'system.disk.operations'
+      GROUP BY time ORDER BY time
+    SQL
+  }
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# External Secrets
+# SLIs: ClusterSecretStore readiness, reconcile errors per controller.
+# ══════════════════════════════════════════════════════════════════════════════
+
+resource "logtail_dashboard" "external_secrets" {
+  name               = "External Secrets"
+  dashboard_group_id = logtail_dashboard_group.services.id
+  date_range_from    = "now-3h"
+  date_range_to      = "now"
+
+  variable {
+    name          = "source"
+    variable_type = "source"
+    values        = [logtail_source.otel_collector.id]
+  }
+}
+
+resource "logtail_dashboard_section" "external_secrets_health" {
+  dashboard_id = logtail_dashboard.external_secrets.id
+  name         = "Secret Store Health"
+  y            = 0
+}
+
+resource "logtail_dashboard_chart" "external_secrets_store_ready" {
+  dashboard_id = logtail_dashboard.external_secrets.id
+  name         = "ClusterSecretStore Ready (1.0 = ready)"
+  chart_type   = "line_chart"
+  w            = 6
+  h            = 8
+  x            = 0
+  y            = 1
+  settings     = jsonencode({ unit = "none", y_axis_min = 0, y_axis_max = 1 })
+  query {
+    query_type = "sql_expression"
+    sql_query  = <<-SQL
+      SELECT
+        {{time}} AS time,
+        avgMergeIf(value_avg, label('status') = 'True') AS value
+      FROM {{source}}
+      WHERE dt BETWEEN {{start_time}} AND {{end_time}}
+        AND name = 'clustersecretstore_status_condition'
+        AND label('condition') = 'Ready'
+      GROUP BY time ORDER BY time
+    SQL
+  }
+}
+
+resource "logtail_dashboard_chart" "external_secrets_reconcile_errors" {
+  dashboard_id = logtail_dashboard.external_secrets.id
+  name         = "Reconcile Errors /s"
+  chart_type   = "line_chart"
+  w            = 6
+  h            = 8
+  x            = 6
+  y            = 1
+  settings     = jsonencode({ unit = "rps", treat_missing_values = "zero" })
+  query {
+    query_type = "sql_expression"
+    sql_query  = <<-SQL
+      SELECT
+        {{time}} AS time,
+        avgMerge(rate_avg) AS value
+      FROM {{source}}
+      WHERE dt BETWEEN {{start_time}} AND {{end_time}}
+        AND name = 'controller_runtime_reconcile_errors_total'
+        AND label('k8s.namespace.name') = 'external-secrets'
+      GROUP BY time ORDER BY time
+    SQL
+  }
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Tailscale Operator
+# SLIs: reconcile errors for ingress and proxygroup controllers.
+# ══════════════════════════════════════════════════════════════════════════════
+
+resource "logtail_dashboard" "tailscale" {
+  name               = "Tailscale Operator"
+  dashboard_group_id = logtail_dashboard_group.services.id
+  date_range_from    = "now-3h"
+  date_range_to      = "now"
+
+  variable {
+    name          = "source"
+    variable_type = "source"
+    values        = [logtail_source.otel_collector.id]
+  }
+}
+
+resource "logtail_dashboard_section" "tailscale_reconcile" {
+  dashboard_id = logtail_dashboard.tailscale.id
+  name         = "Reconciliation"
+  y            = 0
+}
+
+resource "logtail_dashboard_chart" "tailscale_reconcile_errors" {
+  dashboard_id = logtail_dashboard.tailscale.id
+  name         = "Reconcile Errors /s"
+  chart_type   = "line_chart"
+  w            = 6
+  h            = 8
+  x            = 0
+  y            = 1
+  settings     = jsonencode({ unit = "rps", treat_missing_values = "zero" })
+  query {
+    query_type = "sql_expression"
+    sql_query  = <<-SQL
+      SELECT
+        {{time}} AS time,
+        avgMerge(rate_avg) AS value
+      FROM {{source}}
+      WHERE dt BETWEEN {{start_time}} AND {{end_time}}
+        AND name = 'controller_runtime_reconcile_errors_total'
+        AND label('k8s.namespace.name') = 'tailscale'
+      GROUP BY time ORDER BY time
+    SQL
+  }
+}
+
+resource "logtail_dashboard_chart" "tailscale_active_workers" {
+  dashboard_id = logtail_dashboard.tailscale.id
+  name         = "Active Reconcile Workers"
+  chart_type   = "line_chart"
+  w            = 6
+  h            = 8
+  x            = 6
+  y            = 1
+  settings     = jsonencode({ unit = "shortened", treat_missing_values = "zero" })
+  query {
+    query_type = "sql_expression"
+    sql_query  = <<-SQL
+      SELECT
+        {{time}} AS time,
+        avgMergeIf(value_avg, label('controller') = 'ingress-pg-reconciler')   AS "ingress",
+        avgMergeIf(value_avg, label('controller') = 'proxygroup-reconciler')   AS "proxygroup",
+        avgMergeIf(value_avg, label('controller') = 'ingress-reconciler')      AS "ingress-standalone"
+      FROM {{source}}
+      WHERE dt BETWEEN {{start_time}} AND {{end_time}}
+        AND name = 'controller_runtime_active_workers'
+        AND label('k8s.namespace.name') = 'tailscale'
       GROUP BY time ORDER BY time
     SQL
   }
