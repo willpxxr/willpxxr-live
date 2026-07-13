@@ -54,20 +54,23 @@ cluster configuration via FluxCD (GitOps).
 
 ## Development workflow
 
-- **PRs, always** — this repo's real workflow is feature-branch + PR (confirmed via
-  `gh pr list --state merged`), even though `main` isn't branch-protected at the
-  GitHub level. Don't commit straight to `main`.
-- **Terraform**: Terraform Cloud plans on PR open/update (VCS-driven), applies on
-  merge to `main`.
+- **Commit straight to `main`** — this is a single-developer homelab repo; PRs are
+  pure overhead here and are not used. (Earlier history has some PR merges from
+  before this was settled — that's not a convention to continue.) `main` isn't
+  branch-protected at the GitHub level either, which is consistent with that.
+- **Terraform**: Terraform Cloud applies on every push to `main` (VCS-driven). No
+  local `terraform apply` expected.
 - **GitOps**: Flux reconciles `gitops/clusters/de/hetzner/cluster/` automatically on
-  merge to `main`. No manual `kubectl apply`.
+  push to `main`. No manual `kubectl apply`.
 - A handful of k8s objects are created directly by Terraform rather than GitOps —
   only for genuine bootstrap ordering (things Flux/external-secrets themselves
   depend on), e.g. the `external-secrets`/`tailscale` namespaces and the 1Password
   ESO service-account token Secret in `tailscale.tf`. Everything else lives in
   `gitops/`.
-- Before opening a PR, run the `verify-infra-change` skill (see below) rather than
-  waiting for a TFC/Flux failure to surface a mistake.
+- Because pushing to `main` triggers a real Terraform apply and a real Flux
+  reconcile with no PR/plan-only step in between to catch mistakes first, run the
+  `verify-infra-change` skill (see below) before pushing, not after something
+  breaks.
 
 ## GitOps app conventions (de/hetzner cluster)
 
@@ -169,7 +172,7 @@ comment next to that code.
 `.claude/skills/` holds skills scoped to this repo — they encode the repeatable
 parts of working here so they don't have to be re-derived each session:
 
-- **`verify-infra-change`** — run before opening a PR: `terraform fmt`, a
+- **`verify-infra-change`** — run before pushing to `main`: `terraform fmt`, a
   `kubectl --dry-run=client` pass against the live cluster's CRDs for changed
   manifests, and a `helm template` render for any changed app `values.yaml`.
 - **`new-gitops-app`** — scaffolds a new `apps/<name>/` directory plus its

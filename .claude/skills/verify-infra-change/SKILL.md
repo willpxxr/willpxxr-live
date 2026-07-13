@@ -1,13 +1,14 @@
 ---
 name: verify-infra-change
-description: Validate a pending change to this repo (Terraform + FluxCD/Kubernetes manifests) locally before opening a PR, so mistakes surface here instead of in a Terraform Cloud plan failure or a stuck Flux reconciliation.
+description: Validate a pending change to this repo (Terraform + FluxCD/Kubernetes manifests) locally before pushing to main, so mistakes surface here instead of a live Terraform apply or a stuck Flux reconciliation (this repo pushes straight to main -- no PR/plan-only gate in between).
 ---
 
 # Verify Infra Change
 
-This repo has no CI step that renders/dry-runs the actual config before merge —
-Terraform Cloud only plans `.tf`, and nothing validates `gitops/` manifests at all
-until Flux tries to apply them live. Run this yourself first.
+This repo pushes straight to `main` (single-developer homelab, no PR step) and has
+no CI that renders/dry-runs the actual config first — Terraform Cloud applies on
+every push to `main`, and nothing validates `gitops/` manifests at all until Flux
+tries to apply them live. Run this yourself before pushing.
 
 ## 1. Terraform
 
@@ -20,7 +21,7 @@ terraform fmt -check -diff <files...>
 If new provider blocks or resources were added, also sanity-check
 `terraform validate` if a local init is feasible — but don't run
 `terraform apply`/`plan` locally against the real workspace; that's Terraform
-Cloud's job on the PR.
+Cloud's job once pushed.
 
 ## 2. Kubernetes manifests (`gitops/`)
 
