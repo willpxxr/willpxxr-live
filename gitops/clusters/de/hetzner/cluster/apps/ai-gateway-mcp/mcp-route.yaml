@@ -20,6 +20,20 @@ spec:
       # server with no business seeing it. forwardHeaders is opt-in per
       # MCPRouteBackendRef, so simply omitting it keeps this backend
       # credential-blind by default.
+    - name: betterstack
+      kind: Backend
+      group: gateway.envoyproxy.io
+      path: "/"
+      # Same forwardHeaders omission as kiwi -- the client's Auth0 token
+      # must not reach Better Stack either. securityPolicy.apiKey instead
+      # injects Better Stack's own bearer token (confirmed via the live
+      # MCPRoute CRD schema: header defaults to "Authorization" with a
+      # "Bearer " prefix, exactly what Better Stack's MCP server requires)
+      # from the ExternalSecret-populated Secret in externalsecret.yaml.
+      securityPolicy:
+        apiKey:
+          secretRef:
+            name: betterstack-mcp
   securityPolicy:
     # MCPRoute's own OAuth mechanism (MCP spec's RFC 8414/9728-based
     # discovery), not the SecurityPolicy.oidc block used for hubble/flux --
