@@ -29,3 +29,31 @@ spec:
   validation:
     wellKnownCACertificates: "System"
     hostname: mcp.kiwi.com
+---
+# Better Stack's own MCP server (https://betterstack.com/docs/getting-started/integrations/mcp/),
+# exposing tools over its telemetry data. Auth is handled per-backendRef via
+# MCPRoute's securityPolicy.apiKey (see mcp-route.yaml) rather than here.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: betterstack
+  namespace: envoy-gateway-system
+spec:
+  endpoints:
+    - fqdn:
+        hostname: mcp.betterstack.com
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: betterstack-tls
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: "gateway.envoyproxy.io"
+      kind: Backend
+      name: betterstack
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: mcp.betterstack.com
