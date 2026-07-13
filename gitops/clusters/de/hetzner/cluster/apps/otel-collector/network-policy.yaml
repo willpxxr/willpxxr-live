@@ -1,0 +1,103 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: otel-collector
+spec:
+  description: "Baseline consistent with the rest of the repo's per-namespace policies, even though the agent daemonset and gateway deployment don't actually need to talk to each other -- both export straight to Better Stack."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: otel-collector
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: otel-collector
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: otel-collector
+spec:
+  description: "DNS resolution via CoreDNS, required to resolve the Better Stack ingesting host."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: otel-collector
+spec:
+  description: "Both collectors watch/read Kubernetes objects via the API server: the k8sattributes processor (pod metadata enrichment), the gateway's k8s_cluster and k8sobjects receivers (cluster metrics, events), and the agent's kubeletstats receiver (node auth)."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-betterstack-egress
+  namespace: otel-collector
+spec:
+  description: "Both collectors export logs/metrics/traces to Better Stack's OTLP ingesting host over HTTPS; its IPs aren't enumerable so this allows general internet egress on 443, same pattern as the other allow-*-egress rules in this repo for third-party SaaS endpoints (e.g. apps/ai-gateway-llm/, apps/envoy-gateway/)."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kubelet-egress
+  namespace: otel-collector
+spec:
+  description: "The agent daemonset's kubeletstats receiver reads node/pod/container metrics from its own node's kubelet API."
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector-agent
+  egress:
+    - toEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "10250"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-envoy-gateway-tracing-ingress
+  namespace: otel-collector
+spec:
+  description: "The Envoy data-plane pods (apps/envoy-gateway-config/) export traces via OTLP/gRPC to the gateway collector's otlp receiver."
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector-gateway
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway-system
+      toPorts:
+        - ports:
+            - port: "4317"
+              protocol: TCP

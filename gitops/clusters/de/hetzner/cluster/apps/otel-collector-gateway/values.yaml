@@ -1,0 +1,109 @@
+mode: deployment
+nameOverride: otel-collector-gateway
+fullnameOverride: otel-collector-gateway
+
+# contrib, not core -- k8s_cluster/k8sobjects/k8sattributes/prometheus'
+# kubernetes_sd_configs are all contrib-only (confirmed via `helm
+# template`, the chart no longer defaults this and fails closed if unset).
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+presets:
+  # k8s_cluster receiver -- cluster-level metrics (node/pod/deployment
+  # counts and phases), one collector only, hence deployment not daemonset.
+  clusterMetrics:
+    enabled: true
+  kubernetesAttributes:
+    enabled: true
+  # k8sobjects receiver -- Kubernetes events (Warning/Normal) as logs.
+  kubernetesEvents:
+    enabled: true
+
+# Only otlp (for Envoy's traces, see apps/envoy-gateway-config/) and the
+# annotation-scraped prometheus receiver below are actually used here.
+ports:
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+
+extraEnvs:
+  - name: BETTERSTACK_SOURCE_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: betterstack-otel
+        key: sourceToken
+  - name: BETTERSTACK_INGESTING_HOST
+    valueFrom:
+      secretKeyRef:
+        name: betterstack-otel
+        key: ingestingHost
+
+config:
+  receivers:
+    # Replaces the chart's default self-scrape-only config wholesale
+    # (scrape_configs is a list, so this fully overrides rather than
+    # merging) -- the first job keeps that self-scrape, the second
+    # auto-discovers any pod in the cluster carrying the prometheus.io/scrape
+    # annotation (already set today by cert-manager and Envoy Gateway's
+    # control plane; picks up future components with no config change here).
+    prometheus:
+      config:
+        scrape_configs:
+          - job_name: opentelemetry-collector
+            scrape_interval: 10s
+            static_configs:
+              - targets:
+                  - ${env:MY_POD_IP}:8888
+          - job_name: kubernetes-pods
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                action: keep
+                regex: "true"
+              - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                action: replace
+                target_label: __metrics_path__
+                regex: (.+)
+              - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                action: replace
+                regex: ([^:]+)(?::\d+)?;(\d+)
+                replacement: $1:$2
+                target_label: __address__
+              - action: labelmap
+                regex: __meta_kubernetes_pod_label_(.+)
+              - source_labels: [__meta_kubernetes_namespace]
+                action: replace
+                target_label: k8s.namespace.name
+              - source_labels: [__meta_kubernetes_pod_name]
+                action: replace
+                target_label: k8s.pod.name
+  exporters:
+    otlphttp/betterstack:
+      endpoint: "https://${env:BETTERSTACK_INGESTING_HOST}"
+      headers:
+        Authorization: "Bearer ${env:BETTERSTACK_SOURCE_TOKEN}"
+  service:
+    pipelines:
+      logs:
+        exporters:
+          - otlphttp/betterstack
+      metrics:
+        exporters:
+          - otlphttp/betterstack
+      traces:
+        exporters:
+          - otlphttp/betterstack

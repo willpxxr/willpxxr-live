@@ -1,0 +1,69 @@
+mode: daemonset
+nameOverride: otel-collector-agent
+fullnameOverride: otel-collector-agent
+
+# contrib, not core -- hostmetrics/kubeletstats/filelog/k8sattributes are
+# all contrib-only receivers/processors (confirmed via `helm template`,
+# the chart no longer defaults this and fails closed if unset).
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+presets:
+  hostMetrics:
+    enabled: true
+  kubeletMetrics:
+    enabled: true
+  kubernetesAttributes:
+    enabled: true
+  logsCollection:
+    enabled: true
+
+# This node's own agent handles traces/jaeger/zipkin ingestion nowhere --
+# only the gateway deployment receives push-based signals (Envoy traces).
+ports:
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+
+extraEnvs:
+  - name: BETTERSTACK_SOURCE_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: betterstack-otel
+        key: sourceToken
+  - name: BETTERSTACK_INGESTING_HOST
+    valueFrom:
+      secretKeyRef:
+        name: betterstack-otel
+        key: ingestingHost
+
+config:
+  exporters:
+    otlphttp/betterstack:
+      endpoint: "https://${env:BETTERSTACK_INGESTING_HOST}"
+      headers:
+        Authorization: "Bearer ${env:BETTERSTACK_SOURCE_TOKEN}"
+  service:
+    pipelines:
+      logs:
+        exporters:
+          - otlphttp/betterstack
+      metrics:
+        exporters:
+          - otlphttp/betterstack
+      traces:
+        exporters:
+          - otlphttp/betterstack

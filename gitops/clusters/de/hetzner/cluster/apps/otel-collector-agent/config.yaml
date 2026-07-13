@@ -1,0 +1,16 @@
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: otel-collector-agent
+  namespace: flux-system
+  labels:
+    fluxcd.controlplane.io/resourceset: charts
+spec:
+  type: Static
+  defaultValues:
+    name: "otel-collector-agent"
+    namespace: "otel-collector"
+    repoURL: "https://open-telemetry.github.io/opentelemetry-helm-charts"
+    chart: "opentelemetry-collector"
+    valuesConfigMap: "otel-collector-agent-values"
