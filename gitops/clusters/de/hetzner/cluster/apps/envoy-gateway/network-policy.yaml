@@ -110,6 +110,24 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-otel-tracing-egress
+  namespace: envoy-gateway-system
+spec:
+  description: "Envoy data-plane pods export traces via OTLP/gRPC to the otel-collector gateway (apps/otel-collector-gateway/). The matching ingress rule is in apps/otel-collector/network-policy.yaml."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: otel-collector
+            app.kubernetes.io/name: otel-collector-gateway
+      toPorts:
+        - ports:
+            - port: "4317"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-otel-scrape-ingress
   namespace: envoy-gateway-system
 spec:
