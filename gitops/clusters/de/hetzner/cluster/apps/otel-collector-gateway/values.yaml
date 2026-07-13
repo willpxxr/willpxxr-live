@@ -67,6 +67,30 @@ config:
             static_configs:
               - targets:
                   - ${env:MY_POD_IP}:8888
+          - job_name: hubble
+            scrape_interval: 30s
+            kubernetes_sd_configs:
+              - role: pod
+                namespaces:
+                  names: [kube-system]
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_pod_label_k8s_app]
+                action: keep
+                regex: cilium
+              - source_labels: [__address__]
+                action: replace
+                regex: ([^:]+)(?::\d+)?
+                replacement: $1:9965
+                target_label: __address__
+              - source_labels: [__meta_kubernetes_namespace]
+                action: replace
+                target_label: k8s.namespace.name
+              - source_labels: [__meta_kubernetes_pod_name]
+                action: replace
+                target_label: k8s.pod.name
+              - source_labels: [__meta_kubernetes_pod_node_name]
+                action: replace
+                target_label: k8s.node.name
           - job_name: kubernetes-pods
             kubernetes_sd_configs:
               - role: pod

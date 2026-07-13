@@ -30,3 +30,11 @@ hubble:
     enabled: true
   ui:
     enabled: true
+  metrics:
+    enabled:
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - http
