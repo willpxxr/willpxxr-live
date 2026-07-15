@@ -23,6 +23,8 @@ config:
     log_level: info
     trace_printer: text
     enforce_sys_caps: true
+    ebpf:
+      context_propagation: 'all'
     attributes:
       kubernetes:
         enable: true
