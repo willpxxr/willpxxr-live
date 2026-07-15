@@ -22,6 +22,7 @@ config:
   data:
     log_level: info
     trace_printer: text
+    enforce_sys_caps: true
     attributes:
       kubernetes:
         enable: true
