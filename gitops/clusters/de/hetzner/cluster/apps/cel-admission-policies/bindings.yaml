@@ -4,9 +4,9 @@
 # intentionally not bound yet -- deliberate follow-up, see the plan.
 #
 # All bindings use validationActions: [Warn, Audit] (non-blocking) rather
-# than Deny -- staged rollout on a cluster with live traffic. kube-system
-# and tailscale are excluded since both run pods that legitimately need
-# elevated privileges (Cilium CNI, Tailscale's network stack).
+# than Deny -- staged rollout on a cluster with live traffic. kube-system,
+# tailscale, and beyla are excluded since all run pods that legitimately need
+# elevated privileges (Cilium CNI, Tailscale's network stack, Beyla eBPF probes).
 #
 # Bindings only need matchResources.namespaceSelector here: the resource
 # *kinds* each policy applies to (Pods, Deployments, etc.) are already
@@ -30,6 +30,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -48,6 +49,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -66,6 +68,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -84,6 +87,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -102,6 +106,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -120,6 +125,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -138,6 +144,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -159,6 +166,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -177,6 +185,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -195,6 +204,7 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -216,3 +226,4 @@ spec:
           values:
             - kube-system
             - tailscale
+            - beyla

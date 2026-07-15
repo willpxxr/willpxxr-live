@@ -1,0 +1,31 @@
+preset: application
+
+# Beyla needs privileged access to install eBPF probes and read /proc.
+privileged: true
+contextPropagation:
+  enabled: true
+
+config:
+  create: true
+  data:
+    log_level: warn
+    attributes:
+      kubernetes:
+        enable: true
+    # heuristic routing groups un-parameterised paths (e.g. /users/123) into a
+    # single route entry so trace cardinality stays manageable.
+    routes:
+      unmatched: heuristic
+    # parentbased_traceidratio: honour the upstream sampling decision when a
+    # traceparent header is present (Envoy stamps 10% of requests); sample 10%
+    # of root spans that arrive without a parent (matches Envoy's samplingRate).
+    sampler:
+      name: parentbased_traceidratio
+      arg: "0.1"
+    otel_traces_export:
+      endpoint: http://otel-collector-gateway.otel-collector.svc.cluster.local:4317
+    otel_metrics_export:
+      endpoint: http://otel-collector-gateway.otel-collector.svc.cluster.local:4317
+    # Disable the built-in Prometheus scrape endpoint; OTLP export above handles it.
+    prometheus_export:
+      port: 0

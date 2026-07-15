@@ -1,0 +1,16 @@
+---
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: beyla
+  namespace: flux-system
+  labels:
+    fluxcd.controlplane.io/resourceset: charts
+spec:
+  type: Static
+  defaultValues:
+    name: "beyla"
+    namespace: "beyla"
+    repoURL: "https://grafana.github.io/helm-charts"
+    chart: "beyla"
+    valuesConfigMap: "beyla-values"
