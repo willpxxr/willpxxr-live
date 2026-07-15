@@ -20,8 +20,7 @@ contextPropagation:
 config:
   create: true
   data:
-    log_level: info
-    trace_printer: text
+    log_level: warn
     enforce_sys_caps: true
     ebpf:
       context_propagation: 'all'

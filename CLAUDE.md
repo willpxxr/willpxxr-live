@@ -125,6 +125,19 @@ scraping, OTLP receiver) export logs/metrics/traces to Better Stack.
   `apps/otel-collector-gateway/referencegrant.yaml` for the pattern.
 - The Better Stack source itself is Terraform-managed (`betterstack.tf`, `logtail`
   provider) — don't hand-create a source in the dashboard for this cluster.
+- **Beyla (`apps/beyla/`)** runs eBPF auto-instrumentation (Grafana's OBI) cluster-wide
+  (`discovery.instrument: [k8s_namespace: "*"]`) to generate traces for services that
+  don't natively export OTLP (e.g. nginx in the Hubble UI frontend). Beyla's own
+  built-in defaults *hard-exclude* `kube-system` (and several other platform
+  namespaces) from instrumentation regardless of the `discovery.instrument` glob —
+  this is `DefaultExcludeInstrument` in OBI's `pkg/obi/config.go`, layered on top of
+  and independent from any `discovery.instrument`/`exclude_instrument` config we set.
+  So components living in `kube-system` (Hubble UI, Cilium, CoreDNS, etc.) will never
+  get server-side Beyla spans; traffic to them only shows up as the *client-side*
+  span from whatever's calling in (e.g. Envoy Gateway's HTTPClient span). This is
+  accepted as-is — overriding `discovery.default_exclude_instrument` to claw back
+  `kube-system` was considered and deliberately not done, to keep the
+  self-instrumentation/system-noise protection.
 
 ## Terraform conventions
 
