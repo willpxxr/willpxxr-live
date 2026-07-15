@@ -16,12 +16,11 @@ config:
     # single route entry so trace cardinality stays manageable.
     routes:
       unmatched: heuristic
-    # parentbased_traceidratio: honour the upstream sampling decision when a
-    # traceparent header is present (Envoy stamps 10% of requests); sample 10%
-    # of root spans that arrive without a parent (matches Envoy's samplingRate).
+    # parentbased_always_on: honour the upstream sampling decision — if Envoy
+    # stamped traceparent as sampled (10% of requests), always create the child
+    # span. For root spans with no parent (rare in this setup), always sample.
     sampler:
-      name: parentbased_traceidratio
-      arg: "0.1"
+      name: parentbased_always_on
     otel_traces_export:
       endpoint: http://otel-collector-gateway.otel-collector.svc.cluster.local:4317
     otel_metrics_export:
