@@ -54,7 +54,7 @@ metadata:
   name: allow-otel-export-egress
   namespace: beyla
 spec:
-  description: "Beyla exports OTLP traces and metrics to the otel-collector gateway's OTLP/gRPC receiver (port 4317). The matching ingress rule is in apps/otel-collector/network-policy.yaml."
+  description: "Beyla exports OTLP traces and metrics to the otel-collector gateway's OTLP/gRPC receiver (port 4317). NOTE: Beyla runs with hostNetwork=true so Cilium assigns it the host identity and this pod-scoped egress rule is not enforced; the effective permission is the fromEntities host/remote-node ingress rule in apps/otel-collector/network-policy.yaml."
   endpointSelector: {}
   egress:
     - toEndpoints:

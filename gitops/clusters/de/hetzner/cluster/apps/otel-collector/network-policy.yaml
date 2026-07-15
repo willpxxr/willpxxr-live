@@ -153,7 +153,7 @@ metadata:
   name: allow-envoy-gateway-tracing-ingress
   namespace: otel-collector
 spec:
-  description: "The Envoy data-plane pods (apps/envoy-gateway-config/) export traces via OTLP/gRPC to the gateway collector's otlp receiver."
+  description: "The Envoy data-plane pods (apps/envoy-gateway-config/) and Beyla DaemonSet export traces via OTLP/gRPC to the gateway collector's otlp receiver. Beyla uses hostNetwork=true so Cilium assigns it the host identity — fromEntities host/remote-node is required instead of fromEndpoints."
   endpointSelector:
     matchLabels:
       app.kubernetes.io/name: otel-collector-gateway
@@ -165,9 +165,9 @@ spec:
         - ports:
             - port: "4317"
               protocol: TCP
-    - fromEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: beyla
+    - fromEntities:
+        - host
+        - remote-node
       toPorts:
         - ports:
             - port: "4317"
