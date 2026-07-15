@@ -20,7 +20,8 @@ contextPropagation:
 config:
   create: true
   data:
-    log_level: warn
+    log_level: info
+    trace_printer: text
     attributes:
       kubernetes:
         enable: true
