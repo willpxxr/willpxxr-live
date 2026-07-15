@@ -1,5 +1,17 @@
 preset: application
 
+# /sys/fs/bpf must be writable so Beyla can pin BPF maps for its TC (traffic
+# control) kernel-level HTTP probes — required for non-Go runtimes (e.g. nginx).
+volumes:
+  - name: bpffs
+    hostPath:
+      path: /sys/fs/bpf
+      type: Directory
+volumeMounts:
+  - name: bpffs
+    mountPath: /sys/fs/bpf
+
+
 # Beyla needs privileged access to install eBPF probes and read /proc.
 privileged: true
 contextPropagation:
