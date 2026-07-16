@@ -30,6 +30,15 @@ spec:
     useDefaultServiceAccount: false
     tools:
       loglevel: "info"
+      metrics:
+        # Left unset (chart default), this defaults to the same value as the
+        # main tools port (8084), and the chart's deployment.yaml then emits
+        # two container ports with identical containerPort+protocol --
+        # invalid for server-side apply (duplicate list-map key). Nothing
+        # scrapes this port (no prometheus.io/scrape annotation, no
+        # ServiceMonitor -- Better Stack, not Prometheus, per CLAUDE.md), so
+        # the actual value doesn't matter, only that it differs from 8084.
+        port: 9090
       # Available: k8s, helm, istio, cilium, argo, prometheus, kubescape, utils.
       # Limited to what this cluster actually runs: kubectl-wrapper + Helm +
       # Cilium (the CNI here) + utils (datetime; its `shell` tool is disabled
