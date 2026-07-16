@@ -7,6 +7,13 @@ metadata:
 spec:
   interval: 10m0s
   targetNamespace: kagent
+  # Without this, Flux defaults the Helm release name to
+  # "<targetNamespace>-<name>" ("kagent-kagent-tools"), which renames every
+  # chart-generated resource (Service, ServiceAccount, ...) away from what
+  # apps/ai-gateway-mcp/backend.yaml and rbac-cilium-exec.yaml's RoleBinding
+  # subject assume -- confirmed the hard way: the gateway silently couldn't
+  # reach a Service that didn't exist under the expected name.
+  releaseName: kagent-tools
   install:
     createNamespace: true
   chart:
