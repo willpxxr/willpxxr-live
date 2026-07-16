@@ -34,6 +34,18 @@ spec:
         apiKey:
           secretRef:
             name: betterstack-mcp
+    - name: kagent-tools
+      kind: Backend
+      group: gateway.envoyproxy.io
+      # The chart's kagent-tools server mounts its MCP handler at "/" (mux.Handle("/", ...)
+      # in cmd/main.go), not "/mcp" -- confirmed by reading the upstream source
+      # rather than assuming the field's stated default applies here too.
+      path: "/"
+      # No forwardHeaders/securityPolicy.apiKey -- kagent-tools authenticates
+      # to the Kubernetes API via its own in-cluster ServiceAccount
+      # (tools.k8s.tokenPassthrough: false in apps/kagent-tools/helmrelease.yaml),
+      # not a forwarded credential. Same reasoning as kiwi/betterstack: the
+      # client's Auth0 token must not reach this backend either.
   securityPolicy:
     # MCPRoute's own OAuth mechanism (MCP spec's RFC 8414/9728-based
     # discovery), not the SecurityPolicy.oidc block used for hubble/flux --

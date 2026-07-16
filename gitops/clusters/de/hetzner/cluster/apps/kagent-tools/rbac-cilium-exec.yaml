@@ -1,0 +1,37 @@
+---
+# Cilium has no read-only debug API -- its "read-only" MCP tools
+# (cilium_get_endpoints_list, cilium_get_endpoint_details/logs/health,
+# cilium_get_daemon_status) work by `kubectl exec`-ing into a kube-system
+# Cilium agent pod and running `cilium-dbg` inside it (confirmed by reading
+# pkg/cilium/cilium.go upstream). This is deliberately a namespaced Role
+# scoped to kube-system only, not an addition to the chart's cluster-wide
+# read-only ClusterRole (rbac.additionalRules in helmrelease.yaml) -- RBAC
+# can't restrict *which* command runs once pods/exec is granted, so keeping
+# the blast radius to kube-system is the only mitigation available. See
+# docs/adr/0001-kagent-tools-shared-service-account.md.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kagent-tools-cilium-exec
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kagent-tools-cilium-exec
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kagent-tools-cilium-exec
+subjects:
+  - kind: ServiceAccount
+    name: kagent-tools
+    namespace: kagent

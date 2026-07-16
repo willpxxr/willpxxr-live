@@ -1,0 +1,72 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kagent-tools
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  targetNamespace: kagent
+  install:
+    createNamespace: true
+  chart:
+    spec:
+      chart: kagent-tools
+      version: "0.2.1"
+      sourceRef:
+        kind: HelmRepository
+        name: kagent-tools
+  # Plain HelmRelease, not the flux-system/charts.yaml ResourceSetInputProvider
+  # pattern -- that shared template's HelmRepository has no `type: oci`, so it
+  # can't source an OCI chart repo (confirmed: this chart is only published to
+  # oci://ghcr.io/kagent-dev/tools/helm, no classic index.yaml repo).
+  #
+  # This whole app is an interim design: one shared ServiceAccount rather than
+  # per-caller OBO token exchange. See docs/adr/0001-kagent-tools-shared-service-account.md
+  # for why, and what would need to change to get to the real design.
+  values:
+    # When true, the chart skips creating its own ServiceAccount/RBAC and pods
+    # use `default` instead -- we want the dedicated read-only RBAC below.
+    useDefaultServiceAccount: false
+    tools:
+      loglevel: "info"
+      # Available: k8s, helm, istio, cilium, argo, prometheus, kubescape, utils.
+      # Limited to what this cluster actually runs: kubectl-wrapper + Helm +
+      # Cilium (the CNI here) + utils (datetime; its `shell` tool is disabled
+      # by --read-only below). Istio/Argo/Prometheus/kubescape don't apply --
+      # this cluster runs Envoy Gateway not Istio, Flux not Argo, and Better
+      # Stack instead of self-hosted Prometheus/Grafana.
+      enabledTools:
+        - k8s
+        - helm
+        - cilium
+        - utils
+      # Confirmed by reading pkg/k8s/k8s.go, pkg/cilium/cilium.go and
+      # pkg/utils/common.go upstream: every mutating/exec tool (k8s_scale,
+      # k8s_apply_manifest, k8s_delete_resource, k8s_execute_command, Cilium's
+      # install/upgrade/endpoint-mutation tools, utils' arbitrary `shell` tool)
+      # lives behind `if !readOnly` and simply isn't registered with this flag
+      # set -- not just hidden from a tool list.
+      args:
+        - "--read-only"
+      k8s:
+        # In-cluster ServiceAccount for kubectl auth, not a passed-through
+        # bearer token -- consistent with the ai-gateway-mcp MCPRoute never
+        # forwarding the client's Auth0 token to any backend (see
+        # apps/ai-gateway-mcp/mcp-route.yaml).
+        tokenPassthrough: false
+    rbac:
+      create: true
+      # get/list/watch only; without this the chart grants the ClusterRole
+      # equivalent of cluster-admin (confirmed via the chart's
+      # templates/clusterrole.yaml).
+      readOnly: true
+      allowSecrets: false
+      # The default read-only ClusterRole only covers core/apps/batch/
+      # networking.k8s.io/autoscaling resources -- Cilium CRDs (used by
+      # cilium_status_and_version, list_identities, etc.) need an explicit
+      # addition.
+      additionalRules:
+        - apiGroups: ["cilium.io"]
+          resources: ["*"]
+          verbs: ["get", "list", "watch"]

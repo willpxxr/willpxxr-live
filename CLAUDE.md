@@ -47,6 +47,7 @@ cluster configuration via FluxCD (GitOps).
 ├── data.tf                                  # Cloudflare zone/account data sources
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
+├── docs/adr/                                # Architecture decision records -- see docs/adr/README.md
 └── gitops/clusters/{de/hetzner,uk/prod}/cluster/
     ├── flux-system/    # Kustomizations, the ResourceSetInputProvider chart machinery, cluster-wide network policy
     └── apps/<name>/    # One directory per deployed component

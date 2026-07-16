@@ -57,3 +57,22 @@ spec:
   validation:
     wellKnownCACertificates: "System"
     hostname: mcp.betterstack.com
+---
+# kagent-tools (apps/kagent-tools/) -- an in-cluster MCP server, not an
+# external SaaS one, so this Backend uses the Service's in-cluster DNS name
+# instead of a public FQDN and skips BackendTLSPolicy (plain HTTP within the
+# cluster, no TLS termination needed). A plain Service backendRef wasn't an
+# option here: MCPRoute's backendRefs must live in the same namespace as the
+# MCPRoute itself (envoy-gateway-system), not kagent -- routing through a
+# Backend object (which can point anywhere via `endpoints.fqdn`) sidesteps
+# that restriction, same reason kiwi/betterstack use it.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: kagent-tools
+  namespace: envoy-gateway-system
+spec:
+  endpoints:
+    - fqdn:
+        hostname: kagent-tools.kagent.svc.cluster.local
+        port: 8084

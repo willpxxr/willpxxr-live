@@ -24,3 +24,4 @@ resources:
 - kustomization-otel-collector-agent.yaml
 - kustomization-otel-collector-gateway.yaml
 - kustomization-beyla.yaml
+- kustomization-kagent-tools.yaml
