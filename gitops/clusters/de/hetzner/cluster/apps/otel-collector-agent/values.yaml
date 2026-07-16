@@ -51,6 +51,25 @@ extraEnvs:
         key: ingestingHost
 
 config:
+  processors:
+    # Drops verbose Go runtime internals (memstats/GC/scheduler breakdowns)
+    # this collector's self-scrape emits about its own process -- see the
+    # matching (fuller) filter in apps/otel-collector-gateway/values.yaml for
+    # the Envoy-side cuts that don't apply here.
+    filter/metrics:
+      error_mode: ignore
+      metrics:
+        metric:
+          - 'IsMatch(name, "^go_memstats_")'
+          - 'IsMatch(name, "^go_gc_(duration_seconds|heap_|cycles_|cleanups_|finalizers_)")'
+          - 'IsMatch(name, "^go_sched_(latencies|pauses)_")'
+          - 'IsMatch(name, "^go_cpu_classes_")'
+          - 'IsMatch(name, "^go_cgo_")'
+    # Downsamples what survives the filter above to one point/60s per series
+    # -- see the matching comment in
+    # apps/otel-collector-gateway/values.yaml for the aggregation semantics.
+    interval:
+      interval: 60s
   exporters:
     otlphttp/betterstack:
       endpoint: "https://${env:BETTERSTACK_INGESTING_HOST}"
@@ -62,6 +81,12 @@ config:
         exporters:
           - otlphttp/betterstack
       metrics:
+        processors:
+          - filter/metrics
+          - k8s_attributes
+          - memory_limiter
+          - interval
+          - batch
         exporters:
           - otlphttp/betterstack
       traces:

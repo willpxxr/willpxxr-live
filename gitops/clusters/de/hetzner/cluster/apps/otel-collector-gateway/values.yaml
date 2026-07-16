@@ -115,6 +115,34 @@ config:
               - source_labels: [__meta_kubernetes_pod_name]
                 action: replace
                 target_label: k8s.pod.name
+  processors:
+    # Drops verbose, rarely-dashboarded metric families before they leave the
+    # cluster: Go runtime internals (memstats/GC/scheduler breakdowns from
+    # cert-manager, flux-operator, envoy-gateway control plane) and Envoy's
+    # per-cluster SSL/SDS cert-rotation + LB-subset/zone-routing diagnostics
+    # (this cluster is single-zone, so subset/zone stats are dead weight).
+    # Circuit breakers, membership health, request counts/latencies and
+    # everything else stay untouched.
+    filter/metrics:
+      error_mode: ignore
+      metrics:
+        metric:
+          - 'IsMatch(name, "^go_memstats_")'
+          - 'IsMatch(name, "^go_gc_(duration_seconds|heap_|cycles_|cleanups_|finalizers_)")'
+          - 'IsMatch(name, "^go_sched_(latencies|pauses)_")'
+          - 'IsMatch(name, "^go_cpu_classes_")'
+          - 'IsMatch(name, "^go_cgo_")'
+          - 'IsMatch(name, "^envoy_sds_")'
+          - 'IsMatch(name, "^envoy_cluster_(ssl_|client_ssl_socket_factory_)")'
+          - 'IsMatch(name, "^envoy_cluster_lb_(subsets|zone)_")'
+    # Downsamples what survives the filter above to one point/60s per series
+    # instead of forwarding every ~10-30s scrape sample. Cumulative
+    # sums/histograms lose only resolution, not data (the running total is
+    # still exact at each interval boundary); gauges keep the latest value
+    # in the window and drop the rest -- acceptable, dashboards here don't
+    # need sub-minute metric resolution.
+    interval:
+      interval: 60s
   exporters:
     otlphttp/betterstack:
       endpoint: "https://${env:BETTERSTACK_INGESTING_HOST}"
@@ -126,6 +154,12 @@ config:
         exporters:
           - otlphttp/betterstack
       metrics:
+        processors:
+          - filter/metrics
+          - k8s_attributes
+          - memory_limiter
+          - interval
+          - batch
         exporters:
           - otlphttp/betterstack
       traces:
