@@ -79,21 +79,28 @@ gitops/clusters/de/hetzner/cluster/
     ├── app.yaml                 # every app: declarative metadata (the "abstract yaml")
     ├── values.yaml              # helm apps only; consumed by the helm source,
     │                            #   never synced as a manifest
-    └── <extra manifests>        # only the files extraManifests declares
-                                 #   (today: namespace.yaml, network-policy.yaml)
+    └── <manifests>              # only the files the app.yaml `manifests` list
+                                 #   declares (today: namespace.yaml, network-policy.yaml)
 ```
 
-Apps come in three shapes, all expressed in `app.yaml`:
+An app declares any combination of three source kinds in `app.yaml`; they
+compose freely because the rendered Application is multi-source and syncs all
+declared sources as one unit:
 
-1. **helm-only** (minimal: just `app.yaml` + `values.yaml`) — the chart owns
-   everything the app needs. Rare here by convention (see below).
-2. **helm + extra manifests** (today's norm for chart apps) — the chart plus a
-   few plain manifests the chart can't own. Every chart app in this repo
-   carries `network-policy.yaml` (the default-deny posture convention), so the
-   typical helm app declares `extraManifests: [namespace.yaml,
-   network-policy.yaml]`.
-3. **manifest-only** — no `helm:` key; the whole directory (minus `app.yaml`)
-   is the app's manifests (`ai-gateway-llm`, `gateway`, `policy`, ...).
+1. **helm** (`helm:`) — one entry per Helm release (a chart app's norm). Rare
+   minimal case: helm-only, no `manifests:` — the dir is just `app.yaml` +
+   `values.yaml`. Rare here by convention (see below).
+2. **kustomize** (`kustomize:`) — one entry per kustomize target, for
+   components distributed as kustomize (a git repo + path + revision) rather
+   than as a chart. None today; part of the schema so the abstraction is
+   complete.
+3. **manifests** (`manifests:`) — the app dir's own plain manifests
+   (`namespace.yaml`, `network-policy.yaml`, ...). Every chart app in this
+   repo carries `network-policy.yaml` (the default-deny posture convention),
+   so the typical helm app declares
+   `manifests: [namespace.yaml, network-policy.yaml]`. A **manifest-only**
+   app (no `helm:`/`kustomize:`) is just a `manifests:` list
+   (`ai-gateway-llm`, `gateway`, `policy`, ...).
 
 Bootstrap is one-time and manual (documented as a `scripts/` helper):
 
@@ -108,7 +115,7 @@ Each app declares its shape; one ApplicationSet (git files generator over
 `apps/*/app.yaml` and `policy/app.yaml`) renders an Application per file:
 
 ```yaml
-# helm + extra manifests -- today's norm for chart apps (e.g. external-secrets)
+# helm + manifests -- today's norm for chart apps (e.g. external-secrets)
 name: external-secrets
 namespace: external-secrets
 helm:                                            # omit for manifest-only apps
@@ -116,8 +123,9 @@ helm:                                            # omit for manifest-only apps
     chart: external-secrets
     version: ""          # "" = track latest (RSIP parity); set to pin
     releaseName: external-secrets-external-secrets  # must match live name (adoption)
-extraManifests:          # optional; only valid alongside helm:
-  - namespace.yaml       # path globs relative to the app dir
+    values: values.yaml  # consumed by the helm source; never synced as a manifest
+manifests:               # path globs relative to the app dir, synced as plain manifests
+  - namespace.yaml
   - network-policy.yaml
 ```
 
@@ -132,31 +140,66 @@ helm:
     chart: some-chart
     version: ""
     releaseName: some-ns-some-chart
+    values: values.yaml
 ```
 
 ```yaml
-# manifest-only -- whole dir (minus app.yaml) synced as manifests
+# manifest-only -- no helm key; manifests lists every file to sync
 name: gateway
 namespace: envoy-gateway-system
+manifests:
+  - gateway.yaml
+  - gateway-ingress.yaml
+  - hubble-ingress.yaml
+  - issuer.yaml
+  - certificate.yaml
 ```
 
-`extraManifests` semantics: a list of path globs (relative to the app dir)
-rendered as the directory source's `include` pattern; `app.yaml` and
-`values.yaml` are always excluded from manifest syncing. Defaults: helm apps
-without `extraManifests` get **no** directory source; manifest-only apps
-(no `helm:` key) implicitly get the whole directory, so they never need to
-enumerate their own files.
+```yaml
+# all three kinds at once -- one Application, one sync unit
+name: combo-app
+namespace: combo
+helm:
+  - repoURL: https://charts.example.com
+    chart: some-chart
+    version: ""
+    releaseName: combo-some-chart
+    values: values.yaml
+kustomize:
+  - repoURL: https://github.com/some-org/kustomized-component
+    path: deploy/overlays/production
+    revision: ""         # "" = track the repo's default branch
+manifests:
+  - namespace.yaml
+  - network-policy.yaml
+```
 
-The ApplicationSet template (goTemplate) renders a **multi-source
-Application** per entry:
+`manifests` semantics: a list of path globs (relative to the app dir) synced
+as plain manifests via one directory source whose `include` pattern is built
+from the list. **Nothing is synced implicitly** — a file only lands on the
+cluster if it's listed. That makes `app.yaml` the app's index and keeps
+stray/scratch files from being applied by accident (something Flux's
+directory-scanning behavior allowed). The tradeoff: adding a manifest file
+means touching `app.yaml` in the same commit, or the file silently never
+syncs — the `verify-infra-change` skill should diff app dirs against their
+`manifests` lists. `app.yaml` and `values.yaml` are never synced as manifests
+(they're simply not listed). `kustomize` entries take `repoURL`/`path`/
+`revision` (revision "" = track the default branch); `helm` entries take an
+optional per-entry `values:` filename, so multi-release dirs like
+envoy-ai-gateway don't have to share one values file.
 
-- one **helm source per `helm` entry** (`valueFiles: [values.yaml]`,
-  `CreateNamespace=true`) — naturally handles envoy-ai-gateway's two releases
-  (main chart + CRDs chart) from one dir;
-- one **directory source** when the app has extra manifests: `include` built
-  from `extraManifests` (or the whole dir for manifest-only apps) — replicating
-  how Flux's kustomize-controller applied the dir's plain manifests alongside
-  the chart, but opt-in and file-explicit rather than implicit;
+The ApplicationSet template (goTemplate) renders one **multi-source
+Application** per app, combining every declared source kind:
+
+- one **helm source per `helm` entry** (`valueFiles` from the entry's
+  `values:` file, `CreateNamespace=true`) — handles envoy-ai-gateway's two
+  releases (main chart + CRDs chart) from one dir, each with its own values
+  file if needed;
+- one **kustomize source per `kustomize` entry** (`path` + `targetRevision`);
+- one **directory source** when `manifests` is non-empty: `include` built from
+  the list — replicating how Flux's kustomize-controller applied the dir's
+  plain manifests alongside the chart, but explicit and per-file rather than
+  implicit;
 - `syncPolicy.automated` + `selfHeal` + `prune` + `retry` (backoff);
 - destination namespace from `namespace`.
 
