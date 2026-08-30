@@ -46,8 +46,10 @@ spec:
             factor: 2
             maxDuration: 10m
   # hasKey guards everywhere an app.yaml may omit a key -- goTemplate is
-  # strict about missing map keys. All sequence items are emitted at one
-  # consistent indent so the patch is always valid YAML.
+  # strict about missing map keys. The git files generator exposes the file
+  # path as an OBJECT in goTemplate mode (hence .path.path, not .path).
+  # All sequence items are emitted at one consistent indent so the patch is
+  # always valid YAML.
   templatePatch: |
     spec:
       {{- if and (hasKey . "namespace") .namespace }}
@@ -59,7 +61,7 @@ spec:
         - repoURL: https://github.com/willpxxr/willpxxr-live.git
           targetRevision: main
           ref: app
-          path: {{ trimSuffix "/app.yaml" .path }}
+          path: {{ trimSuffix "/app.yaml" .path.path }}
         {{- range .helm }}
         - repoURL: {{ .repoURL }}
           chart: {{ .chart }}
@@ -82,7 +84,7 @@ spec:
       {{- if and (hasKey . "manifests") .manifests }}
         - repoURL: https://github.com/willpxxr/willpxxr-live.git
           targetRevision: main
-          path: {{ trimSuffix "/app.yaml" .path }}
+          path: {{ trimSuffix "/app.yaml" .path.path }}
           directory:
             include: "{ {{- range $i, $e := .manifests }}{{ if $i }},{{ end }}{{ $e }}{{- end -}} }"
       {{- end }}
