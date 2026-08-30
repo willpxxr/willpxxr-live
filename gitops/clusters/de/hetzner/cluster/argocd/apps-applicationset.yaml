@@ -32,10 +32,12 @@ spec:
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:
-        # syncPolicy.automated is deliberately ABSENT until the phase-2 diff
-        # review (WEP-0001): apps render + register but sync nothing until
-        # each Application's diff has been inspected; phase 3's commit adds
-        # `automated: {selfHeal: true, prune: true}` back.
+        # WEP-0001 phase 3: automated sync enabled after the phase-2 diff
+        # review. selfHeal+prune make ArgoCD the sole reconciler; helm
+        # releases are adopted in place (matching releaseNames).
+        automated:
+          selfHeal: true
+          prune: true
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true

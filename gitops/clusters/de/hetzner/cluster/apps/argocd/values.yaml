@@ -42,5 +42,11 @@ configs:
     # Behind that perimeter ArgoCD itself treats every visitor as the
     # default role below (read-only) -- git is the write path, not the UI.
     "users.anonymous.enabled": "true"
+    # Resource tracking: the default label key (app.kubernetes.io/instance)
+    # collides with helm charts' own instance labels (release names) --
+    # syncs would overwrite them and break label selectors. Track via
+    # annotation + a non-conflicting label key instead.
+    "application.trackingMethod": "annotation"
+    "application.instanceLabelKey": "argocd.argoproj.io/instance"
   rbac:
     "policy.default": "role:readonly"
