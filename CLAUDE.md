@@ -19,11 +19,11 @@ cluster configuration via FluxCD (GitOps).
 
 ## Tech stack
 
-- **Terraform** `~> 1.9` — remote backend (`backend.tf`), no local `terraform apply`
-  expected.
+- **Terraform** `>= 1.11` (see `providers.tf`'s `required_version`) — remote backend
+  (`backend.tf`), no local `terraform apply` expected.
 - **Providers**: `cloudflare` (DNS/WAF/redirects for willpxxr.com), `oci` (legacy
   cluster, mostly decommission bookkeeping), `hcloud`/`talos` (the active cluster),
-  `tailscale`, `onepassword`, `auth0`, `openrouter`, `logtail` (Better Stack). Plus
+  `tailscale`, `onepassword`, `auth0`, `logtail` (Better Stack). Plus
   `kubernetes`/`helm`/`kubectl`/`tls` for the small set of bootstrap-only k8s objects
   Terraform manages directly (see below).
 - **FluxCD** (flux-operator, Kustomizations, HelmReleases) reconciles everything
@@ -43,7 +43,8 @@ cluster configuration via FluxCD (GitOps).
 ├── hetzner.tf                               # de/hetzner Talos cluster (hcloud-talos module)
 ├── tailscale.tf                             # Tailscale ACL/OAuth client + bootstrap k8s namespaces/Secret
 ├── auth0.tf                                 # Auth0 clients/scopes for every Envoy Gateway SecurityPolicy
-├── openrouter.tf, betterstack.tf            # Per-service Terraform-provisioned API credentials
+├── betterstack.tf                           # Terraform-provisioned Better Stack API credentials/source
+├── synthetic.tf                             # Synthetic LLM key: 1Password item w/ placeholder, value pasted by hand
 ├── data.tf                                  # Cloudflare zone/account data sources
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
@@ -106,9 +107,14 @@ Each `apps/<name>/` directory typically has:
   `<item-title>/credentials/<field>`. When the secret's origin is another
   Terraform-managed provider resource rather than something typed in by hand, a
   matching `onepassword_item` resource writes it into that vault from the relevant
-  `.tf` file (see `openrouter.tf`, `tailscale.tf`, `betterstack.tf`) — prefer this
+  `.tf` file (see `tailscale.tf`, `betterstack.tf`) — prefer this
   over asking a human to paste a secret into 1Password whenever the upstream
-  service has a usable Terraform provider.
+  service has a usable Terraform provider. When it doesn't (e.g. Synthetic's
+  LLM-gateway API key, `synthetic.tf`), Terraform creates the item with a
+  placeholder value plus `lifecycle { ignore_changes = [section_map] }` (so
+  later applies don't revert the hand-pasted key) and a human pastes the
+  real value into the item afterwards; the `<item-title>/credentials/<field>`
+  key layout still applies.
 
 ## Observability (`otel-collector`)
 
@@ -167,7 +173,6 @@ never hard-coded:
 - `var.tailscale_bootstrap_oauth_client_id`
 - `var.onepassword_terraform_service_account_token`
 - `var.auth0_domain`, `var.auth0_mgmt_client_id`, `var.auth0_mgmt_client_secret`
-- `var.openrouter_api_key`
 - `var.betterstack_api_token`
 
 ## Keeping this file current

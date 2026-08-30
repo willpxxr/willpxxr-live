@@ -25,7 +25,7 @@ Ask (or infer from the task) before scaffolding:
   or another namespace's pods (needs an ingress/egress rule naming that namespace)?
 - **Secrets**: does it need one from 1Password? Is the secret's value something a
   human must paste in, or can a Terraform provider resource produce it (prefer the
-  latter — see `openrouter.tf`/`tailscale.tf`/`betterstack.tf` for the pattern of a
+  latter — see `tailscale.tf`/`betterstack.tf` for the pattern of a
   provider resource + `onepassword_item` writing into the `kubernetes` vault)?
 
 ## 2. Files to create

@@ -103,6 +103,11 @@ provider "auth0" {
   client_secret = var.auth0_mgmt_client_secret
 }
 
+# Retained ONLY so Terraform can destroy the openrouter_* resources in
+# state (the provider is needed throughout the destroy to talk to
+# OpenRouter's API) -- no openrouter resources remain in config. Remove
+# this block (and the required_providers entry, variable, and the TFC
+# workspace variable) once that apply has run.
 provider "openrouter" {
   api_key = var.openrouter_api_key
 }

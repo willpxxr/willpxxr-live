@@ -21,7 +21,26 @@ terraform fmt -check -diff <files...>
 If new provider blocks or resources were added, also sanity-check
 `terraform validate` if a local init is feasible — but don't run
 `terraform apply`/`plan` locally against the real workspace; that's Terraform
-Cloud's job once pushed.
+Cloud's job once pushed. A speculative `terraform plan` against the real
+TFC backend IS safe to run if the user has `terraform login` credentials —
+the workspace is VCS-driven, so the remote run is plan-only with no apply
+path from the CLI, and it's the only real pre-push check of provider/
+variable interactions.
+
+Two gotchas learned the hard way:
+
+- **Removing a provider while its resources remain in state fails the
+  plan** — Terraform needs the provider configured throughout a destroy
+  (it must talk to the upstream API to delete things). When decommissioning
+  a provider-backed integration, delete the resources but keep the provider
+  block, `required_providers` entry, and input variable for one apply cycle;
+  remove them in a follow-up commit once the destroy has applied (leave a
+  comment saying so).
+- **Registry modules with floating version ranges (e.g. `~> 3.1`) are not
+  locked** — only providers are (`.terraform.lock.hcl`). A speculative plan
+  can therefore surface unrelated in-place changes from a newer upstream
+  module release riding along with your change; call these out to the user
+  rather than assuming they're an error in your diff.
 
 ## 2. Kubernetes manifests (`gitops/`)
 

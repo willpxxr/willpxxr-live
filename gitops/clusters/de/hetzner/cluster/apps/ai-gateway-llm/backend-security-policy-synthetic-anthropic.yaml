@@ -1,16 +1,19 @@
 ---
+# Reuses the same synthetic Secret as
+# backend-security-policy-synthetic.yaml -- same subscription API key,
+# just applied to the Anthropic-schema AIServiceBackend too.
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: BackendSecurityPolicy
 metadata:
-  name: openrouter-apikey
+  name: synthetic-anthropic-apikey
   namespace: envoy-gateway-system
 spec:
   targetRefs:
     - group: aigateway.envoyproxy.io
       kind: AIServiceBackend
-      name: openrouter
+      name: synthetic-anthropic
   type: APIKey
   apiKey:
     secretRef:
-      name: openrouter
+      name: synthetic
       namespace: envoy-gateway-system

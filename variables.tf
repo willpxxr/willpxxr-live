@@ -41,9 +41,12 @@ variable "auth0_mgmt_client_secret" {
   description = "Client secret for the Auth0 Management API M2M application above."
 }
 
+# Retained only to decommission the openrouter provider (see the comment
+# on its providers.tf block) -- remove it and the TFC workspace variable
+# once the destroy apply has run.
 variable "openrouter_api_key" {
   sensitive   = true
-  description = "OpenRouter provisioning/management API key (from OpenRouter's dashboard), used to authenticate the openrouter Terraform provider so it can create scoped API keys via openrouter_api_key. Distinct from any regular per-app API key."
+  description = "OpenRouter provisioning/management API key. No openrouter resources remain in config; this only authenticates the provider for the destroy of the state-held resources."
 }
 
 variable "betterstack_api_token" {

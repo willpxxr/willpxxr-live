@@ -25,25 +25,31 @@ spec:
     bufferLimit: 10Mi
 ---
 # Backend-side equivalent -- without this, even once the request gets
-# through, a large response from openrouter.ai (a substantial completion,
-# or one of the larger max_tokens values in crush.json) hits the same
-# 32KB default on the upstream connection and comes back as a 500
-# (response_payload_too_large), confirmed live.
+# through, a large response from the LLM upstream (a substantial
+# completion, or one of the larger max_tokens values in crush.json) hits
+# the same 32KB default on the upstream connection and comes back as a
+# 500 (response_payload_too_large), confirmed live.
 #
 # BackendTrafficPolicy can only target Gateway/HTTPRoute/GRPCRoute/
 # TCPRoute/UDPRoute/TLSRoute under gateway.networking.k8s.io (confirmed
 # via a live validation rejection when this targeted the Backend object
-# directly) -- targets the underlying generated HTTPRoute instead, same
-# one SecurityPolicy targets elsewhere in this app (see security-policy.yaml).
+# directly) -- targets the underlying generated HTTPRoutes instead, the
+# same ones the SecurityPolicies target elsewhere in this app (see
+# security-policy.yaml). Both AIGatewayRoutes in this app are targeted:
+# the buffer limit applies per upstream connection through the route, so
+# the synthetic-anthropic route's responses need it just as much.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: openrouter-buffer-limit
+  name: ai-gateway-backend-buffer-limit
   namespace: envoy-gateway-system
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: ai-gateway-llm
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm-synthetic-anthropic
   connection:
     bufferLimit: 10Mi

@@ -1,0 +1,25 @@
+---
+# Anthropic Messages API counterpart to ai-service-backend-synthetic.yaml:
+# same underlying Backend (api.synthetic.new:443, same subscription/API
+# key), only the wire format differs. Synthetic natively serves Anthropic
+# Messages at /anthropic/v1/messages (confirmed live: POST
+# https://api.synthetic.new/anthropic/v1/messages -> 401 unauthenticated
+# rather than 404), so this is a pure pass-through with no gateway-side
+# translation. prefix "/anthropic" REPLACES the schema's default "/v1"
+# (it isn't prepended to it) -- same prefix semantics confirmed live on
+# the AIServiceBackend CRD previously (see git history for the
+# openrouter backend, whose API was rooted at /api/v1 via the same
+# mechanism).
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: synthetic-anthropic
+  namespace: envoy-gateway-system
+spec:
+  schema:
+    name: Anthropic
+    prefix: "/anthropic"
+  backendRef:
+    name: synthetic
+    kind: Backend
+    group: gateway.envoyproxy.io

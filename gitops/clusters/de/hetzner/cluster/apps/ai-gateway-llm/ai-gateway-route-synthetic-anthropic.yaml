@@ -1,0 +1,157 @@
+---
+# Anthropic Messages API counterpart to the synthetic rule in
+# ai-gateway-route.yaml. Anthropic-format clients address models with an
+# "anthropic:" prefix, and modelNameOverride strips it back to the real
+# upstream model id on each backendRef. The prefix is required, not
+# cosmetic -- confirmed live (originally with the since-removed
+# openrouter-anthropic route, whose file this is modelled on):
+# AIGatewayRoute only supports header matching (no path), and the
+# generated HTTPRoute's path match is a hardcoded catch-all (PathPrefix:
+# /) regardless of backend schema, so a plain (non-prefixed) model name
+# used by both the OpenAI-facing and an Anthropic-facing route is
+# genuinely ambiguous at the Gateway API routing layer. Anthropic
+# requests are also registered at /anthropic/v1/messages, not bare
+# /v1/messages (confirmed live via the extproc deployment flags
+# --endpointPrefixes=...anthropic:/anthropic). The "anthropic:" namespace
+# can't collide with the OpenAI-facing rule because that rule's regex
+# requires the value to START with "syn:"/"hf:".
+#
+# Unlike the OpenAI-facing rule (one regex covering all Synthetic ids),
+# the rules here are enumerated per-model: modelNameOverride is a plain
+# per-backendRef string (confirmed via the live CRD schema), not a
+# template with regex capture, so there's no way to strip the "anthropic:"
+# prefix generically. Keep in sync with api.synthetic.new's /v1/models --
+# new models need a new rule here (each syn:* alias is its own upstream
+# id, so the aliases get their own rules alongside the hf:* ids rather
+# than mapping to them via override).
+#
+# headerMutation strips the client's original x-api-key -- confirmed live
+# this is required: BackendSecurityPolicy always injects the real
+# Synthetic key into Authorization specifically (confirmed via the live
+# CRD field description), never x-api-key, so a client authenticating to
+# THIS gateway via x-api-key (crush's native Anthropic provider; Claude
+# Code sends both headers) would otherwise leave its own Auth0 JWT
+# sitting in x-api-key all the way through to Synthetic, unreplaced.
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm-synthetic-anthropic
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: plaintext
+  hostnames:
+    - "ai.tailb40090.ts.net"
+  rules:
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:syn:large:text
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: syn:large:text
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:syn:small:text
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: syn:small:text
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:syn:large:vision
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: syn:large:vision
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:syn:small:vision
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: syn:small:vision
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:hf:openai/gpt-oss-120b
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: hf:openai/gpt-oss-120b
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:hf:zai-org/GLM-5.3-Flash
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: hf:zai-org/GLM-5.3-Flash
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:hf:zai-org/GLM-5.2
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: hf:zai-org/GLM-5.2
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:hf:moonshotai/Kimi-K3
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: hf:moonshotai/Kimi-K3
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:hf:Qwen/Qwen3.8-27B
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: hf:Qwen/Qwen3.8-27B
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:hf:zai-org/GLM-4.7-Flash
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: hf:zai-org/GLM-4.7-Flash
+          headerMutation:
+            remove:
+              - x-api-key
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: anthropic:hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4
+      backendRefs:
+        - name: synthetic-anthropic
+          modelNameOverride: hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4
+          headerMutation:
+            remove:
+              - x-api-key

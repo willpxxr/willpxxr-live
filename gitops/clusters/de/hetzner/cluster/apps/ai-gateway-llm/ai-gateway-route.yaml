@@ -12,24 +12,25 @@ spec:
   hostnames:
     - "ai.tailb40090.ts.net"
   rules:
-    # Explicit model matches (x-ai-eg-model, extracted from the request
-    # body's model field before routing) rather than a catch-all --
-    # required so the privacy-sensitive free models in
-    # ai-gateway-route-free.yaml can be gated by a separate SecurityPolicy
-    # (llm-free:use) without this route's catch-all also matching them.
-    # AIGatewayRoute rules have no name/sectionName field to target rules
-    # individually within one route (confirmed via the live CRD schema),
-    # so the split is across two AIGatewayRoute resources instead, each
-    # generating its own independently-targetable HTTPRoute (same
-    # hostname/parentRef, disambiguated by these header matches). Single
-    # rule via RegularExpression matching (RE2 syntax, confirmed
-    # supported via the live CRD schema) rather than one rule per model,
-    # same pattern as ai-gateway-route-free.yaml. Keep in sync with
-    # allowed_models in openrouter.tf's openrouter_guardrail.gateway.
+    # Explicit model match (x-ai-eg-model, extracted from the request
+    # body's model field before routing) rather than a catch-all, so the
+    # upstream only ever sees model names it can actually serve. One
+    # RegularExpression rule (RE2 syntax, confirmed supported via the live
+    # CRD schema) deliberately covering both of Synthetic's id families --
+    # syn:* curated aliases and hf:* per-HuggingFace-repo ids, confirmed
+    # live via api.synthetic.new's /v1/models -- so newly-added models
+    # route with no config change. Synthetic has no server-side model
+    # allowlist to keep in sync, and it's flat-rate, so there's no
+    # per-model cost exposure to gating.
+    #
+    # The regex requires the value to START with syn:/hf:, which is what
+    # keeps it unambiguous against ai-gateway-route-synthetic-anthropic.yaml's
+    # "anthropic:"-prefixed matches (same hostname/parentRef, disambiguated
+    # purely by these header matches).
     - matches:
         - headers:
             - name: x-ai-eg-model
               type: RegularExpression
-              value: '^deepseek/deepseek-v4-(flash|pro)$'
+              value: '^(syn|hf):.+$'
       backendRefs:
-        - name: openrouter
+        - name: synthetic

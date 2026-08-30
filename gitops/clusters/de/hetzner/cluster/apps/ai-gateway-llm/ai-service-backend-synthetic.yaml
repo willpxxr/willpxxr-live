@@ -1,0 +1,18 @@
+---
+# Synthetic (synthetic.new), the flat-rate subscription provider -- its
+# OpenAI-compatible API lives at the standard /v1 prefix (confirmed live:
+# POST https://api.synthetic.new/v1/chat/completions -> 401
+# unauthenticated rather than 404), so no `prefix` override is needed
+# (the OpenAI schema defaults to /v1/chat/completions).
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: synthetic
+  namespace: envoy-gateway-system
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: synthetic
+    kind: Backend
+    group: gateway.envoyproxy.io

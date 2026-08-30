@@ -1,14 +1,18 @@
 ---
+# Same requirement as security-policy.yaml (llm:use, same JWT provider),
+# just targeting the synthetic-anthropic route's generated HTTPRoute. The
+# extra x-api-key extraction is for crush's native Anthropic provider,
+# which sends the token via x-api-key rather than Authorization:Bearer.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: ai-gateway-llm-free
+  name: ai-gateway-llm-synthetic-anthropic
   namespace: envoy-gateway-system
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: ai-gateway-llm-free
+      name: ai-gateway-llm-synthetic-anthropic
   jwt:
     providers:
       - name: auth0
@@ -17,17 +21,17 @@ spec:
           uri: "https://auth.willpxxr.com/.well-known/jwks.json"
         audiences:
           - "https://ai.tailb40090.ts.net"
+        extractFrom:
+          headers:
+            - name: Authorization
+              valuePrefix: "Bearer "
+            - name: x-api-key
   authorization:
     defaultAction: Deny
     rules:
-      # Both scopes required (confirmed via the live CRD field
-      # description: "If multiple scopes are specified, all scopes must
-      # match") -- llm:use alone (sufficient for the standard models in
-      # security-policy.yaml) is not enough here.
       - action: Allow
         principal:
           jwt:
             provider: auth0
             scopes:
               - "llm:use"
-              - "llm-free:use"
