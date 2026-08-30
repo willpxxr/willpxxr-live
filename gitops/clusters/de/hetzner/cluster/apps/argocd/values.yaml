@@ -57,9 +57,9 @@ configs:
     "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_EnvoyProxy": |
       jqPathExpressions:
         - .spec.telemetry.tracing.provider.port
-        - .spec.telemetry.tracing.provider.backendRefs[].group
-        - .spec.telemetry.tracing.provider.backendRefs[].kind
-        - .spec.telemetry.tracing.provider.backendRefs[].weight
+        - .spec.telemetry.tracing.provider.backendRefs[]?.group
+        - .spec.telemetry.tracing.provider.backendRefs[]?.kind
+        - .spec.telemetry.tracing.provider.backendRefs[]?.weight
       jsonPointers:
         - /spec/logging
         - /spec/provider/kubernetes/envoyService/externalTrafficPolicy
@@ -68,24 +68,24 @@ configs:
         - .spec.jwt.providers[].remoteJWKS.cacheDuration
     "resource.customizations.ignoreDifferences.gateway.networking.k8s.io_Gateway": |
       jqPathExpressions:
-        - .spec.listeners[].tls.certificateRefs[].group
-        - .spec.listeners[].tls.certificateRefs[].kind
+        - .spec.listeners[].tls?.certificateRefs[]?.group
+        - .spec.listeners[].tls?.certificateRefs[]?.kind
     "resource.customizations.ignoreDifferences.gateway.networking.k8s.io_HTTPRoute": |
       jqPathExpressions:
         - .spec.parentRefs[].group
         - .spec.parentRefs[].kind
-        - .spec.rules[].backendRefs[].group
-        - .spec.rules[].backendRefs[].kind
-        - .spec.rules[].backendRefs[].weight
-        - .spec.rules[].matches[].path
+        - .spec.rules[].backendRefs[]?.group
+        - .spec.rules[].backendRefs[]?.kind
+        - .spec.rules[].backendRefs[]?.weight
+        - .spec.rules[].matches[]?.path
     "resource.customizations.ignoreDifferences.aigateway.envoyproxy.io_AIGatewayRoute": |
       jqPathExpressions:
         - .spec.parentRefs[].group
         - .spec.parentRefs[].kind
         - .spec.rules[].modelsOwnedBy
         - .spec.rules[].backendRefs[].priority
-        - .spec.rules[].backendRefs[].weight
-        - .spec.rules[].matches[].headers[].type
+        - .spec.rules[].backendRefs[]?.weight
+        - .spec.rules[].matches[]?.headers[]?.type
     "resource.customizations.ignoreDifferences.aigateway.envoyproxy.io_MCPRoute": |
       jqPathExpressions:
         - .spec.parentRefs[].group
