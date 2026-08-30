@@ -48,6 +48,7 @@ cluster configuration via FluxCD (GitOps).
 ├── data.tf                                  # Cloudflare zone/account data sources
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
+├── .opencode/                               # opencode global config + ai-gateway-auth plugin (see "opencode config" below)
 ├── docs/adr/                                # Architecture decision records -- see docs/adr/README.md
 └── gitops/clusters/{de/hetzner,uk/prod}/cluster/
     ├── flux-system/    # Kustomizations, the ResourceSetInputProvider chart machinery, cluster-wide network policy
@@ -73,6 +74,16 @@ cluster configuration via FluxCD (GitOps).
   reconcile with no PR/plan-only step in between to catch mistakes first, run the
   `verify-infra-change` skill (see below) before pushing, not after something
   breaks.
+
+## opencode config
+
+`.opencode/` holds the canonical opencode global config: `opencode.jsonc`
+repoints the built-in `synthetic` provider at the AI gateway
+(`https://ai.tailb40090.ts.net/v1`), and `plugin/ai-gateway-auth.ts` registers
+the Auth0 PKCE OAuth flow on it (`opencode auth login synthetic`, silent
+refresh afterwards). `~/.config/opencode/` symlinks to these files, so edit
+them here, not there. The Auth0 `client_id` in the plugin is a public PKCE
+native client (no secret exists), so committing it is fine.
 
 ## GitOps app conventions (de/hetzner cluster)
 

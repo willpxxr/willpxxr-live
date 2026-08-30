@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Route the built-in "synthetic" provider (models.dev, @ai-sdk/openai-compatible)
+  // through the self-hosted gateway instead of api.synthetic.new directly. Auth
+  // is OAuth via the plugin/ai-gateway-auth.ts plugin alongside this file
+  // (`opencode auth login synthetic`), not an API key -- the gateway gates
+  // access with Auth0 JWTs (llm:use), NOT Synthetic's own key.
+  //
+  // This file and plugin/ are the canonical copies; ~/.config/opencode
+  // symlinks to them so this repo is the single source of truth for the
+  // global opencode config.
+  "provider": {
+    "synthetic": {
+      "options": {
+        "baseURL": "https://ai.tailb40090.ts.net/v1"
+      }
+    }
+  }
+}
