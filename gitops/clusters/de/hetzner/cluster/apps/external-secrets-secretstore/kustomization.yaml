@@ -1,6 +1,0 @@
-# Explicit file index for the Flux build during the Flux->ArgoCD
-# migration overlap (WEP-0001): keeps app.yaml out of the resource set.
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - secretstore.yaml
