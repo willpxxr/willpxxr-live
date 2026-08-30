@@ -8,7 +8,7 @@
 # read-only ClusterRole (rbac.additionalRules in helmrelease.yaml) -- RBAC
 # can't restrict *which* command runs once pods/exec is granted, so keeping
 # the blast radius to kube-system is the only mitigation available. See
-# docs/adr/0001-kagent-tools-shared-service-account.md.
+# docs/wep/0002-adr-kagent-tools-shared-service-account.md.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

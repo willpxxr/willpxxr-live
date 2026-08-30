@@ -29,7 +29,7 @@ spec:
   # oci://ghcr.io/kagent-dev/tools/helm, no classic index.yaml repo).
   #
   # This whole app is an interim design: one shared ServiceAccount rather than
-  # per-caller OBO token exchange. See docs/adr/0001-kagent-tools-shared-service-account.md
+  # per-caller OBO token exchange. See docs/wep/0002-adr-kagent-tools-shared-service-account.md
   # for why, and what would need to change to get to the real design.
   values:
     # When true, the chart skips creating its own ServiceAccount/RBAC and pods

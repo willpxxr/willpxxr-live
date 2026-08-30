@@ -1,8 +1,11 @@
-# 0001: kagent-tools MCP server -- shared read-only ServiceAccount, defer per-caller OBO token exchange
+# WEP-0002 (ADR): kagent-tools MCP server -- shared read-only ServiceAccount, defer per-caller OBO token exchange
 
 ## Status
 
 Accepted (2026-07-16)
+
+Originally recorded as `docs/adr/0001`; renumbered when ADRs were folded into
+WEPs (see `docs/wep/README.md`).
 
 ## Context
 

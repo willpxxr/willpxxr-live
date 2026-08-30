@@ -49,7 +49,7 @@ cluster configuration via FluxCD (GitOps).
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
 ├── .opencode/                               # opencode global config + ai-gateway-auth plugin (see "opencode config" below)
-├── docs/adr/                                # Architecture decision records -- see docs/adr/README.md
+├── docs/wep/                                 # Willpxxr enhancement proposals (RFC + ADR subtypes) -- see docs/wep/README.md
 └── gitops/clusters/{de/hetzner,uk/prod}/cluster/
     ├── flux-system/    # Kustomizations, the ResourceSetInputProvider chart machinery, cluster-wide network policy
     └── apps/<name>/    # One directory per deployed component

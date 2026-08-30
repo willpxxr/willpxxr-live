@@ -1,4 +1,4 @@
-# RFC 0001: Replace Flux (flux-operator) with ArgoCD ApplicationSets
+# WEP-0001 (RFC): Replace Flux (flux-operator) with ArgoCD ApplicationSets
 
 ## Status
 
@@ -29,9 +29,10 @@ metadata, built-in health assessment, sync waves for ordering, and a UI.
 Migrating also drops the flux-operator entirely (one less controller stack) and
 replaces the ResourceSet machinery with a single declarative generator.
 
-**Scale note**: this is an RFC rather than an ADR — it changes the repo-wide
-GitOps delivery mechanism and requires a staged migration on a live cluster,
-not a single recorded decision.
+**Type**: RFC (expanded WEP) -- it changes the repo-wide GitOps delivery
+mechanism and requires a staged migration on a live cluster, not a single
+recorded decision; single-decision changes use the ADR subtype instead
+(see `docs/wep/README.md`).
 
 ## Current app inventory
 
