@@ -3,8 +3,8 @@
 name: envoy-gateway
 namespace: envoy-gateway-system
 helm:
-  - repoURL: oci://docker.io/envoyproxy
-    chart: gateway-helm
+  - repoURL: oci://docker.io
+    chart: envoyproxy/gateway-helm
     version: 1.8.2
     releaseName: envoy-gateway-system-envoy-gateway
     values: values.yaml

@@ -20,14 +20,18 @@ configs:
   # registries; without this, resolution 401s against registry-1.docker.io.
   # Classic https chart repos (jetstack, grafana, ...) work unregistered.
   repositories:
+    # OCI repo registrations must be the registry ROOT (hostname only) --
+    # deeper URLs fail ArgoCD's connectivity test ("OCI Helm repository URL
+    # should include hostname and port only"). The chart path lives in each
+    # Application's `chart` field instead (e.g. envoyproxy/gateway-helm).
     envoyproxy-oci:
-      url: oci://docker.io/envoyproxy
+      url: oci://docker.io
       name: envoyproxy-oci
       type: helm
       enableOCI: "true"
-    kagent-tools-oci:
-      url: oci://ghcr.io/kagent-dev/tools/helm
-      name: kagent-tools-oci
+    ghcr-oci:
+      url: oci://ghcr.io
+      name: ghcr-oci
       type: helm
       enableOCI: "true"
   params:
