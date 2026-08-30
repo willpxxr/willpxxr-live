@@ -76,11 +76,24 @@ gitops/clusters/de/hetzner/cluster/
 │   ├── root-app.yaml            # app-of-apps: Application -> ./argocd (self-managed)
 │   └── apps-applicationset.yaml # the single generator (below)
 └── apps/<name>/
-    ├── app.yaml                 # NEW: declarative app metadata (the "abstract yaml")
-    ├── values.yaml              # unchanged (helm apps; inline HelmRelease values move here)
-    ├── namespace.yaml           # unchanged
-    └── network-policy.yaml      # unchanged
+    ├── app.yaml                 # every app: declarative metadata (the "abstract yaml")
+    ├── values.yaml              # helm apps only; consumed by the helm source,
+    │                            #   never synced as a manifest
+    └── <extra manifests>        # only the files extraManifests declares
+                                 #   (today: namespace.yaml, network-policy.yaml)
 ```
+
+Apps come in three shapes, all expressed in `app.yaml`:
+
+1. **helm-only** (minimal: just `app.yaml` + `values.yaml`) — the chart owns
+   everything the app needs. Rare here by convention (see below).
+2. **helm + extra manifests** (today's norm for chart apps) — the chart plus a
+   few plain manifests the chart can't own. Every chart app in this repo
+   carries `network-policy.yaml` (the default-deny posture convention), so the
+   typical helm app declares `extraManifests: [namespace.yaml,
+   network-policy.yaml]`.
+3. **manifest-only** — no `helm:` key; the whole directory (minus `app.yaml`)
+   is the app's manifests (`ai-gateway-llm`, `gateway`, `policy`, ...).
 
 Bootstrap is one-time and manual (documented as a `scripts/` helper):
 
@@ -95,15 +108,44 @@ Each app declares its shape; one ApplicationSet (git files generator over
 `apps/*/app.yaml` and `policy/app.yaml`) renders an Application per file:
 
 ```yaml
-# apps/cert-manager/app.yaml
-name: cert-manager
-namespace: cert-manager
-helm:                                    # omit for manifest-only apps
-  - repoURL: https://charts.jetstack.io  # or oci://docker.io/envoyproxy
-    chart: cert-manager
-    version: ""                          # "" = track latest (RSIP parity); set to pin
-    releaseName: cert-manager-cert-manager  # must match live release names (adoption)
+# helm + extra manifests -- today's norm for chart apps (e.g. external-secrets)
+name: external-secrets
+namespace: external-secrets
+helm:                                            # omit for manifest-only apps
+  - repoURL: https://charts.external-secrets.io  # or oci://docker.io/envoyproxy
+    chart: external-secrets
+    version: ""          # "" = track latest (RSIP parity); set to pin
+    releaseName: external-secrets-external-secrets  # must match live name (adoption)
+extraManifests:          # optional; only valid alongside helm:
+  - namespace.yaml       # path globs relative to the app dir
+  - network-policy.yaml
 ```
+
+```yaml
+# helm-only (minimal shape) -- dir contains app.yaml + values.yaml and nothing
+# else; hypothetical today, since the network-policy convention applies to
+# every app's namespace
+name: some-chart-app
+namespace: some-ns
+helm:
+  - repoURL: https://charts.example.com
+    chart: some-chart
+    version: ""
+    releaseName: some-ns-some-chart
+```
+
+```yaml
+# manifest-only -- whole dir (minus app.yaml) synced as manifests
+name: gateway
+namespace: envoy-gateway-system
+```
+
+`extraManifests` semantics: a list of path globs (relative to the app dir)
+rendered as the directory source's `include` pattern; `app.yaml` and
+`values.yaml` are always excluded from manifest syncing. Defaults: helm apps
+without `extraManifests` get **no** directory source; manifest-only apps
+(no `helm:` key) implicitly get the whole directory, so they never need to
+enumerate their own files.
 
 The ApplicationSet template (goTemplate) renders a **multi-source
 Application** per entry:
@@ -111,9 +153,10 @@ Application** per entry:
 - one **helm source per `helm` entry** (`valueFiles: [values.yaml]`,
   `CreateNamespace=true`) — naturally handles envoy-ai-gateway's two releases
   (main chart + CRDs chart) from one dir;
-- one **directory source** for the dir's plain manifests (namespace.yaml,
-  network-policy.yaml, ...) with `exclude: app.yaml` — replicating how Flux's
-  kustomize-controller applied everything in the dir alongside the chart;
+- one **directory source** when the app has extra manifests: `include` built
+  from `extraManifests` (or the whole dir for manifest-only apps) — replicating
+  how Flux's kustomize-controller applied the dir's plain manifests alongside
+  the chart, but opt-in and file-explicit rather than implicit;
 - `syncPolicy.automated` + `selfHeal` + `prune` + `retry` (backoff);
 - destination namespace from `namespace`.
 
