@@ -6,7 +6,7 @@ namespace: beyla
 helm:
   - repoURL: https://grafana.github.io/helm-charts
     chart: beyla
-    version: ""
+    version: 1.16.11
     releaseName: beyla-beyla
     values: values.yaml
 manifests:

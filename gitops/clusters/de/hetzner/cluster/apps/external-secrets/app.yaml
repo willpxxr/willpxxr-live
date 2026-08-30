@@ -6,7 +6,7 @@ namespace: external-secrets
 helm:
   - repoURL: https://charts.external-secrets.io
     chart: external-secrets
-    version: ""
+    version: 2.10.0
     releaseName: external-secrets-external-secrets
     values: values.yaml
 manifests:

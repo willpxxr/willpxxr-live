@@ -4,7 +4,7 @@ namespace: tailscale
 helm:
   - repoURL: https://pkgs.tailscale.com/helmcharts
     chart: tailscale-operator
-    version: ""
+    version: 1.102.3
     releaseName: tailscale-tailscale-operator
     values: values.yaml
 manifests:

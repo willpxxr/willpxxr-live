@@ -68,9 +68,12 @@ spec:
           chart: {{ .chart }}
           {{- end }}
           {{- if .version }}
-          # targetRevision is REQUIRED for helm sources (empty string fails
-          # spec validation); omitting it resolves the latest chart version.
           targetRevision: "{{ .version }}"
+          {{- else }}
+          # targetRevision is REQUIRED for helm sources (empty or omitted
+          # both fail spec validation) -- "*" is the semver any-version
+          # constraint, i.e. track latest (RSIP parity).
+          targetRevision: "*"
           {{- end }}
           helm:
             releaseName: {{ .releaseName }}
