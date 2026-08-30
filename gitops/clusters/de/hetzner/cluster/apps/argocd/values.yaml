@@ -48,5 +48,49 @@ configs:
     # annotation + a non-conflicting label key instead.
     "application.trackingMethod": "annotation"
     "application.instanceLabelKey": "argocd.argoproj.io/instance"
+    # Controller-injected defaults: the Envoy Gateway / AI Gateway
+    # controllers write default fields into their CRs' specs at reconcile
+    # time (verified live by diffing live vs git) -- without these ignores
+    # every one of those resources is permanently OutOfSync. Only fields
+    # this repo never sets are ignored; anything we do set still diffs and
+    # applies (ignoreDifferences affects comparison, not sync).
+    "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_EnvoyProxy": |
+      jqpathexpressions:
+        - .spec.telemetry.tracing.provider.port
+        - .spec.telemetry.tracing.provider.backendRefs[].group
+        - .spec.telemetry.tracing.provider.backendRefs[].kind
+        - .spec.telemetry.tracing.provider.backendRefs[].weight
+      jsonpointers:
+        - /spec/logging
+        - /spec/provider/kubernetes/envoyService/externalTrafficPolicy
+    "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_SecurityPolicy": |
+      jqpathexpressions:
+        - .spec.jwt.providers[].remoteJWKS.cacheDuration
+    "resource.customizations.ignoreDifferences.gateway.networking.k8s.io_Gateway": |
+      jqpathexpressions:
+        - .spec.listeners[].tls.certificateRefs[].group
+        - .spec.listeners[].tls.certificateRefs[].kind
+    "resource.customizations.ignoreDifferences.gateway.networking.k8s.io_HTTPRoute": |
+      jqpathexpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.rules[].backendRefs[].group
+        - .spec.rules[].backendRefs[].kind
+        - .spec.rules[].backendRefs[].weight
+        - .spec.rules[].matches[].path
+    "resource.customizations.ignoreDifferences.aigateway.envoyproxy.io_AIGatewayRoute": |
+      jqpathexpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.modelsOwnedBy
+        - .spec.rules[].backendRefs[].priority
+        - .spec.rules[].backendRefs[].weight
+        - .spec.rules[].matches[].headers[].type
+    "resource.customizations.ignoreDifferences.aigateway.envoyproxy.io_MCPRoute": |
+      jqpathexpressions:
+        - .spec.parentRefs[].group
+        - .spec.parentRefs[].kind
+        - .spec.backendRefs[].securityPolicy.apiKey.secretRef.group
+        - .spec.backendRefs[].securityPolicy.apiKey.secretRef.kind
   rbac:
     "policy.default": "role:readonly"
