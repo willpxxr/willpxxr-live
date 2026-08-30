@@ -82,7 +82,7 @@ configs:
       jqPathExpressions:
         - .spec.parentRefs[].group
         - .spec.parentRefs[].kind
-        - .spec.modelsOwnedBy
+        - .spec.rules[].modelsOwnedBy
         - .spec.rules[].backendRefs[].priority
         - .spec.rules[].backendRefs[].weight
         - .spec.rules[].matches[].headers[].type
