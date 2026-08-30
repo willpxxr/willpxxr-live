@@ -67,7 +67,11 @@ spec:
           {{- if and (hasKey . "chart") .chart }}
           chart: {{ .chart }}
           {{- end }}
+          {{- if .version }}
+          # targetRevision is REQUIRED for helm sources (empty string fails
+          # spec validation); omitting it resolves the latest chart version.
           targetRevision: "{{ .version }}"
+          {{- end }}
           helm:
             releaseName: {{ .releaseName }}
             {{- if hasKey . "values" }}
