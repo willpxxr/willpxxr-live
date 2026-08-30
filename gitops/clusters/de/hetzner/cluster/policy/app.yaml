@@ -1,0 +1,8 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only, cluster-scoped (CiliumClusterwideNetworkPolicy + CIDRGroup)
+# -- lives outside apps/ because it's cluster-wide policy, hence the second
+# generator path in apps-applicationset.yaml.
+name: policy
+manifests:
+  - deny-by-default.yaml
+  - tailscale-cgnat.yaml

@@ -7,6 +7,9 @@ metadata:
 spec:
   interval: 10m0s
   path: "./gitops/clusters/de/hetzner/cluster/policy"
+  # ArgoCD app metadata (WEP-0001) -- not a Kubernetes manifest.
+  ignore: |
+    /app.yaml
   prune: true
   sourceRef:
     kind: GitRepository

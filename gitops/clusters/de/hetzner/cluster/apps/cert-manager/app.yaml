@@ -1,0 +1,14 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# releaseName must equal the live flux helm-controller release so ArgoCD
+# adopts it in place (WEP-0001 inventory table).
+name: cert-manager
+namespace: cert-manager
+helm:
+  - repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    version: "" # track latest (ResourceSetInputProvider parity)
+    releaseName: cert-manager-cert-manager
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml

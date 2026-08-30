@@ -1,0 +1,12 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+name: tailscale-operator
+namespace: tailscale
+helm:
+  - repoURL: https://pkgs.tailscale.com/helmcharts
+    chart: tailscale-operator
+    version: ""
+    releaseName: tailscale-tailscale-operator
+    values: values.yaml
+manifests:
+  - network-policy.yaml
+  - proxygroup.yaml

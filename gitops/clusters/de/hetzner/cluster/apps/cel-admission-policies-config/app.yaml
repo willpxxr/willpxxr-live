@@ -1,0 +1,6 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only: the ControlConfiguration CR for the CRD shipped by the
+# cel-admission-policies app.
+name: cel-admission-policies-config
+manifests:
+  - control-configuration.yaml

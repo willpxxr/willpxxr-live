@@ -1,0 +1,7 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only: the ExternalSecret backing the Tailscale operator's OAuth
+# credentials (item written by tailscale.tf).
+name: tailscale-operator-secret
+namespace: tailscale
+manifests:
+  - secret.yaml

@@ -1,0 +1,13 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Pinned chart (1.8.2): EG is the Gateway API CRD authority -- see values.yaml.
+name: envoy-gateway
+namespace: envoy-gateway-system
+helm:
+  - repoURL: oci://docker.io/envoyproxy
+    chart: gateway-helm
+    version: 1.8.2
+    releaseName: envoy-gateway-system-envoy-gateway
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml

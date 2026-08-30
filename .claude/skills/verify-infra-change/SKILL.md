@@ -63,6 +63,16 @@ If `pyyaml`/`yq` aren't installed, don't bother installing them just for a synta
 check — `kubectl --dry-run=client` already both parses the YAML and validates the
 schema in one step, which is strictly more useful.
 
+ArgoCD ApplicationSet gotchas (learned in WEP-0001 phase 1):
+
+- The struct `spec.template` only templates *string* fields — it cannot emit
+  conditional or variable-length `sources` lists. Any per-app variation goes in
+  `spec.templatePatch` (a go-template string; requires `goTemplate: true`).
+- `argocd appset generate` needs a live ArgoCD server (not fully offline), so a
+  scaffolded ApplicationSet can only be YAML-parsed + shape-simulated locally;
+  the real render review happens after install, before enabling
+  `syncPolicy.automated`.
+
 ## 3. Helm-values-backed apps
 
 For any app using this repo's `ResourceSetInputProvider` pattern (a `config.yaml` +

@@ -1,0 +1,11 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# helm-only: namespace.yaml/network-policy.yaml live in the otel-collector
+# manifest app -- both collector releases share that namespace.
+name: otel-collector-agent
+namespace: otel-collector
+helm:
+  - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    version: ""
+    releaseName: otel-collector-otel-collector-agent
+    values: values.yaml

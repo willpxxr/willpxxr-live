@@ -1,0 +1,9 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only app: MCP routing through Envoy AI Gateway.
+name: ai-gateway-mcp
+namespace: envoy-gateway-system
+manifests:
+  - mcp-route.yaml
+  - backend.yaml
+  - externalsecret.yaml
+  - ingress.yaml

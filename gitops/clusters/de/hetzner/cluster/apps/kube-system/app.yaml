@@ -1,0 +1,10 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only app: Hubble UI exposure bolted onto kube-system (the Cilium
+# operator itself stays OVH-managed/unmanaged).
+name: kube-system
+namespace: kube-system
+manifests:
+  - network-policy.yaml
+  - hubble-oidc-externalsecret.yaml
+  - hubble-route.yaml
+  - hubble-security-policy.yaml

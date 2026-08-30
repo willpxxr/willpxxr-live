@@ -1,0 +1,14 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# releaseName must equal the live flux helm-controller release so ArgoCD
+# adopts it in place (WEP-0001 inventory table).
+name: beyla
+namespace: beyla
+helm:
+  - repoURL: https://grafana.github.io/helm-charts
+    chart: beyla
+    version: ""
+    releaseName: beyla-beyla
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml

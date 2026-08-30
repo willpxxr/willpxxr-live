@@ -1,0 +1,88 @@
+# The single generator: one Application per apps/<name>/app.yaml (+ policy/app.yaml).
+# Schema and semantics are specified in WEP-0001 (docs/wep/0001-rfc-gitops-flux-to-argocd.md):
+# helm:/kustomize:/manifests: compose freely into one multi-source Application,
+# synced as a single unit. No cross-app ordering is encoded -- apps whose CRDs
+# aren't in place yet fail sync and converge via the retry policy below.
+#
+# The uniform parts live in the struct template; the variable-shaped sources
+# block is a templatePatch -- ApplicationSet's struct template cannot emit
+# conditional/variable-length source lists (templating only applies to string
+# fields; templatePatch exists precisely for this).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: https://github.com/willpxxr/willpxxr-live.git
+        revision: main
+        files:
+          - path: "gitops/clusters/de/hetzner/cluster/apps/*/app.yaml"
+          - path: "gitops/clusters/de/hetzner/cluster/policy/app.yaml"
+  template:
+    metadata:
+      name: "{{ .name }}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        # syncPolicy.automated is deliberately ABSENT until the phase-2 diff
+        # review (WEP-0001): apps render + register but sync nothing until
+        # each Application's diff has been inspected; phase 3's commit adds
+        # `automated: {selfHeal: true, prune: true}` back.
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 10m
+  # hasKey guards everywhere an app.yaml may omit a key -- goTemplate is
+  # strict about missing map keys. All sequence items are emitted at one
+  # consistent indent so the patch is always valid YAML.
+  templatePatch: |
+    spec:
+      {{- if and (hasKey . "namespace") .namespace }}
+      destination:
+        namespace: {{ .namespace }}
+      {{- end }}
+      sources:
+      {{- if and (hasKey . "helm") .helm }}
+        - repoURL: https://github.com/willpxxr/willpxxr-live.git
+          targetRevision: main
+          ref: app
+          path: {{ trimSuffix "/app.yaml" .path }}
+        {{- range .helm }}
+        - repoURL: {{ .repoURL }}
+          chart: {{ .chart }}
+          targetRevision: "{{ .version }}"
+          helm:
+            releaseName: {{ .releaseName }}
+            {{- if hasKey . "values" }}
+            valueFiles:
+              - $app/{{ .values }}
+            {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if and (hasKey . "kustomize") .kustomize }}
+        {{- range .kustomize }}
+        - repoURL: {{ .repoURL }}
+          targetRevision: "{{ .revision }}"
+          path: {{ .path }}
+        {{- end }}
+      {{- end }}
+      {{- if and (hasKey . "manifests") .manifests }}
+        - repoURL: https://github.com/willpxxr/willpxxr-live.git
+          targetRevision: main
+          path: {{ trimSuffix "/app.yaml" .path }}
+          directory:
+            include: "{ {{- range $i, $e := .manifests }}{{ if $i }},{{ end }}{{ $e }}{{- end -}} }"
+      {{- end }}

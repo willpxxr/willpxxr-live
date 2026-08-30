@@ -1,0 +1,13 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# The namespace itself is Terraform-owned (bootstrap ordering for ESO, see
+# tailscale.tf) -- hence no namespace.yaml here.
+name: external-secrets
+namespace: external-secrets
+helm:
+  - repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    version: ""
+    releaseName: external-secrets-external-secrets
+    values: values.yaml
+manifests:
+  - network-policy.yaml

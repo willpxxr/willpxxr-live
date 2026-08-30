@@ -1,0 +1,8 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only, all cluster-scoped (built-in ValidatingAdmissionPolicy API +
+# the ControlConfiguration CRD) -- no destination namespace.
+name: cel-admission-policies
+manifests:
+  - crd-control-configuration.yaml
+  - policies.yaml
+  - bindings.yaml

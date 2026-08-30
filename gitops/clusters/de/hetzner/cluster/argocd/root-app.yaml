@@ -1,0 +1,34 @@
+# Root app-of-apps. This is the ONLY Application ever applied by hand (the
+# one-time bootstrap in phase 2 of WEP-0001); everything else under
+# gitops/clusters/de/hetzner/cluster/argocd/ is synced through it, including
+# the ApplicationSet that renders every per-app Application.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: de-hetzner-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/willpxxr/willpxxr-live.git
+    targetRevision: main
+    path: gitops/clusters/de/hetzner/cluster/argocd
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

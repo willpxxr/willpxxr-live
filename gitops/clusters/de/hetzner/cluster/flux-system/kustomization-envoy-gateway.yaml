@@ -7,6 +7,11 @@ metadata:
 spec:
   interval: 10m0s
   path: "./gitops/clusters/de/hetzner/cluster/apps/envoy-gateway"
+  # ArgoCD app metadata + helm values file (WEP-0001) -- not Kubernetes
+  # manifests; this dir has no kustomization.yaml, so the build auto-scans it.
+  ignore: |
+    /app.yaml
+    /values.yaml
   prune: true
   sourceRef:
     kind: GitRepository

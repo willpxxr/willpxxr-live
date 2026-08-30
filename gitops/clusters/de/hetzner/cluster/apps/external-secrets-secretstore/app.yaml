@@ -1,0 +1,6 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only: the 1Password-backed ClusterSecretStore everything else
+# depends on.
+name: external-secrets-secretstore
+manifests:
+  - secretstore.yaml

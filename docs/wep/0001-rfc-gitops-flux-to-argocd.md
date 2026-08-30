@@ -189,7 +189,11 @@ optional per-entry `values:` filename, so multi-release dirs like
 envoy-ai-gateway don't have to share one values file.
 
 The ApplicationSet template (goTemplate) renders one **multi-source
-Application** per app, combining every declared source kind:
+Application** per app, combining every declared source kind. The uniform
+fields live in the struct template; the variable-shaped `sources` block (and
+`destination.namespace`, when the app declares one) is a `templatePatch` —
+ApplicationSet's struct template only templates string fields and cannot emit
+conditional or variable-length source lists:
 
 - one **helm source per `helm` entry** (`valueFiles` from the entry's
   `values:` file, `CreateNamespace=true`) — handles envoy-ai-gateway's two

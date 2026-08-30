@@ -1,0 +1,18 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Two Helm releases from one dir: the controller chart and its CRDs chart,
+# each with its own releaseName matching the live flux releases for adoption.
+name: envoy-ai-gateway
+namespace: envoy-ai-gateway-system
+helm:
+  - repoURL: oci://docker.io/envoyproxy
+    chart: ai-gateway-crds-helm
+    version: v1.0.0
+    releaseName: envoy-ai-gateway-system-ai-gateway-crds
+  - repoURL: oci://docker.io/envoyproxy
+    chart: ai-gateway-helm
+    version: v1.0.0
+    releaseName: envoy-ai-gateway-system-ai-gateway
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml

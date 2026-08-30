@@ -1,0 +1,16 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Pinned chart + explicit releaseName (the flux HelmRelease overrode flux's
+# <ns>-<name> default -- see the ADR-0002/ADR note in helmrelease.yaml's
+# successor values.yaml).
+name: kagent-tools
+namespace: kagent
+helm:
+  - repoURL: oci://ghcr.io/kagent-dev/tools/helm
+    chart: kagent-tools
+    version: 0.2.1
+    releaseName: kagent-tools
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml
+  - rbac-cilium-exec.yaml
