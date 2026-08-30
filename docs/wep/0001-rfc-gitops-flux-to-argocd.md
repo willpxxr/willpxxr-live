@@ -25,9 +25,9 @@ configuration layers are:
 
 This is two template systems (ResourceSet templating + one Kustomization CR per
 app) to get what ArgoCD provides natively: app rendering from declarative app
-metadata, built-in health assessment, sync waves for ordering, and a UI.
-Migrating also drops the flux-operator entirely (one less controller stack) and
-replaces the ResourceSet machinery with a single declarative generator.
+metadata, built-in health assessment, and a UI. Migrating also drops the
+flux-operator entirely (one less controller stack) and replaces the ResourceSet
+machinery with a single declarative generator.
 
 **Type**: RFC (expanded WEP) -- it changes the repo-wide GitOps delivery
 mechanism and requires a staged migration on a live cluster, not a single
@@ -36,32 +36,31 @@ recorded decision; single-decision changes use the ADR subtype instead
 
 ## Current app inventory
 
-| App dir | Type | Chart / source | Version | Live Helm release | Wave |
-| --- | --- | --- | --- | --- | --- |
-| beyla | helm | grafana / beyla | latest | beyla-beyla | 4 |
-| cert-manager | helm | charts.jetstack.io / cert-manager | latest | cert-manager-cert-manager | 0 |
-| external-secrets | helm | charts.external-secrets.io / external-secrets | latest | external-secrets-external-secrets | 0 |
-| otel-collector-agent | helm | open-telemetry / opentelemetry-collector | latest | otel-collector-otel-collector-agent | 3 |
-| otel-collector-gateway | helm | open-telemetry / opentelemetry-collector | latest | otel-collector-otel-collector-gateway | 3 |
-| tailscale-operator | helm | pkgs.tailscale.com / tailscale-operator | latest | tailscale-tailscale-operator | 0 |
-| envoy-gateway | helm | oci://docker.io/envoyproxy / gateway-helm | 1.8.2 | envoy-gateway-system-envoy-gateway | 0 |
-| envoy-ai-gateway | helm x2 | oci://docker.io/envoyproxy / ai-gateway-helm + ai-gateway-crds-helm | v1.0.0 | ...-ai-gateway + ...-ai-gateway-crds | 1 (crds: 0) |
-| kagent-tools | helm | oci://ghcr.io/kagent-dev/tools/helm / kagent-tools | 0.2.1 | kagent-tools (explicit) | 2 |
-| ai-gateway-llm | manifest | — | — | — | 3 |
-| ai-gateway-mcp | manifest | — | — | — | 3 |
-| envoy-gateway-config | manifest | — | — | — | 1 |
-| gateway | manifest | — | — | — | 2 |
-| cel-admission-policies | manifest | — | — | — | 0 |
-| cel-admission-policies-config | manifest | — | — | — | 1 |
-| external-secrets-secretstore | manifest | — | — | — | 1 |
-| kube-system | manifest | — | — | — | 2 |
-| tailscale-operator-secret | manifest | — | — | — | 2 |
-| policy (cluster/policy/) | manifest | — | — | — | 0 |
-| flux-operator-route | manifest | — | — | — | **deleted** (Flux UI goes away) |
+| App dir | Type | Chart / source | Version | Live Helm release |
+| --- | --- | --- | --- | --- |
+| beyla | helm | grafana / beyla | latest | beyla-beyla |
+| cert-manager | helm | charts.jetstack.io / cert-manager | latest | cert-manager-cert-manager |
+| external-secrets | helm | charts.external-secrets.io / external-secrets | latest | external-secrets-external-secrets |
+| otel-collector-agent | helm | open-telemetry / opentelemetry-collector | latest | otel-collector-otel-collector-agent |
+| otel-collector-gateway | helm | open-telemetry / opentelemetry-collector | latest | otel-collector-otel-collector-gateway |
+| tailscale-operator | helm | pkgs.tailscale.com / tailscale-operator | latest | tailscale-tailscale-operator |
+| envoy-gateway | helm | oci://docker.io/envoyproxy / gateway-helm | 1.8.2 | envoy-gateway-system-envoy-gateway |
+| envoy-ai-gateway | helm x2 | oci://docker.io/envoyproxy / ai-gateway-helm + ai-gateway-crds-helm | v1.0.0 | ...-ai-gateway + ...-ai-gateway-crds |
+| kagent-tools | helm | oci://ghcr.io/kagent-dev/tools/helm / kagent-tools | 0.2.1 | kagent-tools (explicit) |
+| ai-gateway-llm | manifest | — | — | — |
+| ai-gateway-mcp | manifest | — | — | — |
+| envoy-gateway-config | manifest | — | — | — |
+| gateway | manifest | — | — | — |
+| cel-admission-policies | manifest | — | — | — |
+| cel-admission-policies-config | manifest | — | — | — |
+| external-secrets-secretstore | manifest | — | — | — |
+| kube-system | manifest | — | — | — |
+| tailscale-operator-secret | manifest | — | — | — |
+| policy (cluster/policy/) | manifest | — | — | — |
+| flux-operator-route | manifest | — | — | **deleted** (Flux UI goes away) |
 
-Waves replicate the current `dependsOn` graph exactly (external-secrets →
-secretstore → consumers; envoy-gateway → config → gateway → ai-gateway-*;
-otel-collector → agent/gateway → beyla; cert-manager → gateway).
+The Live Helm release column exists because `releaseName` must match these
+names exactly for ArgoCD to adopt the existing releases (see adoption).
 
 ## Decision
 
@@ -99,7 +98,6 @@ Each app declares its shape; one ApplicationSet (git files generator over
 # apps/cert-manager/app.yaml
 name: cert-manager
 namespace: cert-manager
-wave: 0
 helm:                                    # omit for manifest-only apps
   - repoURL: https://charts.jetstack.io  # or oci://docker.io/envoyproxy
     chart: cert-manager
@@ -116,14 +114,20 @@ Application** per entry:
 - one **directory source** for the dir's plain manifests (namespace.yaml,
   network-policy.yaml, ...) with `exclude: app.yaml` — replicating how Flux's
   kustomize-controller applied everything in the dir alongside the chart;
-- `syncPolicy.automated` + `selfHeal` + `prune`;
-- `argocd.argoproj.io/sync-wave: <wave>` annotation from `wave`;
+- `syncPolicy.automated` + `selfHeal` + `prune` + `retry` (backoff);
 - destination namespace from `namespace`.
 
-Manifest-only apps render the directory source alone. Waves replace
-`dependsOn`; ArgoCD's built-in health assessment replaces `wait` +
-`healthChecks`. Adding an app = one new directory with an `app.yaml` — same
-workflow as today's `config.yaml`.
+Manifest-only apps render the directory source alone. **No cross-app ordering
+is encoded** — deliberately, and this replaces the whole `dependsOn` graph:
+Flux needed `dependsOn` because a kustomization that references a not-yet-
+created CRD fails its apply and sits degraded; in ArgoCD the equivalent
+failure is an Application whose sync fails and **retries with backoff**
+(`syncPolicy.retry`) until the dependency (a CRD from another app's chart,
+etc.) lands, then converges with no further intervention. ArgoCD's built-in
+health assessment replaces `wait` + `healthChecks`. (Within a single
+Application, ArgoCD still applies namespaces and helm `crds/` before the rest,
+so intra-app ordering needs no help either.) Adding an app = one new directory
+with an `app.yaml` — same workflow as today's `config.yaml`.
 
 ### In-place adoption (no rebuild)
 
@@ -146,11 +150,10 @@ workflow as today's `config.yaml`.
 2. **Install ArgoCD** (manual, one-time): helm install + apply root-app with
    the ApplicationSet in **manual sync** mode. Review rendered Applications
    and their diffs against live state in the UI/CLI before syncing anything.
-3. **Adopt, wave by wave**: enable automated sync starting at wave 0
-   (policy, external-secrets, cert-manager, envoy-gateway,
-   tailscale-operator...), confirm each wave Healthy with no unexpected
-   diffs/drift before the next. Helm releases must be verified as *adopted*
-   (no second release revision created) at this point.
+3. **Adopt**: enable automated sync on all Applications (order doesn't matter;
+   apps whose CRDs aren't in place yet retry and converge). Confirm every app
+   ends Healthy/Synced and that Helm releases were *adopted* (no second
+   release revision created).
 4. **Remove Flux**: delete the `FluxInstance` and all Flux CRs
    (Kustomizations, HelmReleases, HelmRepositories, ResourceSet machinery),
    then the flux CRDs, then the `flux-system` namespace and its
@@ -171,8 +174,8 @@ workflow as today's `config.yaml`.
   instead of adopting — the inventory table exists precisely so `releaseName`
   matches the live flux-generated names.
 - **Flux/ArgoCD overlap window**: both reconciling the same objects. Keep the
-  window short and one-directional (ArgoCD takes over wave by wave; Flux is
-  only *removed*, never partially edited, during the window).
+  window short and one-directional (ArgoCD takes over; Flux is only *removed*,
+  never partially edited, during the window).
 - **Deleting HelmRelease CRs uninstalls releases** (helm-controller GC).
   Order in phase 4 matters: `FluxInstance` delete first (takes the controllers
   down), then CRs/CRDs — never the reverse.
