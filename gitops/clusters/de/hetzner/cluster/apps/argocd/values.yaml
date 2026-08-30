@@ -77,7 +77,11 @@ configs:
         - .spec.rules[].backendRefs[]?.group
         - .spec.rules[].backendRefs[]?.kind
         - .spec.rules[].backendRefs[]?.weight
-        - .spec.rules[].matches[]?.path
+      # matches is controller-added and absent from git entirely -- jq path
+      # iterators yield nothing for keys git doesn't have, so this one is a
+      # JSON pointer (single-rule routes only).
+      jsonPointers:
+        - /spec/rules/0/matches
     "resource.customizations.ignoreDifferences.aigateway.envoyproxy.io_AIGatewayRoute": |
       jqPathExpressions:
         - .spec.parentRefs[].group
