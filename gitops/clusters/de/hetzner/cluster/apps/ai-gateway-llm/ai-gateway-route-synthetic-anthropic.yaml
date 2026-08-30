@@ -32,6 +32,9 @@
 # THIS gateway via x-api-key (crush's native Anthropic provider; Claude
 # Code sends both headers) would otherwise leave its own Auth0 JWT
 # sitting in x-api-key all the way through to Synthetic, unreplaced.
+#
+# Every rule also sets timeouts.request: 10m -- same rationale as
+# ai-gateway-route.yaml (the controller's 60s default kills long streams).
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
@@ -55,6 +58,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -65,6 +70,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -75,6 +82,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -85,6 +94,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -95,6 +106,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -105,6 +118,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -115,6 +130,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -125,6 +142,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -135,6 +154,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -145,6 +166,8 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m
     - matches:
         - headers:
             - name: x-ai-eg-model
@@ -155,3 +178,5 @@ spec:
           headerMutation:
             remove:
               - x-api-key
+      timeouts:
+        request: 10m

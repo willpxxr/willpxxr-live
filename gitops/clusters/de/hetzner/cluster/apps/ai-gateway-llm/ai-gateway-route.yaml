@@ -34,3 +34,13 @@ spec:
               value: '^(syn|hf):.+$'
       backendRefs:
         - name: synthetic
+      # The controller defaults generated HTTPRoutes to a 60s total request
+      # deadline (timeouts.request nil => 60s, per the AIGatewayRoute API
+      # docs, not Envoy Gateway's 15s) -- long streaming completions get
+      # killed mid-stream at exactly 60s (access log: response_flags UT,
+      # response_code_details response_timeout, response_code 200 with
+      # ~825KB already sent). 10m is generous headroom over any realistic
+      # completion; genuinely stuck streams are bounded by Envoy's default
+      # streamIdleTimeout (5m), which fires on 5m of zero bytes either way.
+      timeouts:
+        request: 10m
