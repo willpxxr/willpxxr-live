@@ -17,5 +17,5 @@ reasoning fits on a page, it's an ADR.
 
 | # | Type | Title | Status |
 | --- | --- | --- | --- |
-| [0001](0001-rfc-gitops-flux-to-argocd.md) | RFC | Migrate de/hetzner GitOps from Flux to ArgoCD ApplicationSets | Proposed |
+| [0001](0001-rfc-gitops-flux-to-argocd.md) | RFC | Migrate de/hetzner GitOps from Flux to ArgoCD ApplicationSets | Accepted |
 | [0002](0002-adr-kagent-tools-shared-service-account.md) | ADR | kagent-tools MCP server: shared read-only ServiceAccount, defer per-caller OBO token exchange | Accepted |

@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed (2026-08-30)
+Accepted, implemented (2026-08-30) — all five phases shipped the same day;
+the ignoreDifferences + ESO hardening that fell out of phase 3 landed in
+follow-up commits the same day.
 
 ## Context
 

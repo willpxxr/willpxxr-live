@@ -5,7 +5,7 @@
 
 Infrastructure-as-code for willpxxr.com: cloud infrastructure via Terraform (remote
 state in Terraform Cloud, org `willpxxr`, workspace `willpxxr-live`), Kubernetes
-cluster configuration via FluxCD (GitOps).
+cluster configuration via ArgoCD (GitOps).
 
 ## Agent rules (binding)
 
@@ -48,22 +48,17 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   (kube-proxy replacement, native routing, Hubble), Envoy Gateway + Envoy AI Gateway
   for ingress/routing, cert-manager, external-secrets (1Password backend), the
   Tailscale operator (ingress is over Tailscale, not a public LoadBalancer).
-- **`uk/prod`** (`gitops/clusters/uk/prod/cluster/`) — legacy OCI OKE cluster in
-  `uk-london-1`, Teleport + cloudflared ingress. Treat as inactive/being wound down
-  (see the OCI-decommission `moved` blocks in `moves.tf`) — don't build new things
-  here unless explicitly asked to.
 
 ## Tech stack
 
 - **Terraform** `>= 1.11` (see `providers.tf`'s `required_version`) — remote backend
   (`backend.tf`), no local `terraform apply` expected.
-- **Providers**: `cloudflare` (DNS/WAF/redirects for willpxxr.com), `oci` (legacy
-  cluster, mostly decommission bookkeeping), `hcloud`/`talos` (the active cluster),
-  `tailscale`, `onepassword`, `auth0`, `logtail` (Better Stack). Plus
-  `kubernetes`/`helm`/`kubectl`/`tls` for the small set of bootstrap-only k8s objects
-  Terraform manages directly (see below).
-- **FluxCD** (flux-operator, Kustomizations, HelmReleases) reconciles everything
-  under `gitops/`.
+- **Providers**: `cloudflare` (DNS/WAF/redirects for willpxxr.com),
+  `hcloud`/`talos` (the active cluster), `tailscale`, `onepassword`, `auth0`,
+  `logtail` (Better Stack). Plus `kubernetes`/`helm`/`kubectl`/`tls` for the small
+  set of bootstrap-only k8s objects Terraform manages directly (see below).
+- **ArgoCD** (self-managed app-of-apps, see `gitops/clusters/de/hetzner/cluster/argocd/`)
+  reconciles everything under `gitops/`.
 - **CI** (`.github/workflows/`): OSSF Scorecard, dependency-review, Checkov
   (IaC security scanning), and a Packer build for the Talos node image.
 - **pre-commit** (`.pre-commit-config.yaml`): gitleaks, end-of-file-fixer,
@@ -81,14 +76,16 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 ├── auth0.tf                                 # Auth0 clients/scopes for every Envoy Gateway SecurityPolicy
 ├── betterstack.tf                           # Terraform-provisioned Better Stack API credentials/source
 ├── synthetic.tf                             # Synthetic LLM key: 1Password item w/ placeholder, value pasted by hand
+├── argocd.tf                                # ArgoCD redis auth: random_password -> 1Password item (ESO-synced)
 ├── data.tf                                  # Cloudflare zone/account data sources
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
 ├── .opencode/                               # opencode global config + ai-gateway-auth plugin (see "opencode config" below)
 ├── docs/wep/                                 # Willpxxr enhancement proposals (RFC + ADR subtypes) -- see docs/wep/README.md
-└── gitops/clusters/{de/hetzner,uk/prod}/cluster/
-    ├── flux-system/    # Kustomizations, the ResourceSetInputProvider chart machinery, cluster-wide network policy
-    └── apps/<name>/    # One directory per deployed component
+└── gitops/clusters/de/hetzner/cluster/
+    ├── argocd/        # root-app (app-of-apps) + the single apps ApplicationSet
+    ├── policy/        # cluster-wide Cilium policies (its own app)
+    └── apps/<name>/   # one directory per deployed component: app.yaml (+ values.yaml, manifests)
 ```
 
 ## Development workflow
@@ -99,15 +96,17 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   branch-protected at the GitHub level either, which is consistent with that.
 - **Terraform**: Terraform Cloud applies on every push to `main` (VCS-driven). No
   local `terraform apply` expected.
-- **GitOps**: Flux reconciles `gitops/clusters/de/hetzner/cluster/` automatically on
-  push to `main`. No manual `kubectl apply`.
+- **GitOps**: ArgoCD auto-syncs (selfHeal + prune) the Applications its
+  ApplicationSet renders from `gitops/clusters/de/hetzner/cluster/apps/*/app.yaml`
+  on push to `main`. No manual `kubectl apply`.
 - A handful of k8s objects are created directly by Terraform rather than GitOps —
-  only for genuine bootstrap ordering (things Flux/external-secrets themselves
-  depend on), e.g. the `external-secrets`/`tailscale` namespaces and the 1Password
-  ESO service-account token Secret in `tailscale.tf`. Everything else lives in
-  `gitops/`.
-- Because pushing to `main` triggers a real Terraform apply and a real Flux
-  reconcile with no PR/plan-only step in between to catch mistakes first, run the
+  only for genuine bootstrap ordering (things ArgoCD/external-secrets themselves
+  depend on), e.g. the `external-secrets`/`tailscale`/`argocd` namespaces and the
+  1Password ESO service-account token Secret in `tailscale.tf`. The one-time ArgoCD
+  install itself was also bootstrap (helm, release `argocd`, which the `argocd`
+  app then adopts). Everything else lives in `gitops/`.
+- Because pushing to `main` triggers a real Terraform apply and a real ArgoCD
+  sync with no PR/plan-only step in between to catch mistakes first, run the
   `verify-infra-change` skill (see below) before pushing, not after something
   breaks.
 
@@ -123,45 +122,61 @@ native client (no secret exists), so committing it is fine.
 
 ## GitOps app conventions (de/hetzner cluster)
 
-Each `apps/<name>/` directory typically has:
+ArgoCD renders every app from a per-app `app.yaml` via the single
+`argocd/apps-applicationset.yaml` (git files generator over
+`apps/*/app.yaml` + `policy/app.yaml`). Each `apps/<name>/` directory has:
 
-- **`namespace.yaml`**.
-- **`network-policy.yaml`** — `CiliumNetworkPolicy`, default-deny posture. Every
-  namespace gets explicit `allow-same-namespace` + `allow-dns-egress` (+
-  `allow-kube-apiserver-egress` if the workload talks to the API server) rules.
-  Egress to a specific third-party SaaS host whose IPs aren't enumerable uses
-  `toEntities: [world]` restricted to port 443, one rule per external dependency,
-  each with a `description` explaining *why*. `kube-system` is the one deliberate
-  exception (`allow-all` — OVH-managed components whose requirements aren't
-  documented).
-- Either a plain **`HelmRelease`** (`envoy-gateway`, `envoy-ai-gateway` — used when
-  a pinned chart version or install-time flags like `crds: CreateReplace` matter)
-  **or** this repo's own **`ResourceSetInputProvider` pattern** (most other charts):
-  a `config.yaml` (`ResourceSetInputProvider`, labeled
-  `fluxcd.controlplane.io/resourceset: charts`) supplies `name`/`namespace`/
-  `repoURL`/`chart`/`valuesConfigMap`, and `flux-system/charts.yaml`'s `ResourceSet`
-  templates out the actual `HelmRepository` + `HelmRelease`. This path has no
-  version pin — it tracks the chart's latest. Values live in a `values.yaml` bundled
-  into a ConfigMap via `configMapGenerator` (`disableNameSuffixHash: true`), named
-  `<app>-values`.
-- A `flux-system/kustomization-<name>.yaml` registered in
-  `flux-system/kustomization.yaml`'s `resources` list, with a `healthChecks` entry
-  for the HelmRelease (when there is one) and `dependsOn` only where there's a real
-  ordering requirement (e.g. anything creating an `ExternalSecret` depends on
-  `external-secrets-secretstore`).
-- **Secrets**: `ExternalSecret` (`secretStoreRef: ClusterSecretStore/onepassword`)
-  pulling from the `kubernetes` 1Password vault, key convention
-  `<item-title>/credentials/<field>`. When the secret's origin is another
-  Terraform-managed provider resource rather than something typed in by hand, a
-  matching `onepassword_item` resource writes it into that vault from the relevant
-  `.tf` file (see `tailscale.tf`, `betterstack.tf`) — prefer this
-  over asking a human to paste a secret into 1Password whenever the upstream
-  service has a usable Terraform provider. When it doesn't (e.g. Synthetic's
-  LLM-gateway API key, `synthetic.tf`), Terraform creates the item with a
-  placeholder value plus `lifecycle { ignore_changes = [section_map] }` (so
-  later applies don't revert the hand-pasted key) and a human pastes the
-  real value into the item afterwards; the `<item-title>/credentials/<field>`
-  key layout still applies.
+- **`app.yaml`** — the app's definition: `name`, `namespace` (omit for
+  cluster-scoped apps), `dir` (cluster-relative path), and any combination of:
+  `helm:` entries (`repoURL`/`chart`/`version`/`releaseName` + optional per-entry
+  `values:` file; for OCI, repoURL is the full artifact path and the registry is
+  registered hostname-only in `apps/argocd/values.yaml`), `kustomize:` entries
+  (`repoURL`/`path`/`revision`), and `manifests:` (path globs, synced as plain
+  manifests — nothing is synced implicitly). See WEP-0001 for the full schema.
+- **`values.yaml`** — helm values (never synced as a manifest; consumed via the
+  `$app` valueFiles reference).
+- **`namespace.yaml`** + **`network-policy.yaml`** — `CiliumNetworkPolicy`,
+  default-deny posture. Every namespace gets explicit `allow-same-namespace` +
+  `allow-dns-egress` (+ `allow-kube-apiserver-egress` if the workload talks to
+  the API server — list every controller that watches resources, not just the
+  obvious ones). Egress to a specific third-party SaaS host whose IPs aren't
+  enumerable uses `toEntities: [world]` restricted to port 443, one rule per
+  external dependency, each with a `description` explaining *why*. `kube-system`
+  is the one deliberate exception (`allow-all` — OVH-managed components whose
+  requirements aren't documented). UI/exposure apps additionally need the Envoy
+  data plane to reach their backend: add an egress rule to
+  `apps/envoy-gateway/network-policy.yaml`'s `allow-backend-egress` (one per
+  backend).
+- **`externalsecret.yaml`** if it needs a secret: `ExternalSecret`
+  (`secretStoreRef: ClusterSecretStore/onepassword`, **`refreshInterval: 6h`**
+  — required and admission-enforced; 1Password service-account rate limits are
+  tight, on-demand refresh via the `force-sync` annotation) pulling from the
+  `kubernetes` 1Password vault, key convention `<item-title>/credentials/<field>`.
+  When the secret's origin is another Terraform-managed provider resource rather
+  than something typed in by hand, a matching `onepassword_item` resource writes
+  it into that vault from the relevant `.tf` file (see `tailscale.tf`,
+  `betterstack.tf`, `argocd.tf`) — prefer this over asking a human to paste a
+  secret into 1Password whenever the upstream service has a usable Terraform
+  provider. When it doesn't (e.g. Synthetic's LLM-gateway API key,
+  `synthetic.tf`), Terraform creates the item with a placeholder value plus
+  `lifecycle { ignore_changes = [section_map] }` (so later applies don't revert
+  the hand-pasted key) and a human pastes the real value into the item
+  afterwards; the key layout still applies.
+- **Ordering**: none is encoded cross-app — ArgoCD apps whose CRDs aren't in
+  place yet fail sync and converge via the retry policy. Within an app,
+  Secrets/CRDs apply before CRs.
+- **Controller-mutated CRs** (Envoy Gateway / AI Gateway kinds): the
+  controllers write defaults into specs at reconcile time; per-kind
+  `ignoreDifferences` live in `apps/argocd/values.yaml`
+  (`resource.customizations.ignoreDifferences.*` — note the camelCase
+  `jqPathExpressions`/`jsonPointers` keys, and null-safe jq `[]?` iterations:
+  iterating null silently disables the whole normalizer). Extend them when a
+  new controller-defaulted kind appears.
+- **ArgoCD's own chart** lives in `apps/argocd/` (release `argocd`, adopted from
+  the one-time helm bootstrap) together with its exposure (Tailscale Ingress in
+  `envoy-gateway-system` + HTTPRoute + Auth0 SecurityPolicy) — the app manages
+  ArgoCD itself; `dex` and the redis init Job are disabled (the init Job
+  deadlocks GitOps syncs; the redis auth is ESO-managed, see `argocd.tf`).
 
 ## Observability (`otel-collector`)
 
@@ -200,10 +215,9 @@ scraping, OTLP receiver) export logs/metrics/traces to Better Stack.
   `local.lists.vpn`).
 - Use `moved` blocks in `moves.tf` when renaming/moving resources, to avoid
   destructive replacement.
-- The Kubernetes version for the legacy OCI cluster is tracked in `oci.tf`'s
-  `locals` (`kubernetes_version`, `kubernetes_node_version`); for the active
-  cluster it's `hetzner.tf`'s `module.talos.kubernetes_version`/`talos_version`
-  (keep in sync with `packer/talos/talos.pkr.hcl`'s default).
+- The Kubernetes version for the active cluster is `hetzner.tf`'s
+  `module.talos.kubernetes_version`/`talos_version` (keep in sync with
+  `packer/talos/talos.pkr.hcl`'s default).
 - Auth0 scope naming (`auth0.tf`) is `<resource>:<tier>`, tier one of
   `get`/`admin`/`use` — see the comment at the top of `auth0.tf` for the full
   rationale before adding a new scope.
@@ -216,7 +230,6 @@ never hard-coded:
 
 - `var.cloudflare_api_token`
 - `var.hetzner_token`
-- `var.oci_rsa_private_key_base64enc` (legacy cluster cleanup only)
 - `var.tailscale_bootstrap_oauth_client_id`
 - `var.onepassword_terraform_service_account_token`
 - `var.auth0_domain`, `var.auth0_mgmt_client_id`, `var.auth0_mgmt_client_secret`
@@ -241,9 +254,9 @@ parts of working here so they don't have to be re-derived each session:
 - **`verify-infra-change`** — run before pushing to `main`: `terraform fmt`, a
   `kubectl --dry-run=client` pass against the live cluster's CRDs for changed
   manifests, and a `helm template` render for any changed app `values.yaml`.
-- **`new-gitops-app`** — scaffolds a new `apps/<name>/` directory plus its
-  `flux-system/kustomization-<name>.yaml` and registration, following the
-  conventions above.
+- **`new-gitops-app`** — scaffolds a new `apps/<name>/` directory (app.yaml +
+  values.yaml + manifests) following the conventions above; the ApplicationSet
+  picks the directory up automatically.
 
 If you find yourself doing the same multi-step verification or scaffolding twice,
 that's a sign it should become a skill (or an update to an existing one) rather

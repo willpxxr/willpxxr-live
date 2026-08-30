@@ -47,7 +47,7 @@ Two gotchas learned the hard way:
 Use the live cluster's context (`kubectl config get-contexts`) for a real
 server-side schema check against the actual installed CRDs — this catches typos in
 CRD fields (e.g. `EnvoyProxy`, `CiliumNetworkPolicy`, `ExternalSecret`,
-`ResourceSetInputProvider`, `ReferenceGrant`) that a generic YAML linter would miss:
+ApplicationSet, `ReferenceGrant`) that a generic YAML linter would miss:
 
 ```
 kubectl apply --dry-run=client -f <file> -o yaml
@@ -56,8 +56,8 @@ kubectl apply --dry-run=client -f <file> -o yaml
 Note: plain `kustomization.yaml` / bare Helm `values.yaml` files aren't real k8s
 objects — `kubectl apply` on those will correctly error with `kind not set`; that's
 expected, not a failure. Only dry-run the actual manifests (namespace,
-network-policy, externalsecret, config/ResourceSetInputProvider, referencegrant,
-etc.).
+network-policy, externalsecret, app.yaml is NOT a manifest (skip it),
+referencegrant, etc.).
 
 If `pyyaml`/`yq` aren't installed, don't bother installing them just for a syntax
 check — `kubectl --dry-run=client` already both parses the YAML and validates the
@@ -75,14 +75,14 @@ ArgoCD ApplicationSet gotchas (learned in WEP-0001 phase 1):
 
 ## 3. Helm-values-backed apps
 
-For any app using this repo's `ResourceSetInputProvider` pattern (a `config.yaml` +
-`values.yaml` pair, see `CLAUDE.md`), render the actual chart to confirm the
+For any app whose `app.yaml` has helm entries (a `values.yaml` referenced via
+`values:`), render the actual chart to confirm the
 `values.yaml` produces the intended config — the chart's own values-merge
 semantics (deep-merge maps, but a list at the same path fully replaces, not
 appends) are easy to get subtly wrong:
 
 ```
-helm repo add <repo-name> <repoURL from config.yaml>   # if not already added
+helm repo add <repo-name> <repoURL from app.yaml>   # if not already added
 helm repo update <repo-name>
 helm template <release-name> <repo-name>/<chart> \
   -f apps/<app>/values.yaml --namespace <namespace>

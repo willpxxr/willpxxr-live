@@ -23,7 +23,7 @@ tools:
   # Limited to what this cluster actually runs: kubectl-wrapper + Helm +
   # Cilium (the CNI here) + utils (datetime; its `shell` tool is disabled
   # by --read-only below). Istio/Argo/Prometheus/kubescape don't apply --
-  # this cluster runs Envoy Gateway not Istio, Flux not Argo, and Better
+  # this cluster runs Envoy Gateway not Istio, ArgoCD not Flux, and Better
   # Stack instead of self-hosted Prometheus/Grafana.
   enabledTools:
     - k8s
