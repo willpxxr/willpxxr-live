@@ -3,8 +3,10 @@
 name: envoy-gateway
 namespace: envoy-gateway-system
 helm:
-  - repoURL: oci://docker.io
-    chart: envoyproxy/gateway-helm
+  # OCI sources: repoURL is the full artifact path (chart: is ignored by
+  # ArgoCD for OCI); credentials match by registry hostname from the
+  # argocd-repo-* secrets registered in apps/argocd/values.yaml.
+  - repoURL: oci://docker.io/envoyproxy/gateway-helm
     version: 1.8.2
     releaseName: envoy-gateway-system-envoy-gateway
     values: values.yaml

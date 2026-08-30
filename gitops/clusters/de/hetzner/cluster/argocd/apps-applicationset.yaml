@@ -64,7 +64,9 @@ spec:
           ref: app
         {{- range .helm }}
         - repoURL: {{ .repoURL }}
+          {{- if and (hasKey . "chart") .chart }}
           chart: {{ .chart }}
+          {{- end }}
           targetRevision: "{{ .version }}"
           helm:
             releaseName: {{ .releaseName }}
