@@ -95,3 +95,11 @@ spec:
         - ports:
             - port: "8080"
               protocol: TCP
+    # kubectl port-forward / argocd CLI for operator access (phase-3 diff
+    # review) -- node/host-originated traffic to the API port.
+    - fromEntities:
+        - host
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

@@ -6,6 +6,22 @@
 dex:
   enabled: false
 configs:
+  # OCI helm sources (envoy-gateway/ai-gateway from docker.io/envoyproxy,
+  # kagent-tools from ghcr.io) require the repo registered with enableOCI
+  # for repo-server to resolve chart revisions -- even for anonymous public
+  # registries; without this, resolution 401s against registry-1.docker.io.
+  # Classic https chart repos (jetstack, grafana, ...) work unregistered.
+  repositories:
+    envoyproxy-oci:
+      url: oci://docker.io/envoyproxy
+      name: envoyproxy-oci
+      type: helm
+      enableOCI: "true"
+    kagent-tools-oci:
+      url: oci://ghcr.io/kagent-dev/tools/helm
+      name: kagent-tools-oci
+      type: helm
+      enableOCI: "true"
   params:
     "server.insecure": true
   cm:
