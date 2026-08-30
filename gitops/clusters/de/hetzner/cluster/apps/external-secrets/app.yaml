@@ -11,3 +11,4 @@ helm:
     values: values.yaml
 manifests:
   - network-policy.yaml
+  - cel-policies.yaml

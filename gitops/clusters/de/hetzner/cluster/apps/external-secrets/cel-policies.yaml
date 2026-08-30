@@ -1,0 +1,37 @@
+---
+# ExternalSecret refresh-interval floor. 1Password service-account rate
+# limits are tight (bursty 1000-request buckets); hourly refreshes across
+# the fleet plus Terraform runs exhaust them and degrade the secrets.
+# Enforced at admission (in-apiserver CEL, no external webhook) so new
+# ExternalSecrets cannot be created without an explicit >= 6h interval;
+# on-demand refreshes use the force-sync annotation, not a shorter interval.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: external-secret-refresh-interval
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - external-secrets.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - externalsecrets
+  validations:
+    - expression: "has(object.spec.refreshInterval) && duration(object.spec.refreshInterval) >= duration('6h')"
+      message: "ExternalSecrets must set spec.refreshInterval >= 6h (1Password service-account rate limits); on-demand refreshes use the force-sync annotation."
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: external-secret-refresh-interval
+spec:
+  policyName: external-secret-refresh-interval
+  validationActions:
+    - Deny
