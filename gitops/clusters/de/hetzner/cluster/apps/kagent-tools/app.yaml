@@ -5,8 +5,10 @@
 name: kagent-tools
 namespace: kagent
 helm:
-  # OCI source: full artifact path in repoURL (chart: ignored for OCI).
-  - repoURL: oci://ghcr.io/kagent-dev/tools/helm/kagent-tools
+  # OCI: repoURL carries the full artifact path; chart (basename) +
+  # targetRevision stay per the Application spec -- see envoy-gateway.
+  - chart: kagent-tools
+    repoURL: oci://ghcr.io/kagent-dev/tools/helm/kagent-tools
     version: 0.2.1
     releaseName: kagent-tools
     values: values.yaml
