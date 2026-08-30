@@ -1,0 +1,23 @@
+---
+# Tailscale-side of the ArgoCD UI exposure: this Ingress is what creates the
+# argocd.tailb40090.ts.net MagicDNS name (proxy-group "ingress"); traffic
+# lands on the Envoy gateway service, where the HTTPRoute (argocd ns) and its
+# Auth0 SecurityPolicy take over. Mirrors gateway/flux-operator-ingress.yaml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    tailscale.com/proxy-group: "ingress"
+    tailscale.com/tags: "tag:admin-services"
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - argocd
+  defaultBackend:
+    service:
+      name: envoy-envoy-gateway-system-gateway-4864c4ea
+      port:
+        number: 80
