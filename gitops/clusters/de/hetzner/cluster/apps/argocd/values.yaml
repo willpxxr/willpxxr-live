@@ -55,23 +55,23 @@ configs:
     # this repo never sets are ignored; anything we do set still diffs and
     # applies (ignoreDifferences affects comparison, not sync).
     "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_EnvoyProxy": |
-      jqpathexpressions:
+      jqPathExpressions:
         - .spec.telemetry.tracing.provider.port
         - .spec.telemetry.tracing.provider.backendRefs[].group
         - .spec.telemetry.tracing.provider.backendRefs[].kind
         - .spec.telemetry.tracing.provider.backendRefs[].weight
-      jsonpointers:
+      jsonPointers:
         - /spec/logging
         - /spec/provider/kubernetes/envoyService/externalTrafficPolicy
     "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_SecurityPolicy": |
-      jqpathexpressions:
+      jqPathExpressions:
         - .spec.jwt.providers[].remoteJWKS.cacheDuration
     "resource.customizations.ignoreDifferences.gateway.networking.k8s.io_Gateway": |
-      jqpathexpressions:
+      jqPathExpressions:
         - .spec.listeners[].tls.certificateRefs[].group
         - .spec.listeners[].tls.certificateRefs[].kind
     "resource.customizations.ignoreDifferences.gateway.networking.k8s.io_HTTPRoute": |
-      jqpathexpressions:
+      jqPathExpressions:
         - .spec.parentRefs[].group
         - .spec.parentRefs[].kind
         - .spec.rules[].backendRefs[].group
@@ -79,7 +79,7 @@ configs:
         - .spec.rules[].backendRefs[].weight
         - .spec.rules[].matches[].path
     "resource.customizations.ignoreDifferences.aigateway.envoyproxy.io_AIGatewayRoute": |
-      jqpathexpressions:
+      jqPathExpressions:
         - .spec.parentRefs[].group
         - .spec.parentRefs[].kind
         - .spec.modelsOwnedBy
@@ -87,7 +87,7 @@ configs:
         - .spec.rules[].backendRefs[].weight
         - .spec.rules[].matches[].headers[].type
     "resource.customizations.ignoreDifferences.aigateway.envoyproxy.io_MCPRoute": |
-      jqpathexpressions:
+      jqPathExpressions:
         - .spec.parentRefs[].group
         - .spec.parentRefs[].kind
         - .spec.backendRefs[].securityPolicy.apiKey.secretRef.group
