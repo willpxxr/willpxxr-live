@@ -1,0 +1,17 @@
+# Explicit file index for the Flux build during the Flux->ArgoCD
+# migration overlap (WEP-0001): keeps app.yaml out of the resource set.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ai-gateway-route.yaml
+  - ai-gateway-route-synthetic-anthropic.yaml
+  - ai-service-backend-synthetic.yaml
+  - ai-service-backend-synthetic-anthropic.yaml
+  - backend-synthetic.yaml
+  - backend-security-policy-synthetic.yaml
+  - backend-security-policy-synthetic-anthropic.yaml
+  - security-policy.yaml
+  - security-policy-synthetic-anthropic.yaml
+  - externalsecret-synthetic.yaml
+  - ingress.yaml
+  - traffic-policy.yaml
