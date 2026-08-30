@@ -41,14 +41,6 @@ variable "auth0_mgmt_client_secret" {
   description = "Client secret for the Auth0 Management API M2M application above."
 }
 
-# Retained only to decommission the openrouter provider (see the comment
-# on its providers.tf block) -- remove it and the TFC workspace variable
-# once the destroy apply has run.
-variable "openrouter_api_key" {
-  sensitive   = true
-  description = "OpenRouter provisioning/management API key. No openrouter resources remain in config; this only authenticates the provider for the destroy of the state-held resources."
-}
-
 variable "betterstack_api_token" {
   sensitive   = true
   description = "Better Stack Telemetry API token (from https://betterstack.com/docs/logs/api/getting-started/#get-an-logs-api-token), used to authenticate the logtail Terraform provider so it can create the OTel Collector's Source via logtail_source. Distinct from the source token that resource then produces."
