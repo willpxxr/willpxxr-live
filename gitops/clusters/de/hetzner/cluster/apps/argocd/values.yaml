@@ -5,6 +5,14 @@
 # native OIDC), not ArgoCD's own SSO/Dex flow.
 dex:
   enabled: false
+# The one-shot redis auth secret was created by the one-time helm bootstrap;
+# the init Job has no business inside a GitOps sync -- ArgoCD treats Jobs as
+# sync hooks and the job waits on a rollout the same sync would apply
+# (deadlock -> 10m timeout -> failed hook -> sync stuck). If the secret ever
+# needs recreating: kubectl -n argocd create secret generic argocd-redis
+# --from-literal=auth=$(openssl rand -hex 16), then roll redis.
+redisSecretInit:
+  enabled: false
 configs:
   # OCI helm sources (envoy-gateway/ai-gateway from docker.io/envoyproxy,
   # kagent-tools from ghcr.io) require the repo registered with enableOCI
