@@ -3,6 +3,8 @@
 # tailscale.tf) -- hence no namespace.yaml here.
 name: external-secrets
 namespace: external-secrets
+dir: apps/external-secrets  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 helm:
   - repoURL: https://charts.external-secrets.io
     chart: external-secrets

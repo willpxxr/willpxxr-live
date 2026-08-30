@@ -2,6 +2,8 @@
 # Manifest-only app: EnvoyProxy config + the cluster-scoped GatewayClass.
 name: envoy-gateway-config
 namespace: envoy-gateway-system
+dir: apps/envoy-gateway-config  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 manifests:
   - envoyproxy.yaml
   - gatewayclass.yaml

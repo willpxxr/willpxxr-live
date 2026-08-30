@@ -4,6 +4,8 @@
 # successor values.yaml).
 name: kagent-tools
 namespace: kagent
+dir: apps/kagent-tools  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 helm:
   - repoURL: oci://ghcr.io/kagent-dev/tools/helm
     chart: kagent-tools

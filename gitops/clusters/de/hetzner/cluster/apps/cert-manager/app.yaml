@@ -3,6 +3,8 @@
 # adopts it in place (WEP-0001 inventory table).
 name: cert-manager
 namespace: cert-manager
+dir: apps/cert-manager  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 helm:
   - repoURL: https://charts.jetstack.io
     chart: cert-manager

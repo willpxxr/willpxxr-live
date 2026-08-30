@@ -2,6 +2,8 @@
 # Manifest-only app: MCP routing through Envoy AI Gateway.
 name: ai-gateway-mcp
 namespace: envoy-gateway-system
+dir: apps/ai-gateway-mcp  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 manifests:
   - mcp-route.yaml
   - backend.yaml

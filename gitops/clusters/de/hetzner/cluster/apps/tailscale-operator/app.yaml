@@ -1,6 +1,8 @@
 # ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
 name: tailscale-operator
 namespace: tailscale
+dir: apps/tailscale-operator  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 helm:
   - repoURL: https://pkgs.tailscale.com/helmcharts
     chart: tailscale-operator

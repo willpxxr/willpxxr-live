@@ -3,6 +3,8 @@
 # -- lives outside apps/ because it's cluster-wide policy, hence the second
 # generator path in apps-applicationset.yaml.
 name: policy
+dir: policy  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 manifests:
   - deny-by-default.yaml
   - tailscale-cgnat.yaml

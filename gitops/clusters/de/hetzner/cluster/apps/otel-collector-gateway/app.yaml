@@ -3,6 +3,8 @@
 # the otel-collector manifest app.
 name: otel-collector-gateway
 namespace: otel-collector
+dir: apps/otel-collector-gateway  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 helm:
   - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
     chart: opentelemetry-collector

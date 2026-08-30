@@ -4,6 +4,8 @@
 # the Flux UI goes away (WEP-0001).
 name: gateway
 namespace: envoy-gateway-system
+dir: apps/gateway  # cluster-relative app dir (appset prefixes the cluster path; used for
+                  # the dir source + $app valueFiles)
 manifests:
   - gateway.yaml
   - gateway-ingress.yaml

@@ -46,10 +46,11 @@ spec:
             factor: 2
             maxDuration: 10m
   # hasKey guards everywhere an app.yaml may omit a key -- goTemplate is
-  # strict about missing map keys. The git files generator exposes the file
-  # path as an OBJECT in goTemplate mode (hence .path.path, not .path).
-  # All sequence items are emitted at one consistent indent so the patch is
-  # always valid YAML.
+  # strict about missing map keys. The app dir is taken from app.yaml's own
+  # `dir` field (cluster-relative) rather than the generator's .path params,
+  # whose shape has been version-inconsistent (string vs map vs missing
+  # sub-keys) -- explicit beats clever here. All sequence items are emitted
+  # at one consistent indent so the patch is always valid YAML.
   templatePatch: |
     spec:
       {{- if and (hasKey . "namespace") .namespace }}
@@ -72,7 +73,7 @@ spec:
               # $app values resolution is repo-root-relative in this ArgoCD
               # version (the ref source's own path is ignored) -- hence the
               # full path, not just the values filename.
-              - $app/{{ trimSuffix "/app.yaml" .path.path }}/{{ .values }}
+              - $app/gitops/clusters/de/hetzner/cluster/{{ .dir }}/{{ .values }}
             {{- end }}
         {{- end }}
       {{- end }}
@@ -86,7 +87,7 @@ spec:
       {{- if and (hasKey . "manifests") .manifests }}
         - repoURL: https://github.com/willpxxr/willpxxr-live.git
           targetRevision: main
-          path: {{ trimSuffix "/app.yaml" .path.path }}
+          path: gitops/clusters/de/hetzner/cluster/{{ .dir }}
           directory:
             include: "{ {{- range $i, $e := .manifests }}{{ if $i }},{{ end }}{{ $e }}{{- end -}} }"
       {{- end }}
