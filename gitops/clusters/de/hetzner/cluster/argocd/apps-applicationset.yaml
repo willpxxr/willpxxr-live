@@ -61,7 +61,6 @@ spec:
         - repoURL: https://github.com/willpxxr/willpxxr-live.git
           targetRevision: main
           ref: app
-          path: {{ trimSuffix "/app.yaml" .path.path }}
         {{- range .helm }}
         - repoURL: {{ .repoURL }}
           chart: {{ .chart }}
@@ -70,7 +69,10 @@ spec:
             releaseName: {{ .releaseName }}
             {{- if hasKey . "values" }}
             valueFiles:
-              - $app/{{ .values }}
+              # $app values resolution is repo-root-relative in this ArgoCD
+              # version (the ref source's own path is ignored) -- hence the
+              # full path, not just the values filename.
+              - $app/{{ trimSuffix "/app.yaml" .path.path }}/{{ .values }}
             {{- end }}
         {{- end }}
       {{- end }}
