@@ -42,7 +42,7 @@ metadata:
   name: allow-kube-apiserver-egress
   namespace: argocd
 spec:
-  description: "argocd-server, application and applicationset controllers reconcile Kubernetes resources via the API server."
+  description: "argocd-server and the application, applicationset and notifications controllers reconcile/watch Kubernetes resources via the API server."
   endpointSelector:
     matchExpressions:
       - key: app.kubernetes.io/name
@@ -51,6 +51,7 @@ spec:
           - argocd-server
           - argocd-application-controller
           - argocd-applicationset-controller
+          - argocd-notifications-controller
   egress:
     - toEntities:
         - kube-apiserver
