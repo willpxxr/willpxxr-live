@@ -5,8 +5,6 @@
 # managed from git like any other app.
 name: argocd
 namespace: argocd
-dir: apps/argocd  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 helm:
   - repoURL: https://argoproj.github.io/argo-helm
     chart: argo-cd

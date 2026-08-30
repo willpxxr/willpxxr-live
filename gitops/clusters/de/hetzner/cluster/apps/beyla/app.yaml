@@ -3,8 +3,6 @@
 # adopts it in place (WEP-0001 inventory table).
 name: beyla
 namespace: beyla
-dir: apps/beyla  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 helm:
   - repoURL: https://grafana.github.io/helm-charts
     chart: beyla

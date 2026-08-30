@@ -2,8 +2,6 @@
 # Manifest-only, all cluster-scoped (built-in ValidatingAdmissionPolicy API +
 # the ControlConfiguration CRD) -- no destination namespace.
 name: cel-admission-policies
-dir: apps/cel-admission-policies  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 manifests:
   - crd-control-configuration.yaml
   - policies.yaml

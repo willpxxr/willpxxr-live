@@ -2,7 +2,5 @@
 # Manifest-only: the ControlConfiguration CR for the CRD shipped by the
 # cel-admission-policies app.
 name: cel-admission-policies-config
-dir: apps/cel-admission-policies-config  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 manifests:
   - control-configuration.yaml

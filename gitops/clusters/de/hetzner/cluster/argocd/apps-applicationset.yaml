@@ -46,11 +46,11 @@ spec:
             factor: 2
             maxDuration: 10m
   # hasKey guards everywhere an app.yaml may omit a key -- goTemplate is
-  # strict about missing map keys. The app dir is taken from app.yaml's own
-  # `dir` field (cluster-relative) rather than the generator's .path params,
-  # whose shape has been version-inconsistent (string vs map vs missing
-  # sub-keys) -- explicit beats clever here. All sequence items are emitted
-  # at one consistent indent so the patch is always valid YAML.
+  # strict about missing map keys. .path.path is the generator-provided app
+  # dir (the directory containing the matched app.yaml). Inside
+  # `{{ range .helm }}` the dot rebinds to the helm entry -- use $.path.path
+  # there ($ is the template root). All sequence items are emitted at one
+  # consistent indent so the patch is always valid YAML.
   templatePatch: |
     spec:
       {{- if and (hasKey . "namespace") .namespace }}
@@ -73,7 +73,7 @@ spec:
               # $app values resolution is repo-root-relative in this ArgoCD
               # version (the ref source's own path is ignored) -- hence the
               # full path, not just the values filename.
-              - $app/gitops/clusters/de/hetzner/cluster/{{ .dir }}/{{ .values }}
+              - $app/{{ $.path.path }}/{{ .values }}
             {{- end }}
         {{- end }}
       {{- end }}
@@ -87,7 +87,7 @@ spec:
       {{- if and (hasKey . "manifests") .manifests }}
         - repoURL: https://github.com/willpxxr/willpxxr-live.git
           targetRevision: main
-          path: gitops/clusters/de/hetzner/cluster/{{ .dir }}
+          path: {{ .path.path }}
           directory:
             include: "{ {{- range $i, $e := .manifests }}{{ if $i }},{{ end }}{{ $e }}{{- end -}} }"
       {{- end }}

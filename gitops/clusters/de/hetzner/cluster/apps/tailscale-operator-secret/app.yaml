@@ -3,7 +3,5 @@
 # credentials (item written by tailscale.tf).
 name: tailscale-operator-secret
 namespace: tailscale
-dir: apps/tailscale-operator-secret  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 manifests:
   - secret.yaml

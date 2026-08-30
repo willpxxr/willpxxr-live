@@ -3,8 +3,6 @@
 # operator itself stays OVH-managed/unmanaged).
 name: kube-system
 namespace: kube-system
-dir: apps/kube-system  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 manifests:
   - network-policy.yaml
   - hubble-oidc-externalsecret.yaml

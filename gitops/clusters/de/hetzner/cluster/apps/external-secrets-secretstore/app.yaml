@@ -2,7 +2,5 @@
 # Manifest-only: the 1Password-backed ClusterSecretStore everything else
 # depends on.
 name: external-secrets-secretstore
-dir: apps/external-secrets-secretstore  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 manifests:
   - secretstore.yaml

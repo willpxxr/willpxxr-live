@@ -3,8 +3,6 @@
 # for the LLM proxy, all in envoy-gateway-system.
 name: ai-gateway-llm
 namespace: envoy-gateway-system
-dir: apps/ai-gateway-llm  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 manifests:
   - ai-gateway-route.yaml
   - ai-gateway-route-synthetic-anthropic.yaml

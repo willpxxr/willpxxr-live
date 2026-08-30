@@ -3,8 +3,6 @@
 # manifest app -- both collector releases share that namespace.
 name: otel-collector-agent
 namespace: otel-collector
-dir: apps/otel-collector-agent  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 helm:
   - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
     chart: opentelemetry-collector

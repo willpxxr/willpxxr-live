@@ -2,8 +2,6 @@
 # Pinned chart (1.8.2): EG is the Gateway API CRD authority -- see values.yaml.
 name: envoy-gateway
 namespace: envoy-gateway-system
-dir: apps/envoy-gateway  # cluster-relative app dir (appset prefixes the cluster path; used for
-                  # the dir source + $app valueFiles)
 helm:
   - repoURL: oci://docker.io/envoyproxy
     chart: gateway-helm
