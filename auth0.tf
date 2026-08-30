@@ -19,7 +19,7 @@
 # rather than inventing a new verb by default.
 resource "auth0_client" "envoy_gateway_oidc" {
   name        = "willpxxr-live-envoy-gateway-oidc"
-  description = "Confidential client used by Envoy Gateway SecurityPolicy (native OIDC) for hubble/flux-operator"
+  description = "Confidential client used by Envoy Gateway SecurityPolicy (native OIDC) for hubble/flux-operator/argocd"
   app_type    = "regular_web"
 
   oidc_conformant = true
@@ -28,14 +28,17 @@ resource "auth0_client" "envoy_gateway_oidc" {
   callbacks = [
     "https://hubble.tailb40090.ts.net/oauth2/callback",
     "https://flux.tailb40090.ts.net/oauth2/callback",
+    "https://argocd.tailb40090.ts.net/oauth2/callback",
   ]
   allowed_logout_urls = [
     "https://hubble.tailb40090.ts.net",
     "https://flux.tailb40090.ts.net",
+    "https://argocd.tailb40090.ts.net",
   ]
   web_origins = [
     "https://hubble.tailb40090.ts.net",
     "https://flux.tailb40090.ts.net",
+    "https://argocd.tailb40090.ts.net",
   ]
 
   jwt_configuration {
@@ -202,6 +205,11 @@ resource "auth0_role" "cicd_get" {
   description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net)."
 }
 
+resource "auth0_role" "argo_get" {
+  name        = "argo:get"
+  description = "Grants access to the ArgoCD UI (argocd.tailb40090.ts.net)."
+}
+
 resource "auth0_role" "hubble_use" {
   name        = "hubble:use"
   description = "Grants access to the Hubble UI (hubble.tailb40090.ts.net) -- a network flow observability dashboard, not something administered through it."
@@ -228,6 +236,7 @@ resource "auth0_user_roles" "will" {
   user_id = data.auth0_user.will.id
   roles = [
     auth0_role.cicd_get.id,
+    auth0_role.argo_get.id,
     auth0_role.hubble_use.id,
     auth0_role.llm_use.id,
     auth0_role.mcp_use.id,
@@ -321,6 +330,24 @@ resource "auth0_resource_server_scopes" "cicd" {
   scopes {
     name        = "cicd:get"
     description = "View deployment and CI/CD pipeline status"
+  }
+}
+
+resource "auth0_resource_server" "argo" {
+  name       = "willpxxr-live argo"
+  identifier = "https://argocd.tailb40090.ts.net"
+
+  enforce_policies                                = true
+  token_dialect                                   = "access_token_authz"
+  skip_consent_for_verifiable_first_party_clients = false
+}
+
+resource "auth0_resource_server_scopes" "argo" {
+  resource_server_identifier = auth0_resource_server.argo.identifier
+
+  scopes {
+    name        = "argo:get"
+    description = "View the ArgoCD UI (deployment/app state)"
   }
 }
 
@@ -425,6 +452,17 @@ resource "auth0_role_permissions" "cicd_get" {
   }
 
   depends_on = [auth0_resource_server_scopes.cicd]
+}
+
+resource "auth0_role_permissions" "argo_get" {
+  role_id = auth0_role.argo_get.id
+
+  permissions {
+    name                       = "argo:get"
+    resource_server_identifier = auth0_resource_server.argo.identifier
+  }
+
+  depends_on = [auth0_resource_server_scopes.argo]
 }
 
 resource "auth0_role_permissions" "hubble_use" {

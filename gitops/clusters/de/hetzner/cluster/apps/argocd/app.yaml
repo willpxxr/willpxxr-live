@@ -1,0 +1,18 @@
+# ArgoCD's own namespace is bootstrap-owned (created by the one-time helm
+# install, like the external-secrets/tailscale namespaces from Terraform) --
+# no namespace.yaml here on purpose: the app deleting its own namespace would
+# be suicide. Everything else about ArgoCD (chart, config, exposure) is
+# managed from git like any other app.
+name: argocd
+namespace: argocd
+helm:
+  - repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-cd
+    version: 10.4.2
+    releaseName: argocd
+    values: values.yaml
+manifests:
+  - network-policy.yaml
+  - httproute.yaml
+  - security-policy.yaml
+  - externalsecret.yaml

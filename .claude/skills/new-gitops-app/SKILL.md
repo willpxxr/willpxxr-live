@@ -5,6 +5,13 @@ description: Scaffold a new component under gitops/clusters/de/hetzner/cluster/a
 
 # New GitOps App
 
+**DURING THE WEP-0001 FLUX->ARGOCD MIGRATION**: scaffold new apps with the
+ArgoCD pattern instead of everything below -- `apps/<name>/app.yaml` (helm:/
+kustomize:/manifests: entries, see WEP-0001) + values.yaml + manifests, and NO
+flux registration (the ApplicationSet generator picks the dir up
+automatically). The ResourceSetInputProvider/flux instructions below are
+legacy until phase 4 removes Flux.
+
 Read `CLAUDE.md`'s "GitOps app conventions" section first — this skill is the
 executable version of that section. If the two ever disagree, `CLAUDE.md` is wrong
 and should be fixed as part of this change (see its "Keeping this file current"

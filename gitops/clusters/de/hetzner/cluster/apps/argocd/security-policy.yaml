@@ -1,0 +1,57 @@
+---
+# Same Auth0-at-the-gateway model as flux-operator-route/security-policy.yaml
+# (and hubble): Envoy Gateway terminates the browser OIDC flow, validates the
+# JWT, and only forwards authorized requests. ArgoCD itself never sees
+# credentials (users.anonymous.enabled + read-only default role in
+# values.yaml). Shares the envoy-gateway-oidc Auth0 client with hubble/flux
+# (callbacks registered in auth0.tf); the argo resource server + argo:get
+# scope are what actually gate access.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: argocd-oidc
+  namespace: argocd
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: argocd
+  oidc:
+    provider:
+      issuer: "https://auth.willpxxr.com"
+    clientIDRef:
+      name: envoy-gateway-oidc
+    clientSecret:
+      name: envoy-gateway-oidc
+    redirectURL: "https://argocd.tailb40090.ts.net/oauth2/callback"
+    logoutPath: "/oauth2/logout"
+    cookieDomain: "tailb40090.ts.net"
+    # Puts the access token in the Authorization header for the jwt provider
+    # below to validate/inspect -- see flux-operator-route for the full note.
+    forwardAccessToken: true
+    scopes:
+      - "argo:get"
+    # RFC 8707 resource-indicator param (requires the tenant's
+    # resource_parameter_profile = "compatibility" in auth0.tf).
+    resources:
+      - "https://argocd.tailb40090.ts.net"
+  jwt:
+    providers:
+      # Note: the real token 'iss' claim keeps the trailing slash (unlike
+      # oidc.provider.issuer above, which is used to build the discovery
+      # URL and 404s with one -- see the earlier fix in flux-operator-route).
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://argocd.tailb40090.ts.net"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "argo:get"

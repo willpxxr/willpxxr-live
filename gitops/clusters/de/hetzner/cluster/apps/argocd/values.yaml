@@ -1,0 +1,18 @@
+# TLS terminates at the Envoy Gateway (SecurityPolicy OIDC, see
+# security-policy.yaml) -- argocd-server serves plain HTTP behind the route,
+# same pattern as the flux-operator UI.
+# dex is disabled: authentication is Envoy Gateway's SecurityPolicy (Auth0
+# native OIDC), not ArgoCD's own SSO/Dex flow.
+dex:
+  enabled: false
+configs:
+  params:
+    "server.insecure": true
+  cm:
+    # The Envoy Gateway SecurityPolicy is the real authentication boundary
+    # (Auth0 OIDC in front of the HTTPRoute, same model as hubble/flux).
+    # Behind that perimeter ArgoCD itself treats every visitor as the
+    # default role below (read-only) -- git is the write path, not the UI.
+    "users.anonymous.enabled": "true"
+  rbac:
+    "policy.default": "role:readonly"
