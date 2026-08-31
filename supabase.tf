@@ -44,15 +44,24 @@ data "supabase_pooler" "token_vault" {
 }
 
 locals {
-  # The pooler data source returns a map of mode -> connection string with a
+  # The pooler data source returns a map of mode -> connection string (keys
+  # are the raw Supavisor PoolMode values, per the provider source), with a
   # [YOUR-PASSWORD] placeholder and the built-in postgres role as user.
-  # TO VERIFY at first apply: the exact map key naming (matched loosely on
-  # "session" here) and the placeholder format; both come straight from the
-  # Management API response and are not documented in the provider schema.
+  pooler_urls = data.supabase_pooler.token_vault.url
+
   supabase_session_url = one([
-    for mode, url in data.supabase_pooler.token_vault.url : url
+    for mode, url in local.pooler_urls : url
     if strcontains(lower(mode), "session")
   ])
+
+  # Fallback for the first apply: a just-created project can race Supavisor
+  # provisioning, and the provider silently yields an EMPTY url map then
+  # (one([]) -> null). Construct the documented session-pooler host directly;
+  # the data-source result wins on any later run once the pooler exists.
+  supabase_session_url_fallback = coalesce(
+    local.supabase_session_url,
+    "postgresql://postgres.${supabase_project.token_vault.id}:[YOUR-PASSWORD]@aws-0-${var.supabase_region}.pooler.supabase.com:5432/postgres"
+  )
 
   # Supavisor session mode usernames are "<role>.<project-ref>"; swap the
   # built-in postgres user for the dedicated least-privilege role created by
@@ -60,7 +69,7 @@ locals {
   # dashboard step -- the provider has no SQL-execution resource).
   token_vault_db_url = replace(
     replace(
-      local.supabase_session_url,
+      local.supabase_session_url_fallback,
       "postgres.${supabase_project.token_vault.id}@",
       "token_vault.${supabase_project.token_vault.id}@"
     ),
