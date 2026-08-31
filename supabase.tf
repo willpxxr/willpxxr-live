@@ -64,9 +64,9 @@ locals {
   )
 
   # Supavisor session mode usernames are "<role>.<project-ref>"; swap the
-  # built-in postgres user for the dedicated least-privilege role created by
-  # services/mcp-token-vault/scripts/0000-bootstrap-role.sql (still a manual
-  # dashboard step -- the provider has no SQL-execution resource).
+  # built-in postgres user for the dedicated least-privilege role. The role
+  # itself is bootstrapped at vault startup (admin_url below): the vault
+  # reconciles its own role/password against db_url on every boot.
   token_vault_db_url = replace(
     replace(
       local.supabase_session_url_fallback,
@@ -75,6 +75,15 @@ locals {
     ),
     "[YOUR-PASSWORD]",
     random_password.token_vault_role.result
+  )
+
+  # Admin connection (built-in postgres role) for the GitOps role-bootstrap
+  # CronJob (apps/mcp-token-vault/cronjob.yaml), which reconciles the
+  # token_vault role against db_url on a schedule.
+  token_vault_admin_url = replace(
+    local.supabase_session_url_fallback,
+    "[YOUR-PASSWORD]",
+    random_password.supabase_db.result
   )
 
   # 32 random bytes, base64 -- exactly what the vault's VAULT_ENCRYPTION_KEY
@@ -111,6 +120,10 @@ resource "onepassword_item" "mcp_token_vault" {
         role_password = {
           type  = "CONCEALED"
           value = random_password.token_vault_role.result
+        }
+        admin_url = {
+          type  = "CONCEALED"
+          value = local.token_vault_admin_url
         }
       }
     }

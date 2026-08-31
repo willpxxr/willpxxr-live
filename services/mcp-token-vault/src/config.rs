@@ -22,6 +22,7 @@ pub struct ProviderConfig {
 #[derive(Clone, Debug)]
 pub struct Config {
     pub database_url: String,
+    pub admin_database_url: Option<String>,
     pub admin_port: u16,
     pub oauth_port: u16,
     pub admin_token: Option<String>,
@@ -32,6 +33,8 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL not set")?;
+        let admin_database_url =
+            std::env::var("ADMIN_DATABASE_URL").ok().filter(|s| !s.is_empty());
         let admin_port = std::env::var("ADMIN_PORT")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -112,6 +115,7 @@ impl Config {
 
         Ok(Self {
             database_url,
+            admin_database_url,
             admin_port,
             oauth_port,
             admin_token,

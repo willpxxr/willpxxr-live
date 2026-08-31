@@ -34,17 +34,19 @@ fresh bearer injected.
 
 ## Deploy order
 
-1. Supabase project → run `scripts/0000-bootstrap-role.sql` in the SQL editor
-   → store `postgresql://token_vault:<pw>@<host>:5432/postgres` in 1Password
-   as `mcp-token-vault/credentials/db_url`.
-2. Generate a 32-byte key (`openssl rand -base64 32`) → 1Password as
-   `mcp-token-vault/credentials/encryption_key`.
-3. ExternalSecrets for both (refreshInterval 6h) → `apps/mcp-token-vault`.
-4. Bootstrap a credential:
-   `kubectl port-forward <pod> 9090:9090` then
-   `curl -X POST localhost:9090/bootstrap -d '{"provider":"linear","kind":"oauth","refresh_token":"..."}'`
-   (one-time human OAuth dance per WEP-0006 / `scripts/` helper in
-   willpxxr-live).
+Everything below is GitOps/Terraform-driven; there is no manual DB step:
+
+1. `supabase.tf` (in willpxxr-live) creates the Supabase project and writes
+   the `mcp-token-vault` 1Password item: `db_url` (least-privilege role via
+   the session pooler), `encryption_key`, `admin_url` (built-in postgres
+   role), `role_password`.
+2. ExternalSecrets sync them (refreshInterval 6h) → `apps/mcp-token-vault`.
+3. On startup the vault bootstraps its own role using `ADMIN_DATABASE_URL`
+   (create-if-missing + password reconciled to `db_url`), then runs its
+   schema migrations, then serves traffic.
+4. Per-provider credentials arrive via the elicitation UX (`/oauth/<p>/start`
+   through the Gateway) or the cluster-internal `/bootstrap` API
+   (`kubectl port-forward <pod> 9090:9090`).
 
 ## Dev
 

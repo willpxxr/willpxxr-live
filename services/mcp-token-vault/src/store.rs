@@ -1,5 +1,6 @@
 use crate::crypto::Key;
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use sqlx::Connection;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row, postgres::PgPoolOptions};
 
@@ -28,6 +29,51 @@ pub async fn connect(url: &str) -> Result<PgPool> {
         .connect(url)
         .await
         .context("connecting to database")
+}
+
+/// Idempotently ensure the least-privilege role named in `database_url`
+/// exists and its password matches it, using the admin connection. Runs on
+/// every startup so GitOps rotation of db_url self-heals.
+pub async fn bootstrap_role(admin_url: &str, database_url: &str) -> Result<()> {
+    let target = reqwest::Url::parse(database_url).context("parsing DATABASE_URL")?;
+    let role = target
+        .username()
+        .split('.')
+        .next()
+        .context("empty username in DATABASE_URL")?
+        .to_owned();
+    if role.is_empty() || !role.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+        bail!("DATABASE_URL username {role:?} is not a safe role name");
+    }
+    let password = target
+        .password()
+        .context("DATABASE_URL has no password")?
+        .replace('\'', "''");
+
+    let mut conn = sqlx::postgres::PgConnection::connect(admin_url)
+        .await
+        .context("admin database handshake failed")?;
+    let sql = format!(
+        r#"
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{role}') THEN
+        CREATE ROLE "{role}" LOGIN;
+    END IF;
+END $$;
+ALTER ROLE "{role}" LOGIN PASSWORD '{password}';
+GRANT USAGE, CREATE ON SCHEMA public TO "{role}";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "{role}";
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "{role}";
+"#
+    );
+    sqlx::raw_sql(&sql)
+        .execute(&mut conn)
+        .await
+        .context("role bootstrap SQL failed")?;
+    conn.close().await.context("closing admin connection")?;
+    tracing::info!(%role, "database role bootstrapped");
+    Ok(())
 }
 
 pub async fn migrate(pool: &PgPool) -> Result<()> {

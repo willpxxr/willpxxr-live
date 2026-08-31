@@ -43,6 +43,13 @@ spec:
                 secretKeyRef:
                   name: mcp-token-vault
                   key: encryption_key
+            # Built-in postgres role connection; the vault uses it at startup
+            # to bootstrap/reconcile its own least-privilege role (WEP-0006).
+            - name: ADMIN_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-token-vault
+                  key: admin_url
             - name: ADMIN_PORT
               value: "9090"
             - name: OAUTH_PORT

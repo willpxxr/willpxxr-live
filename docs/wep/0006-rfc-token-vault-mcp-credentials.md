@@ -106,10 +106,15 @@ the boundary sits.
   needs `var.supabase_token` + `var.supabase_organization_id` in the TFC
   workspace); `migrations/0001_init.sql`
   (`credentials(id, provider, principal, kind, access_token_enc,
-  refresh_token_enc, expires_at, scopes, rotated_at, created_at)`); manual
-  one-time role bootstrap via `scripts/0000-bootstrap-role.sql`; 1Password
+  refresh_token_enc, expires_at, scopes, rotated_at, created_at)`); role
+  bootstrap is folded into the vault itself: Terraform writes an `admin_url`
+  (built-in postgres role) alongside `db_url` into the 1Password item, and
+  the vault reconciles its own least-privilege role/password against db_url
+  on every startup (idempotent, self-heals rotation); `scripts/0000-bootstrap-role.sql`
+  remains only as a manual break-glass reference; 1Password
   items written by Terraform (`mcp-token-vault/credentials/db_url` +
-  `encryption_key`) and by hand (`linear-mcp-oauth/credentials/client_id` +
+  `encryption_key` + `admin_url`) and by hand
+  (`linear-mcp-oauth/credentials/client_id` +
   `client_secret`, placeholders until the Linear OAuth app exists); network
   policy: `world:443` egress for Supabase and per-upstream MCP hosts, each
   with a why-description.

@@ -1,5 +1,5 @@
 use crate::{config, crypto, store};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::sync::Arc;
 
 pub struct AppState {
@@ -13,6 +13,11 @@ pub struct AppState {
 pub async fn build() -> Result<Arc<AppState>> {
     let cfg = config::Config::from_env()?;
     let key = crypto::Key::from_env()?;
+    if let Some(admin_url) = &cfg.admin_database_url {
+        store::bootstrap_role(admin_url, &cfg.database_url)
+            .await
+            .context("bootstrapping database role")?;
+    }
     let pool = store::connect(&cfg.database_url).await?;
     store::migrate(&pool).await?;
     let client = reqwest::Client::builder()
