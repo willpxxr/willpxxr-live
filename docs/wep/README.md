@@ -22,3 +22,4 @@ reasoning fits on a page, it's an ADR.
 | [0003](0003-rfc-tailnet-internal-dns.md) | RFC | Tailnet service DNS via ExternalDNS on `*.internal.willpxxr.com` | Accepted |
 | [0004](0004-adr-cloudflare-provider-v5.md) | ADR | Cloudflare provider v5 | Accepted |
 | [0005](0005-rfc-kagent-substrate-hermes-agent.md) | RFC | Personal chat agent via kagent AgentHarness (hermes) on Agent Substrate | Accepted |
+| [0006](0006-rfc-token-vault-mcp-credentials.md) | RFC | Token vault for ai-gateway-mcp third-party credentials (Supabase-backed) | Proposed |
