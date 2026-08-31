@@ -100,6 +100,13 @@ Read the rendered output, don't just check the exit code — confirm:
   `image.repository` in a recent version; a chart bump can introduce a new one of
   these at any time, so re-check `helm template`'s error output rather than
   assuming last time's values.yaml still satisfies the chart
+- **verify the produced ConfigMap, not just the values keys** — Helm silently
+  ignores unknown/mistyped values keys, and some keys only take effect when a
+  parent feature flag is on. When a change is meant to set a ConfigMap/flag
+  (Cilium, collectors, proxies), render the chart and grep the produced
+  ConfigMap for the exact key/value you expect. Learned 2026-08-31:
+  `bpf.socketLB.hostNetworkOnly` was a doubly-invalid path+key that never
+  rendered, silently breaking Tailscale LB-Service forwarding for months.
 
 ## 4. Learning loop
 

@@ -45,15 +45,28 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 - **`de/hetzner`** (`gitops/clusters/de/hetzner/cluster/`) — **the active cluster**;
   essentially all current work happens here. Talos Linux on Hetzner Cloud (`nbg1`),
   provisioned via the `hcloud-talos` Terraform module (`hetzner.tf`). Cilium CNI
-  (kube-proxy replacement, native routing, Hubble), Envoy Gateway + Envoy AI Gateway
-  for ingress/routing, cert-manager, external-secrets (1Password backend), the
-  Tailscale operator (ingress is over Tailscale, not a public LoadBalancer).
+  (kube-proxy replacement, native routing, Hubble) — with
+  `socketLB.hostNamespaceOnly: true` in `cilium-values.yaml`, which is load-bearing:
+  Cilium's socket-LB force-enables with kube-proxy replacement
+  (cilium/cilium#47417), and with it active in pod namespaces, pod→ClusterIP
+  traffic bypasses the netfilter DNAT hooks the Tailscale operator's proxies
+  depend on — silently blackholing tailnet traffic to LoadBalancer Services.
+  Envoy Gateway + Envoy AI Gateway for ingress/routing (all host routing + TLS
+  termination; wildcard `*.internal.willpxxr.com` via cert-manager DNS-01), cert-manager,
+  external-dns (`apps/external-dns/`, syncs `*.internal.willpxxr.com` records to
+  Cloudflare from Gateway HTTPRoutes), external-secrets (1Password backend), the
+  Tailscale operator. Tailnet exposure is L3-only: one `loadBalancerClass:
+  tailscale` LoadBalancer Service (the Envoy data plane); the per-hostname
+  Tailscale L7 Ingresses were removed (WEP-0003) — their hostname machinery is
+  what caused the 2026-07/08 `svc:gateway` outage, so prefer not to bring them back.
 
 ## Tech stack
 
 - **Terraform** `>= 1.11` (see `providers.tf`'s `required_version`) — remote backend
   (`backend.tf`), no local `terraform apply` expected.
-- **Providers**: `cloudflare` (DNS/WAF/redirects for willpxxr.com),
+- **Providers**: `cloudflare` (**v5** — see `docs/wep/0004-adr-cloudflare-provider-v5.md`;
+  token minting for downscoped tokens uses the account-token surface, which
+  needs the automation token to hold Account/API-Tokens Read+Write),
   `hcloud`/`talos` (the active cluster), `tailscale`, `onepassword`, `auth0`,
   `logtail` (Better Stack). Plus `kubernetes`/`helm`/`kubectl`/`tls` for the small
   set of bootstrap-only k8s objects Terraform manages directly (see below).
@@ -220,7 +233,10 @@ scraping, OTLP receiver) export logs/metrics/traces to Better Stack.
   `packer/talos/talos.pkr.hcl`'s default).
 - Auth0 scope naming (`auth0.tf`) is `<resource>:<tier>`, tier one of
   `get`/`admin`/`use` — see the comment at the top of `auth0.tf` for the full
-  rationale before adding a new scope.
+  rationale before adding a new scope. Auth0 resource-server identifiers and
+  all SecurityPolicy redirect URLs / audiences use
+  `https://<name>.internal.willpxxr.com` (MCP carries a `/mcp` path suffix) —
+  keep `auth0.tf` identifiers and the matching SecurityPolicy fields in lockstep.
 - Run `terraform fmt` before committing.
 
 ## Sensitive information

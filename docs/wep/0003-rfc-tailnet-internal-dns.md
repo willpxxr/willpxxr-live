@@ -1,6 +1,6 @@
 # WEP-0003: Tailnet service DNS via ExternalDNS on `*.internal.willpxxr.com`
 
-**Type:** RFC · **Status:** Accepted · **Date:** 2026-08-31
+**Type:** RFC · **Status:** Implemented (2026-08-31) · **Date:** 2026-08-31
 
 ## Context
 
