@@ -3,26 +3,31 @@
 # only (WEP-0003). Consumed from the cluster via 1Password ExternalSecrets
 # (apps/external-dns + apps/gateway/externalsecret.yaml).
 #
-# PREREQUISITE (one-time, granted in the Cloudflare dashboard): the
-# automation token this provider runs with (var.cloudflare_api_token) needs
-# API-Tokens Read + API-Tokens Write. Terraform deliberately holds token-
-# minting power so it can produce downscoped tokens like this one on every
-# apply; rotating or revoking them is a git change, not a dashboard visit.
-data "cloudflare_api_token_permission_groups" "main" {}
-
+# Minted as an ACCOUNT token via the account-token surface (provider v5) --
+# the automation token is account-owned, and v4's user-endpoint-only token
+# management couldn't touch it at all (error 9109). PREREQUISITE (one-time,
+# granted in the Cloudflare dashboard): the automation token needs
+# Account/API-Tokens Read + Write.
 locals {
-  internal_dns_group_id = data.cloudflare_api_token_permission_groups.main.zone["DNS Write"]
+  # Zone-scoped "DNS Write" permission group. Pinned because the v5
+  # cloudflare_account_api_token_permission_groups data source returns a
+  # null permission_groups list regardless of input (verified v5.24.0);
+  # the id comes from GET /accounts/{id}/tokens/permission_groups and is a
+  # stable, account-independent identifier.
+  internal_dns_group_id = "4755a26eedb94da69e1066d98aa820be"
 }
 
-resource "cloudflare_api_token" "internal_dns" {
-  name = "willpxxr-internal-dns (external-dns + cert-manager)"
+resource "cloudflare_account_token" "internal_dns" {
+  account_id = data.cloudflare_accounts.main.result[0].id
+  name       = "willpxxr-internal-dns (external-dns + cert-manager)"
 
-  policy {
-    permission_groups = [local.internal_dns_group_id]
-    resources = {
+  policies = [{
+    effect            = "allow"
+    permission_groups = [{ id = local.internal_dns_group_id }]
+    resources = jsonencode({
       "com.cloudflare.api.account.zone.${data.cloudflare_zone.main.id}" = "*"
-    }
-  }
+    })
+  }]
 }
 
 resource "onepassword_item" "internal_dns_cloudflare" {
@@ -35,7 +40,7 @@ resource "onepassword_item" "internal_dns_cloudflare" {
       field_map = {
         token = {
           type  = "CONCEALED"
-          value = cloudflare_api_token.internal_dns.value
+          value = cloudflare_account_token.internal_dns.value
         }
       }
     }

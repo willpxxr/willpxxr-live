@@ -1,5 +1,7 @@
 data "cloudflare_zone" "main" {
-  name = "willpxxr.com"
+  filter = {
+    name = "willpxxr.com"
+  }
 }
 
 data "cloudflare_accounts" "main" {

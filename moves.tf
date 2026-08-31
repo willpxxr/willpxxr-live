@@ -1,6 +1,11 @@
+# cloudflare provider v5 renamed cloudflare_record -> cloudflare_dns_record
+# (WEP-0003-adjacent provider migration); the type-level move carries every
+# instance over in place, so no DNS record is destroyed or recreated. The
+# historical per-key record moves below this point in the old chain were
+# already applied and their source state is gone, so they were removed.
 moved {
-  from = cloudflare_record.main["git"]
-  to   = cloudflare_record.main["records/git/a"]
+  from = cloudflare_record.main
+  to   = cloudflare_dns_record.main
 }
 
 # OCI resources were decommissioned in INF-6. These removed blocks tell Terraform
@@ -60,21 +65,6 @@ removed {
   lifecycle {
     destroy = false
   }
-}
-
-moved {
-  from = cloudflare_record.main["www"]
-  to   = cloudflare_record.main["records/www/a"]
-}
-
-moved {
-  from = cloudflare_record.main["willpxxr.com"]
-  to   = cloudflare_record.main["records/@/a"]
-}
-
-moved {
-  from = cloudflare_record.main["@"]
-  to   = cloudflare_record.main["records/@/txt"]
 }
 
 moved {
