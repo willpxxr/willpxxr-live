@@ -35,6 +35,16 @@ async fn main() -> Result<()> {
             .ok();
     });
 
+    let oauth_state = state.clone();
+    let oauth_listener = tokio::net::TcpListener::bind(("0.0.0.0", cfg.oauth_port)).await?;
+    tracing::info!(port = cfg.oauth_port, "oauth listening");
+    tokio::spawn(async move {
+        axum::serve(oauth_listener, admin::oauth_router(oauth_state))
+            .with_graceful_shutdown(shutdown())
+            .await
+            .ok();
+    });
+
     let mut handles = Vec::new();
     for pc in cfg.providers {
         let st = state.clone();

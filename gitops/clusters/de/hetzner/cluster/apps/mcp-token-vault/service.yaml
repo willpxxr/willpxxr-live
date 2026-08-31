@@ -1,0 +1,21 @@
+---
+# Exposes only the traffic-carrying listeners. The admin listener (9090) is
+# deliberately absent -- /bootstrap is cluster-internal by design (WEP-0006),
+# reachable via kubectl port-forward, never via the Gateway.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-token-vault
+  namespace: mcp-token-vault
+  labels:
+    app.kubernetes.io/name: mcp-token-vault
+spec:
+  selector:
+    app.kubernetes.io/name: mcp-token-vault
+  ports:
+    - name: proxy-linear
+      port: 8081
+      targetPort: proxy-linear
+    - name: oauth
+      port: 9091
+      targetPort: oauth

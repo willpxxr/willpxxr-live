@@ -93,6 +93,7 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 ├── data.tf                                  # Cloudflare zone/account data sources
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
+├── services/                                # In-cluster services with source in this repo (mcp-token-vault, WEP-0006; CI builds/pushes the image)
 ├── .opencode/                               # opencode global config + ai-gateway-auth plugin (see "opencode config" below)
 ├── docs/wep/                                 # Willpxxr enhancement proposals (RFC + ADR subtypes) -- see docs/wep/README.md
 └── gitops/clusters/de/hetzner/cluster/
@@ -107,6 +108,11 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   pure overhead here and are not used. (Earlier history has some PR merges from
   before this was settled — that's not a convention to continue.) `main` isn't
   branch-protected at the GitHub level either, which is consistent with that.
+- **Committing to `main` while a feature-branch checkout is active** (e.g. WEP-0005
+  staging on a branch): use `git worktree add /tmp/<name> main` and commit there.
+  Do NOT `git checkout main` in the branch checkout — files tracked on main but
+  absent from the branch are deleted from the working tree on switch (bit us
+  twice with `services/`), and stash-dances around modified files are fragile.
 - **Terraform**: Terraform Cloud applies on every push to `main` (VCS-driven). No
   local `terraform apply` expected.
 - **GitOps**: ArgoCD auto-syncs (selfHeal + prune) the Applications its

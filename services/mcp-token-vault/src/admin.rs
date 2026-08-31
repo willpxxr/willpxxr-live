@@ -121,8 +121,13 @@ pub fn router(state: SharedState) -> Router {
         .layer(middleware::from_fn_with_state(state.clone(), require_admin));
     Router::new()
         .route("/healthz", get(healthz))
+        .merge(protected)
+        .with_state(state)
+}
+
+pub fn oauth_router(state: SharedState) -> Router {
+    Router::new()
         .route("/oauth/{provider}/start", get(crate::oauth::start))
         .route("/oauth/{provider}/callback", get(crate::oauth::callback))
-        .merge(protected)
         .with_state(state)
 }

@@ -20,12 +20,17 @@ fresh bearer injected.
 | --- | --- |
 | `DATABASE_URL` | Postgres connection string (ESO-delivered) |
 | `VAULT_ENCRYPTION_KEY` | base64 32-byte master key (ESO-delivered) |
-| `ADMIN_PORT` | admin listener, default `9090` |
+| `ADMIN_PORT` | admin listener, default `9090` (never exposed via Service) |
+| `OAUTH_PORT` | browser-facing elicitation listener, default `9091` |
+| `ELICITATION_BASE_URL` | public Gateway hostname serving `/oauth/*` |
 | `ADMIN_TOKEN` | optional bearer required on `/bootstrap` |
 | `PROVIDER_<NAME>_LISTEN_PORT` | proxy listener for provider `<name>` |
 | `PROVIDER_<NAME>_UPSTREAM_URL` | upstream MCP server base URL |
 | `PROVIDER_<NAME>_TOKEN_URL` | OAuth token endpoint (enables refresh) |
-| `PROVIDER_<NAME>_CLIENT_ID` / `_CLIENT_SECRET` | OAuth client for refresh |
+| `PROVIDER_<NAME>_AUTHORIZE_URL` | OAuth authorize endpoint (enables elicitation UX) |
+| `PROVIDER_<NAME>_REDIRECT_URI` | OAuth redirect URI (must match the provider app) |
+| `PROVIDER_<NAME>_SCOPES` | optional space-separated scopes |
+| `PROVIDER_<NAME>_CLIENT_ID` / `_CLIENT_SECRET` | OAuth client for refresh + elicitation |
 
 ## Deploy order
 

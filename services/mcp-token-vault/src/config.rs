@@ -23,6 +23,7 @@ pub struct ProviderConfig {
 pub struct Config {
     pub database_url: String,
     pub admin_port: u16,
+    pub oauth_port: u16,
     pub admin_token: Option<String>,
     pub elicitation_base_url: Option<String>,
     pub providers: Vec<ProviderConfig>,
@@ -35,6 +36,10 @@ impl Config {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(9090);
+        let oauth_port = std::env::var("OAUTH_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(9091);
         let admin_token = std::env::var("ADMIN_TOKEN").ok().filter(|s| !s.is_empty());
         let elicitation_base_url = std::env::var("ELICITATION_BASE_URL")
             .ok()
@@ -108,6 +113,7 @@ impl Config {
         Ok(Self {
             database_url,
             admin_port,
+            oauth_port,
             admin_token,
             elicitation_base_url,
             providers,
