@@ -13,6 +13,7 @@ spec:
   issuerRef:
     name: cloudflare-dns01
     kind: Issuer
+  commonName: "internal.willpxxr.com"
   dnsNames:
     - "*.internal.willpxxr.com"
     - "internal.willpxxr.com"

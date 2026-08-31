@@ -51,6 +51,22 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-acme-egress
+  namespace: cert-manager
+spec:
+  description: "The cert-manager controller talks to Let's Encrypt's ACME directory and validation endpoints (acme-v02.api.letsencrypt.org:443) for certificate issuance; LE's IPs aren't a fixed enumerable set, so this allows general internet egress on 443."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-otel-scrape-ingress
   namespace: cert-manager
 spec:
