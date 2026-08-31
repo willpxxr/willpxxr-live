@@ -63,27 +63,31 @@ locals {
     "postgresql://postgres.${supabase_project.token_vault.id}:[YOUR-PASSWORD]@aws-0-${var.supabase_region}.pooler.supabase.com:5432/postgres"
   )
 
-  # Supavisor session mode usernames are "<role>.<project-ref>"; swap the
-  # built-in postgres user for the dedicated least-privilege role. The role
-  # itself is bootstrapped at vault startup (admin_url below): the vault
-  # reconciles its own role/password against db_url on every boot.
-  token_vault_db_url = replace(
-    replace(
-      local.supabase_session_url_fallback,
-      "postgres.${supabase_project.token_vault.id}@",
-      "token_vault.${supabase_project.token_vault.id}@"
-    ),
-    "[YOUR-PASSWORD]",
-    random_password.token_vault_role.result
+  # Only the HOST is taken from the pooled URL; both connection strings are
+  # then built from parts. (A literal username swap can never match here:
+  # the URL carries the password placeholder between username and @.)
+  supabase_pooler_host = element(
+    regex("^[^@]+@([^:/]+):[0-9]+", local.supabase_session_url_fallback),
+    0
   )
 
-  # Admin connection (built-in postgres role) for the GitOps role-bootstrap
-  # CronJob (apps/mcp-token-vault/cronjob.yaml), which reconciles the
-  # token_vault role against db_url on a schedule.
-  token_vault_admin_url = replace(
-    local.supabase_session_url_fallback,
-    "[YOUR-PASSWORD]",
-    random_password.supabase_db.result
+  # Supavisor session mode usernames are "<role>.<project-ref>". The vault
+  # bootstraps the token_vault role at startup (admin_url below): it
+  # reconciles its own role/password against db_url on every boot.
+  token_vault_db_url = format(
+    "postgresql://token_vault.%s:%s@%s:5432/postgres",
+    supabase_project.token_vault.id,
+    random_password.token_vault_role.result,
+    local.supabase_pooler_host
+  )
+
+  # Admin connection (built-in postgres role), consumed by the vault at
+  # startup to reconcile the token_vault role against db_url.
+  token_vault_admin_url = format(
+    "postgresql://postgres.%s:%s@%s:5432/postgres",
+    supabase_project.token_vault.id,
+    random_password.supabase_db.result,
+    local.supabase_pooler_host
   )
 
   # 32 random bytes, base64 -- exactly what the vault's VAULT_ENCRYPTION_KEY
