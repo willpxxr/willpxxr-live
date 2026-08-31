@@ -60,11 +60,18 @@ the boundary sits.
    1Password (`mcp-token-vault/credentials/encryption_key` -> ESO). A
    compromised Supabase project yields ciphertext only.
 
-3. **The vault talks to Supabase over direct Postgres**, not the REST/PostgREST
+3. **The vault talks to Supabase over Postgres**, not the REST/PostgREST
    surface: fewer auth surfaces, no Supabase Auth in the data path, standard
    SQL for the refresh loop. The connection string and encryption key are the
    vault's only secrets, delivered via ExternalSecret
-   (`mcp-token-vault/credentials/db_url`, `.../encryption_key`). The Supabase
+   (`mcp-token-vault/credentials/db_url`, `.../encryption_key`). The vault
+   uses a **dedicated least-privilege role** (created by the schema migration,
+   not the dashboard's `postgres` role) with `sslmode=require` minimum.
+   **Connection path is an IPv4 question**: Supabase's direct endpoint is
+   IPv6-only without the paid IPv4 add-on (verified against their connecting
+   docs, 2026-08-31); Phase 0 must verify real IPv6 egress from the pods
+   (node has v6 != pod route does) and otherwise use the Supavisor
+   session-mode pooler, which is IPv4 on every tier. The Supabase
    project itself is dashboard-created (no usable Terraform provider); schema
    ships as versioned SQL migrations in-repo, applied by the vault on boot.
 
@@ -104,6 +111,19 @@ the boundary sits.
 - **Phase 3 -- cutover/cleanup**: retire the demo `kiwi` backend once a real
   one is proven; decide whether Better Stack moves behind the vault (probably
   not -- static is fine).
+
+## Deliberately deferred
+
+- **Federated/workload identity for DB auth.** Supabase's Postgres accepts
+  only username/password (SCRAM) on the wire -- its SSO is dashboard-scoped
+  and its Auth0 integration mints end-user Data API JWTs, neither authenticates
+  a database role (verified 2026-08-31). There is no IRSA-style surface to
+  federate a k8s service-account token into. Vault-style dynamic per-lease DB
+  credentials were considered and deferred: a credential broker is another
+  service to run and still bootstraps from a static admin credential -- not
+  justified for one single-tenant database whose rows are ciphertext anyway.
+  Revisit if Supabase ships managed OAuth DB auth (Postgres 18 adds native
+  OAuth client support upstream).
 
 ## Risks
 
