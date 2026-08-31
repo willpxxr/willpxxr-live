@@ -10,7 +10,9 @@ section).
 Ask (or infer from the task) before scaffolding:
 
 - **App name** and **target namespace** (usually the same; omit the namespace in
-  app.yaml only for cluster-scoped apps).
+  app.yaml only for cluster-scoped apps). **Never share a namespace between two
+  apps** — either app's prune becomes a hazard for the other (see the
+  kagent/kagent-system note in WEP-0005).
 - **Source kinds** (any combination, see WEP-0001): `helm:` entries
   (`repoURL`/`chart`/`version`/`releaseName` + per-entry `values:` file),
   `kustomize:` entries (`repoURL`/`path`/`revision`), and/or `manifests:`

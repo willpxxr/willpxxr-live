@@ -1,0 +1,84 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: kagent-system
+spec:
+  description: "kagent controller, UI and substrate worker pods (ateom + hermes sandbox) talk to each other within kagent-system."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kagent-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kagent-system
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: kagent-system
+spec:
+  description: "DNS resolution via CoreDNS for ateapi/atenet, the Hetzner Cloud API and external LLM/messaging hosts."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: kagent-system
+spec:
+  description: "The kagent controller watches AgentHarness/ModelConfig resources and creates worker Deployments; substrate worker pods read their projected tokens/config -- all via the API server."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-substrate-egress
+  namespace: kagent-system
+spec:
+  description: "The controller provisions harnesses onto ateapi (gRPC, 443) and worker pods reach actors through the atenet router (80)."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ate-system
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "80"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-world-egress
+  namespace: kagent-system
+spec:
+  description: "Hermes worker pods call the Telegram Bot API (api.telegram.org) and Synthetic's LLM API (api.synthetic.new) over HTTPS, and the worker pool fetches gVisor sandbox binaries (storage.googleapis.com); single rule per dependency family, port 443 only."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

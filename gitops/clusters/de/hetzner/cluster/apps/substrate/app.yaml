@@ -1,0 +1,21 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Agent Substrate (github.com/agent-substrate/substrate) -- the snapshot/restore
+# actor runtime that kagent's AgentHarness (backend: hermes) provisions onto.
+# Two pinned releases from one OCI registry: CRDs first, then the control
+# plane + data plane + bundled postgres (state store) and rustfs (S3-compatible
+# snapshot store). See WEP-0005 for the full decision record.
+name: substrate
+namespace: ate-system
+helm:
+  - repoURL: oci://ghcr.io/kagent-dev/substrate/helm/substrate-crds
+    chart: substrate-crds
+    version: 0.0.21
+    releaseName: substrate-crds
+  - repoURL: oci://ghcr.io/kagent-dev/substrate/helm/substrate
+    chart: substrate
+    version: 0.0.21
+    releaseName: substrate
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml

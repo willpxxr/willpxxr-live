@@ -1,0 +1,71 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: hcloud-csi
+spec:
+  description: "CSI controller, node plugins and livenessprobe sidecar talk to each other within hcloud-csi."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: hcloud-csi
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: hcloud-csi
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: hcloud-csi
+spec:
+  description: "DNS resolution via CoreDNS for the Hetzner Cloud API endpoint."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-hcloud-api-egress
+  namespace: hcloud-csi
+spec:
+  description: "CSI controller provisions/attaches/detaches Hetzner Cloud Volumes via the Hetzner Cloud API (api.hetzner.cloud), a single SaaS host whose IPs aren't enumerable."
+  endpointSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - hcloud-csi-controller
+          - hcloud-csi
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: hcloud-csi
+spec:
+  description: "The CSI controller watches PVC/PV/VA and VolumeSnapshot objects; node plugins' csi-provisioner sidecars watch their CSIDriver/CSINode resources via the API server."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver

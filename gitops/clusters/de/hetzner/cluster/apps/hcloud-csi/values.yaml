@@ -1,0 +1,18 @@
+# Hetzner Cloud CSI driver values (chart: hcloud/hcloud-csi 2.22.1).
+#
+# The chart's controller + node plugins talk to the Hetzner Cloud API
+# (api.hetzner.cloud:443) using the token from the Secret named `hcloud`
+# (synced from 1Password via externalsecret.yaml).
+#
+# Default storageClasses block creates the cluster's only StorageClass:
+# `hcloud-volumes`, set as the cluster default so PVCs without an explicit
+# className (substrate's postgres/rustfs, kagent's anything-else-later)
+# provision Hetzner Cloud Volumes. Hetzner volumes have a 10 GB minimum size,
+# which is why substrate's 1Gi requests end up as 10 GB volumes (~EUR 0.50/mo
+# each) -- see WEP-0005. ReclaimPolicy Delete matches the ephemerality of
+# snapshot/database state (actors rehydrate from snapshots; losing the store
+# loses idle-actor state only).
+storageClasses:
+  - name: hcloud-volumes
+    defaultStorageClass: true
+    reclaimPolicy: Delete

@@ -1,0 +1,25 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# kagent (github.com/kagent-dev/kagent) with the Agent Substrate integration
+# enabled, so AgentHarness resources (apps/hermes) can provision hermes
+# sandboxes. Pinned 0.9.12 -- the substrate values (controller.substrate.*,
+# substrateWorkerPool.*) need >= 0.9.9. The namespace is deliberately
+# `kagent-system`, NOT `kagent`: that namespace is owned by the kagent-tools
+# app (WEP-0002) and a namespace managed by two ArgoCD apps would make either
+# app's prune a hazard for the other.
+name: kagent
+namespace: kagent-system
+helm:
+  - repoURL: oci://ghcr.io/kagent-dev/kagent/helm/kagent-crds
+    chart: kagent-crds
+    version: 0.9.12
+    releaseName: kagent-crds
+  - repoURL: oci://ghcr.io/kagent-dev/kagent/helm/kagent
+    chart: kagent
+    version: 0.9.12
+    releaseName: kagent
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml
+  - modelconfig-synthetic.yaml
+  - externalsecret-synthetic.yaml

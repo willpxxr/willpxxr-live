@@ -1,0 +1,36 @@
+---
+# The personal chat agent. kagent writes the hermes configuration into the
+# sandbox from the referenced ModelConfig and wires the Telegram channel into
+# hermes environment variables. `workerPoolRef` names the WorkerPool created
+# by the kagent chart (apps/kagent/values.yaml) -- same namespace required.
+#
+# The bot fails closed until the placeholders in the 1Password item
+# (hermes.tf: hermes-telegram-bot) are filled: without a real token the
+# channel can't start, and without allowed_user_ids only the allowlist gate
+# stands between the bot and strangers once it does.
+apiVersion: kagent.dev/v1alpha2
+kind: AgentHarness
+metadata:
+  name: hermes
+  namespace: kagent-system
+spec:
+  backend: hermes
+  description: "Personal chat agent (Telegram) -- hermes on Agent Substrate"
+  modelConfigRef: synthetic
+  substrate:
+    workerPoolRef:
+      name: kagent-default
+  channels:
+    - name: telegram
+      type: telegram
+      telegram:
+        botToken:
+          valueFrom:
+            type: Secret
+            name: hermes-telegram-bot
+            key: token
+        allowedUserIDsFrom:
+          valueFrom:
+            type: Secret
+            name: hermes-telegram-bot
+            key: allowed-user-ids

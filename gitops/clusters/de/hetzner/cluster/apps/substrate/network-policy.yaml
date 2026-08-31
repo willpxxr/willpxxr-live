@@ -1,0 +1,84 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: ate-system
+spec:
+  description: "Substrate control plane (ateapi, atenet, agentgateway, coredns), its postgres/rustfs stores, the atelet DaemonSet and the podcertcontroller talk to each other within ate-system."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ate-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ate-system
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: ate-system
+spec:
+  description: "DNS resolution via CoreDNS for in-cluster services and external snapshot/binary fetches."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: ate-system
+spec:
+  description: "atecontroller reconciles WorkerPool/ActorTemplate CRs, podcertificate-controller watches Pods and signs PodCertificateRequests, atelet supervises worker pods -- all via the API server."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-world-egress
+  namespace: ate-system
+spec:
+  description: "Substrate fetches sandbox binaries (gVisor runsc from storage.googleapis.com per the SandboxConfig defaults) and image artifacts over HTTPS from hosts that can't be enumerated; scoped to port 443 only."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kagent-ingress
+  namespace: ate-system
+spec:
+  description: "The kagent controller (and its substrate worker pods) call the ateapi gRPC service and are routed to actors via the atenet router."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kagent-system
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "80"
+              protocol: TCP

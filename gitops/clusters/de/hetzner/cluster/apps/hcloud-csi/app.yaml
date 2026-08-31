@@ -1,0 +1,16 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Hetzner Cloud CSI driver: provides the cluster's only StorageClass
+# (hcloud-volumes), backing the substrate control-plane PVCs (postgres/rustfs)
+# -- see WEP-0005. Pinned chart (new app, nothing to adopt).
+name: hcloud-csi
+namespace: hcloud-csi
+helm:
+  - repoURL: https://charts.hetzner.cloud
+    chart: hcloud-csi
+    version: 2.22.1
+    releaseName: hcloud-csi
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - externalsecret.yaml
+  - network-policy.yaml

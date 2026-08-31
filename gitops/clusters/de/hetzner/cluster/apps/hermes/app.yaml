@@ -1,0 +1,13 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# The hermes agent itself: an AgentHarness (kagent.dev/v1alpha2, backend:
+# hermes) that kagent provisions onto Agent Substrate, with the Telegram
+# channel wired from the 1Password-synced secret. Manifest-only; the actual
+# sandbox pods belong to the kagent app (worker pool in kagent-system), so
+# this app declares no namespace objects of its own -- destination namespace
+# kagent-system keeps the harness, its ModelConfig ref and its WorkerPool ref
+# in one namespace (WorkerPool refs are same-namespace).
+name: hermes
+namespace: kagent-system
+manifests:
+  - agentharness.yaml
+  - externalsecret-telegram.yaml

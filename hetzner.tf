@@ -66,6 +66,23 @@ module "talos" {
     auth_key = tailscale_tailnet_key.cluster_nodes.key
   }
 
+  # Agent Substrate (gitops/clusters/de/hetzner/cluster/apps/substrate) requires
+  # the alpha pod-certificate APIs -- ClusterTrustBundle, ClusterTrustBundleProjection
+  # and PodCertificateRequest, served under certificates.k8s.io/v1beta1. None of
+  # these are enabled by default on k8s 1.35 (upstream gates them until at least
+  # 1.36 -- see agent-substrate/substrate's hack/create-kind-cluster.sh, which
+  # turns on exactly this set). Enabling alpha APIs restarts the kube-apiserver;
+  # with a single control-plane node that is a brief API outage. The kubelet also
+  # needs the projection gate so worker pods can mount ClusterTrustBundle
+  # projections. See WEP-0005.
+  kube_api_extra_args = {
+    feature-gates  = "ClusterTrustBundle=true,ClusterTrustBundleProjection=true,PodCertificateRequest=true"
+    runtime-config = "certificates.k8s.io/v1beta1=true"
+  }
+  kubelet_extra_args = {
+    feature-gates = "ClusterTrustBundle=true,ClusterTrustBundleProjection=true,PodCertificateRequest=true"
+  }
+
   # Custom Cilium values:
   # - Enable bpf.socketLB.hostNetworkOnly so socket load balancing only applies to
   #   host-network traffic, not pod namespaces. Without this, Cilium's BPF socket LB
@@ -140,4 +157,28 @@ resource "onepassword_item" "kubeconfig" {
   title      = "willpxxr-prod-kubeconfig"
   category   = "secure_note"
   note_value = module.talos.kubeconfig
+}
+
+# API token for the hcloud CSI driver (apps/hcloud-csi), which provisions
+# Hetzner Cloud Volumes for PVCs (substrate's bundled postgres/rustfs, see
+# WEP-0005). The driver only needs read/write volume access, but the hcloud
+# provider has no resource for minting scoped tokens, so the workspace token
+# is reused; it is written into the kubernetes vault here and synced into the
+# cluster via the app's ExternalSecret, keeping the cluster-secret convention
+# (1Password -> ExternalSecret) intact.
+resource "onepassword_item" "hcloud_csi" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "hcloud-csi"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        token = {
+          type  = "CONCEALED"
+          value = var.hetzner_token
+        }
+      }
+    }
+  }
 }

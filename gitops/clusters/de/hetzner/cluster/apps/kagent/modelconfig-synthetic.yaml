@@ -1,0 +1,21 @@
+---
+# The model the hermes harness (apps/hermes) uses. OpenAI-shape provider
+# pointed straight at Synthetic (synthetic.new) -- the same upstream the
+# ai-gateway-llm route fronts, minus the Auth0 llm:use gate: agents can't do
+# the gateway's browser/PKCE-oriented OAuth (see WEP-0005 for the reasoning
+# and the rejected alternatives). api.synthetic.new serves syn:* curated and
+# hf:* per-HuggingFace-repo model ids (confirmed live via its /v1/models --
+# see the comment in apps/ai-gateway-llm/ai-gateway-route.yaml); swap `model`
+# for any id that endpoint serves.
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: synthetic
+  namespace: kagent-system
+spec:
+  provider: OpenAI
+  model: hf:zai-org/GLM-5.3-Flash
+  apiKeySecret: synthetic
+  apiKeySecretKey: api-key
+  openAI:
+    baseUrl: https://api.synthetic.new/v1

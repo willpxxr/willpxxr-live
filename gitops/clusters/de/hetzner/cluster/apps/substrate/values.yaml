@@ -1,0 +1,46 @@
+# Agent Substrate chart values (chart: oci://ghcr.io/kagent-dev/substrate/helm/substrate 0.0.21).
+#
+# The namespace is ate-system and must stay that name: kagent's substrate
+# integration defaults to dns:///api.ate-system.svc:443 (apps/kagent/values.yaml).
+#
+# Storage: both bundled stores claim PVCs, satisfied by the hcloud-volumes
+# StorageClass (apps/hcloud-csi). Hetzner Cloud Volumes have a 10 GB minimum
+# regardless of the requested size, so the small requests below still cost a
+# 10 GB volume each (~EUR 0.50/mo) -- see WEP-0005.
+createNamespace: false
+
+postgres:
+  # ateapi's state store (actors, workers, locks). Session state itself lives
+  # in actor snapshots (rustfs), so a small database is fine.
+  storageSize: 1Gi
+  connectionString: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+rustfs:
+  # S3-compatible snapshot store for actor suspend/resume. Sized up from the
+  # 1Gi default: the hermes sandbox's golden snapshot plus incremental
+  # checkpoints are the largest objects here (the hermes image itself is
+  # ~1 GB, though snapshots are zstd-compressed state deltas).
+  enabled: true
+  storageSize: 10Gi
+  bucket: ate-snapshots
+  # Chart defaults; rustfs is only reachable inside ate-system (same-namespace
+  # network policy), so the default dev credentials are acceptable.
+  accessKey: rustfsadmin
+  secretKey: rustfsadmin
+
+atelet:
+  # Snapshots go to the bundled rustfs via its S3 API -- no GCP auth needed.
+  gcpAuthForImagePulls: false
+  storageBackend: s3
+
+otel:
+  # Better Stack tracing for substrate is a possible follow-up (see
+  # apps/otel-collector-gateway); not wired on first deploy.
+  endpoint: ""

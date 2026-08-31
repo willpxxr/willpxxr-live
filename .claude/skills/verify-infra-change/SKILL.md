@@ -41,6 +41,15 @@ Two gotchas learned the hard way:
   can therefore surface unrelated in-place changes from a newer upstream
   module release riding along with your change; call these out to the user
   rather than assuming they're an error in your diff.
+- **The hcloud-talos module seeds machine config at provision time only**
+  (`talos_machine_configuration` data source → server `user_data`, which is
+  under `lifecycle.ignore_changes`, and there is no
+  `talos_machine_configuration_apply` resource). Changing module inputs like
+  `kube_api_extra_args`/`kubelet_extra_args`/config patches therefore shows
+  **no node changes in the plan and does not reach the live cluster** — it
+  only affects future re-provisions. Landing a control-plane/kubelet config
+  change on live nodes requires a one-time `talosctl apply-config
+  --config-patch` runbook step (document it in the WEP; see WEP-0005).
 
 ## 2. Kubernetes manifests (`gitops/`)
 

@@ -59,6 +59,16 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   tailscale` LoadBalancer Service (the Envoy data plane); the per-hostname
   Tailscale L7 Ingresses were removed (WEP-0003) — their hostname machinery is
   what caused the 2026-07/08 `svc:gateway` outage, so prefer not to bring them back.
+  Storage is `hcloud-csi` (the cluster's only StorageClass, `hcloud-volumes`;
+  Hetzner volumes floor at 10 GB). The personal chat agent (Telegram) runs as a
+  kagent `AgentHarness` (backend: hermes) on Agent Substrate —
+  `apps/kagent` (controller + worker pool, ns `kagent-system`), `apps/substrate`
+  (ns `ate-system`), `apps/hermes` (the harness CR) — see WEP-0005; substrate
+  depends on alpha pod-certificate feature gates set in `hetzner.tf`'s module
+  block and landed on live nodes via a one-time `talosctl apply-config`
+  runbook (the hcloud-talos module only seeds machine config at provision —
+  re-verify the gates at every Talos/k8s upgrade, see WEP-0005), and its LLM
+  calls go direct to Synthetic, bypassing the Auth0-gated LLM gateway route.
 
 ## Tech stack
 
