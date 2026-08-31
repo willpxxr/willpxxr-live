@@ -2,9 +2,11 @@
 # DNS-advertising shim only (WEP-0003): MCPRoute has no `hostnames` field
 # (CRD-verified), so ExternalDNS's gateway-httproute source never sees
 # mcp.internal.willpxxr.com from the MCP-generated routes. This route carries
-# the hostname for ExternalDNS but declares no rules, so it matches no
-# traffic -- the MCP-generated HTTPRoutes (hostname-less, path /mcp) do the
-# actual routing on both listeners.
+# the hostname for ExternalDNS. A no-rules route turned out NOT to be inert:
+# after a config regeneration it shadowed the MCP-generated /mcp routes and
+# answered every request with Envoy's synthesized 500 direct-response. The
+# rule below pins the shim to a path nothing uses, so the MCP-generated
+# routes (hostname-less, path /mcp) always win the match.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -17,3 +19,8 @@ spec:
       sectionName: tls
   hostnames:
     - "mcp.internal.willpxxr.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /_dns-shim-only

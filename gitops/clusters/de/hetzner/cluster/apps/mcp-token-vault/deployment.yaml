@@ -16,6 +16,7 @@ spec:
       labels:
         app.kubernetes.io/name: mcp-token-vault
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: vault
           # Rolling tag: CI (mcp-token-vault workflow) rebuilds :main on every
