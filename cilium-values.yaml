@@ -5,12 +5,19 @@ ipam:
 routingMode: native
 ipv4NativeRoutingCIDR: 10.0.16.0/20
 kubeProxyReplacement: true
+# socketLB must not apply inside pod namespaces: Cilium's cgroup-level socket
+# interception makes pod->ClusterIP traffic bypass the netfilter DNAT hooks the
+# Tailscale operator's proxy pods rely on for L3 Service forwarding, which
+# silently blackholes tailnet traffic to Tailscale LoadBalancer Services.
+# Note kubeProxyReplacement=true force-enables socketLB regardless of
+# .enabled (cilium/cilium#47417) -- hostNamespaceOnly is the load-bearing knob.
+# Ref: https://tailscale.com/docs/kubernetes-operator/reference/compatibility#cilium-kube-proxy-replacement-mode
+socketLB:
+  enabled: true
+  hostNamespaceOnly: true
 bpf:
   masquerade: false
   lbAcceleration: best-effort
-  socketLB:
-    enabled: true
-    hostNetworkOnly: true
 encryption:
   enabled: false
   type: wireguard
