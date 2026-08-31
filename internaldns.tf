@@ -6,10 +6,7 @@
 data "cloudflare_api_token_permission_groups" "main" {}
 
 locals {
-  internal_dns_group_id = [
-    for g in data.cloudflare_api_token_permission_groups.main.permission_groups :
-    g.id if g.name == "DNS Write"
-  ][0]
+  internal_dns_group_id = data.cloudflare_api_token_permission_groups.main.zone["DNS Write"]
 }
 
 resource "cloudflare_api_token" "internal_dns" {
