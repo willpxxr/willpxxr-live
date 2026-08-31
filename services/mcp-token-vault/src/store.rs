@@ -1,6 +1,9 @@
 use crate::crypto::Key;
 use anyhow::{bail, Context, Result};
 use sqlx::Connection;
+use tokio::time::timeout;
+
+const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row, postgres::PgPoolOptions};
 
@@ -16,8 +19,9 @@ pub async fn connect(url: &str) -> Result<PgPool> {
     // One direct handshake attempt first: the pool's acquire timeout masks
     // the real per-connection failure (auth, DNS, TLS), which is exactly
     // what the crash log needs to show.
-    let mut conn = sqlx::postgres::PgConnection::connect(url)
+    let mut conn = timeout(CONNECT_TIMEOUT, sqlx::postgres::PgConnection::connect(url))
         .await
+        .context("database connect timed out")?
         .context("direct database handshake failed")?;
     conn.close()
         .await
@@ -50,8 +54,10 @@ pub async fn bootstrap_role(admin_url: &str, database_url: &str) -> Result<()> {
         .context("DATABASE_URL has no password")?
         .replace('\'', "''");
 
-    let mut conn = sqlx::postgres::PgConnection::connect(admin_url)
+    tracing::info!(role = %role, "bootstrapping database role");
+    let mut conn = timeout(CONNECT_TIMEOUT, sqlx::postgres::PgConnection::connect(admin_url))
         .await
+        .context("admin database connect timed out")?
         .context("admin database handshake failed")?;
     let sql = format!(
         r#"
