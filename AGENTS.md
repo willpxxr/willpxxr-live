@@ -68,7 +68,9 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   token minting for downscoped tokens uses the account-token surface, which
   needs the automation token to hold Account/API-Tokens Read+Write),
   `hcloud`/`talos` (the active cluster), `tailscale`, `onepassword`, `auth0`,
-  `logtail` (Better Stack). Plus `kubernetes`/`helm`/`kubectl`/`tls` for the small
+  `logtail` (Better Stack), `supabase` (mcp-token-vault project, WEP-0006 --
+  static Management-API PAT; the API has no OIDC surface for the TFC
+  workload-identity path Tailscale uses). Plus `kubernetes`/`helm`/`kubectl`/`tls` for the small
   set of bootstrap-only k8s objects Terraform manages directly (see below).
 - **ArgoCD** (self-managed app-of-apps, see `gitops/clusters/de/hetzner/cluster/argocd/`)
   reconciles everything under `gitops/`.
@@ -256,6 +258,7 @@ never hard-coded:
 - `var.onepassword_terraform_service_account_token`
 - `var.auth0_domain`, `var.auth0_mgmt_client_id`, `var.auth0_mgmt_client_secret`
 - `var.betterstack_api_token`
+- `var.supabase_access_token`
 
 ## Keeping this file current
 

@@ -57,6 +57,10 @@ terraform {
       source  = "BetterStackHQ/logtail"
       version = "~> 10.9"
     }
+    supabase = {
+      source  = "supabase/supabase"
+      version = "~> 1.0"
+    }
   }
 }
 
@@ -89,4 +93,8 @@ provider "auth0" {
 
 provider "logtail" {
   api_token = var.betterstack_api_token
+}
+
+provider "supabase" {
+  access_token = var.supabase_access_token
 }

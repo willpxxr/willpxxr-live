@@ -71,9 +71,18 @@ the boundary sits.
    IPv6-only without the paid IPv4 add-on (verified against their connecting
    docs, 2026-08-31); Phase 0 must verify real IPv6 egress from the pods
    (node has v6 != pod route does) and otherwise use the Supavisor
-   session-mode pooler, which is IPv4 on every tier. The Supabase
-   project itself is dashboard-created (no usable Terraform provider); schema
-   ships as versioned SQL migrations in-repo, applied by the vault on boot.
+   session-mode pooler, which is IPv4 on every tier.
+   **The Supabase project itself is Terraform-managed** (`supabase.tf`):
+   the official `supabase/supabase` provider (v1.x, verified resource surface:
+   project/settings/apikey/... + a pooler data source) creates the project and
+   resolves the session-pooler URL; the db_url and encryption key are written
+   into the 1Password `kubernetes` vault by `onepassword_item` (writer of
+   record, betterstack.tf pattern). The provider only authenticates with a
+   static Management-API access token -- no OIDC federation surface, unlike
+   the Tailscale TFC workload-identity path. Two things stay manual: the
+   least-privilege role bootstrap SQL (`scripts/0000-bootstrap-role.sql`, the
+   provider has no SQL-execution resource) and the schema migrations (applied
+   by the vault on boot, in-repo under `migrations/`).
 
 4. **Credential bootstrap is human-in-the-loop, once per provider.** A
    headless vault can never perform the initial OAuth `authorization_code`
@@ -93,13 +102,17 @@ the boundary sits.
 
 ## Plan
 
-- **Phase 0 -- groundwork**: Supabase project; `migrations/0001_init.sql`
+- **Phase 0 -- groundwork**: Terraform-created Supabase project (`supabase.tf`;
+  needs `var.supabase_access_token` + `var.supabase_organization_id` in the TFC
+  workspace); `migrations/0001_init.sql`
   (`credentials(id, provider, principal, kind, access_token_enc,
-  refresh_token_enc, expires_at, scopes, rotated_at, created_at)`); 1Password
-  items (placeholder + hand-paste, the `synthetic.tf` pattern -- here hand
-  only, no Terraform item resource is warranted); network policy: `world:443`
-  egress for `<project>.supabase.co` and per-upstream MCP hosts, each with a
-  why-description.
+  refresh_token_enc, expires_at, scopes, rotated_at, created_at)`); manual
+  one-time role bootstrap via `scripts/0000-bootstrap-role.sql`; 1Password
+  items written by Terraform (`mcp-token-vault/credentials/db_url` +
+  `encryption_key`) and by hand (`linear-mcp-oauth/credentials/client_id` +
+  `client_secret`, placeholders until the Linear OAuth app exists); network
+  policy: `world:443` egress for Supabase and per-upstream MCP hosts, each
+  with a why-description.
 - **Phase 1 -- the vault**: `apps/mcp-token-vault` (Rust: axum + reqwest,
   streaming proxy, Postgres via `sqlx`), Deployment + Service + CNP
   (default-deny, allow-dns, allow-kube-apiserver not needed) + ExternalSecrets
