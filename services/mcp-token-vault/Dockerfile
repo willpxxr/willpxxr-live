@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM rust:1-slim-bookworm AS build
+FROM rust:1-slim AS build
 WORKDIR /src
 # cmake: aws-lc-rs (reqwest's rustls backend) builds its C sources with it.
 RUN apt-get update \
@@ -10,6 +10,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
     cargo build --release && cp target/release/mcp-token-vault /usr/local/bin/
 
-FROM gcr.io/distroless/cc-debian12:nonroot
+FROM gcr.io/distroless/cc-debian13:nonroot
 COPY --from=build /usr/local/bin/mcp-token-vault /
 ENTRYPOINT ["/mcp-token-vault"]
