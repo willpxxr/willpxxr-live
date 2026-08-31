@@ -1,4 +1,6 @@
 ---
+# Single wildcard for every tailnet-facing hostname (WEP-0003). Envoy
+# terminates TLS for all *.internal.willpxxr.com routes with this cert.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -9,8 +11,8 @@ spec:
   duration: 8760h
   renewBefore: 720h
   issuerRef:
-    name: self-signed
+    name: cloudflare-dns01
     kind: Issuer
-  commonName: "*.tailb40090.ts.net"
   dnsNames:
-    - "*.tailb40090.ts.net"
+    - "*.internal.willpxxr.com"
+    - "internal.willpxxr.com"

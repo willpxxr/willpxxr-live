@@ -1,0 +1,15 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# ExternalDNS keeps *.internal.willpxxr.com records in Cloudflare in sync with
+# Gateway API HTTPRoutes (WEP-0003) -- records point at the tailnet VIP.
+name: external-dns
+namespace: external-dns
+helm:
+  - repoURL: https://kubernetes-sigs.github.io/external-dns
+    chart: external-dns
+    version: 1.21.1
+    releaseName: external-dns
+    values: values.yaml
+manifests:
+  - namespace.yaml
+  - network-policy.yaml
+  - externalsecret.yaml

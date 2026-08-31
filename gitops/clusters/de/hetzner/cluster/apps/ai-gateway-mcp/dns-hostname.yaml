@@ -1,0 +1,19 @@
+---
+# DNS-advertising shim only (WEP-0003): MCPRoute has no `hostnames` field
+# (CRD-verified), so ExternalDNS's gateway-httproute source never sees
+# mcp.internal.willpxxr.com from the MCP-generated routes. This route carries
+# the hostname for ExternalDNS but declares no rules, so it matches no
+# traffic -- the MCP-generated HTTPRoutes (hostname-less, path /mcp) do the
+# actual routing on both listeners.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp-dns-shim
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "mcp.internal.willpxxr.com"

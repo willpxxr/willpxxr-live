@@ -9,8 +9,12 @@ spec:
     - name: gateway
       namespace: envoy-gateway-system
       sectionName: plaintext
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
   hostnames:
     - "hubble.tailb40090.ts.net"
+    - "hubble.internal.willpxxr.com"
   rules:
     - backendRefs:
         - name: hubble-ui

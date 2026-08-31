@@ -10,3 +10,4 @@ manifests:
   - hubble-ingress.yaml
   - certificate.yaml
   - issuer.yaml
+  - externalsecret.yaml

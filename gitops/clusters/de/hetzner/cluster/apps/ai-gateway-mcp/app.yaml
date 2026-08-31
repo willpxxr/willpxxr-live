@@ -7,3 +7,4 @@ manifests:
   - backend.yaml
   - externalsecret.yaml
   - ingress.yaml
+  - dns-hostname.yaml

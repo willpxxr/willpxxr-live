@@ -1,8 +1,21 @@
 ---
+# Let's Encrypt via Cloudflare DNS-01, so the wildcard *.internal.willpxxr.com
+# cert can be issued without any HTTP reachability (the names resolve to a
+# tailnet-only VIP). WEP-0003.
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: self-signed
+  name: cloudflare-dns01
   namespace: envoy-gateway-system
 spec:
-  selfSigned: {}
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: acme@willpxxr.com
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: token

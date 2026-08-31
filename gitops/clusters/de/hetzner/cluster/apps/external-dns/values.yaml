@@ -1,0 +1,34 @@
+# ExternalDNS maintains *.internal.willpxxr.com A records in Cloudflare from
+# Gateway API HTTPRoutes (WEP-0003). Records are DNS-only (never proxied --
+# Cloudflare can't proxy a CGNAT IP) and point at the Envoy data plane's
+# tailnet VIP, so they're publicly resolvable but only reachable from the
+# tailnet. upsert-only + the domain filter keep it away from every other
+# record in the zone, including the Terraform-managed ones.
+provider:
+  name: cloudflare
+
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: external-dns-cloudflare
+        key: token
+
+sources:
+  - gateway-httproute
+
+domainFilters:
+  - internal.willpxxr.com
+
+# Never delete -- records it stops seeing (e.g. during a route rename) stay
+# and are cleaned up by hand, rather than vanishing on a transient watch error.
+policy: upsert-only
+
+registry: txt
+txtOwnerId: willpxxr-live-hetzner
+
+interval: 1m
+
+cloudflare:
+  # DNS-only records: Cloudflare's proxy cannot front a 100.64.0.0/10 address.
+  proxied: false

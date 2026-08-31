@@ -9,8 +9,12 @@ spec:
     - name: gateway
       namespace: envoy-gateway-system
       sectionName: plaintext
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
   hostnames:
     - "ai.tailb40090.ts.net"
+    - "ai.internal.willpxxr.com"
   rules:
     # Explicit model match (x-ai-eg-model, extracted from the request
     # body's model field before routing) rather than a catch-all, so the
