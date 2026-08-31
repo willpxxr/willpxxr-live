@@ -30,6 +30,8 @@ spec:
               containerPort: 9090
             - name: oauth
               containerPort: 9091
+            - name: authz
+              containerPort: 9092
           env:
             - name: RUST_LOG
               value: info
@@ -54,6 +56,8 @@ spec:
               value: "9090"
             - name: OAUTH_PORT
               value: "9091"
+            - name: AUTHZ_PORT
+              value: "9092"
             # Public hostname the Gateway serves; the /oauth HTTPRoute (phase
             # 2) must make ELICITATION_BASE_URL + path reachable from a
             # browser for the elicitation UX to work.

@@ -19,3 +19,6 @@ spec:
     - name: oauth
       port: 9091
       targetPort: oauth
+    - name: authz
+      port: 9092
+      targetPort: authz

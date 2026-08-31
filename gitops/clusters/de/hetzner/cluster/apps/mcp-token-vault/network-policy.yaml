@@ -42,7 +42,7 @@ metadata:
   name: allow-gateway-ingress
   namespace: mcp-token-vault
 spec:
-  description: "The ai-gateway-mcp MCPRoute (apps/ai-gateway-mcp/, phase 2) and the /oauth elicitation HTTPRoute proxy here from the Envoy data-plane pods in envoy-gateway-system. The admin listener (9090) is deliberately NOT reachable -- it is only for kubectl port-forward."
+  description: "The ai-gateway-mcp MCPRoute (apps/ai-gateway-mcp/) calls the vault ext_authz endpoint (9092) for upstream credential injection, proxies MCP traffic via the vault proxy listener (8081, phase-2 fallback), and the /oauth elicitation HTTPRoute lands on 9091. The admin listener (9090) is deliberately NOT reachable -- kubectl port-forward only."
   endpointSelector: {}
   ingress:
     - fromEndpoints:
@@ -53,6 +53,8 @@ spec:
             - port: "8081"
               protocol: TCP
             - port: "9091"
+              protocol: TCP
+            - port: "9092"
               protocol: TCP
 ---
 apiVersion: "cilium.io/v2"
