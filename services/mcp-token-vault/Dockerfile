@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM rust:1-slim AS build
+FROM rust:1-slim-bookworm AS build
 WORKDIR /src
 # cmake: aws-lc-rs (reqwest's rustls backend) builds its C sources with it.
 RUN apt-get update \
