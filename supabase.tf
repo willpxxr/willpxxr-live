@@ -116,3 +116,36 @@ resource "onepassword_item" "mcp_token_vault" {
     }
   }
 }
+
+# Linear OAuth client for the mcp-token-vault elicitation flow (WEP-0006
+# phase 2). Created here with placeholders so the ExternalSecret syncs and
+# the vault pod can start; the values fail closed until the real
+# client_id/client_secret are pasted after creating the Linear OAuth
+# application (redirect URI:
+# https://mcp.internal.willpxxr.com/oauth/linear/callback). ignore_changes:
+# the later hand-paste in 1Password must not be reverted by applies (same
+# pattern as synthetic.tf).
+resource "onepassword_item" "linear_mcp_oauth" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "linear-mcp-oauth"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        client_id = {
+          type  = "STRING"
+          value = "placeholder-create-the-linear-oauth-app"
+        }
+        client_secret = {
+          type  = "CONCEALED"
+          value = "placeholder-create-the-linear-oauth-app"
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [section_map]
+  }
+}
