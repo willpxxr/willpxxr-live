@@ -1,0 +1,20 @@
+[package]
+name = "mcp-token-vault"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+axum = "0.8.9"
+base64 = "0.23.1"
+chacha20poly1305 = { version = "0.11.0", features = ["getrandom"] }
+chrono = "0.4.45"
+getrandom = "0.4.3"
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "stream", "rustls", "form"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "migrate", "macros"] }
+tokio = { version = "1.53.1", features = ["full"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
