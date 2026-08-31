@@ -20,8 +20,13 @@ env:
 sources:
   - gateway-httproute
 
+# Zone-level filter: the Cloudflare zone is willpxxr.com, and external-dns's
+# zone filter does not match parent zones, so filtering on the subdomain
+# would leave zero eligible zones. Records are only ever created for
+# hostnames carried by Gateway HTTPRoutes; upsert-only means nothing in the
+# zone is ever deleted.
 domainFilters:
-  - internal.willpxxr.com
+  - willpxxr.com
 
 # Never delete -- records it stops seeing (e.g. during a route rename) stay
 # and are cleaned up by hand, rather than vanishing on a transient watch error.
