@@ -41,7 +41,7 @@ variable "betterstack_api_token" {
   description = "Better Stack Telemetry API token (from https://betterstack.com/docs/logs/api/getting-started/#get-an-logs-api-token), used to authenticate the logtail Terraform provider so it can create the OTel Collector's Source via logtail_source. Distinct from the source token that resource then produces."
 }
 
-variable "supabase_access_token" {
+variable "supabase_token" {
   sensitive   = true
   description = "Supabase Management API personal access token (from https://supabase.com/dashboard/account/tokens), used to authenticate the supabase Terraform provider. The Management API has no OIDC/federation surface (unlike Tailscale above), so this is a static token by necessity."
 }

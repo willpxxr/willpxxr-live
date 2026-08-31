@@ -258,7 +258,7 @@ never hard-coded:
 - `var.onepassword_terraform_service_account_token`
 - `var.auth0_domain`, `var.auth0_mgmt_client_id`, `var.auth0_mgmt_client_secret`
 - `var.betterstack_api_token`
-- `var.supabase_access_token`
+- `var.supabase_token`
 
 ## Keeping this file current
 

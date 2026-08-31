@@ -96,5 +96,5 @@ provider "logtail" {
 }
 
 provider "supabase" {
-  access_token = var.supabase_access_token
+  access_token = var.supabase_token
 }

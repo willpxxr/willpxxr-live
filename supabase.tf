@@ -4,7 +4,7 @@
 # Auth note: unlike the Tailscale path in providers.tf (TFC workload-identity
 # OIDC), the Supabase Management API has no federation surface -- the
 # supabase provider's only auth is a static personal access token (verified
-# against the provider schema), hence var.supabase_access_token.
+# against the provider schema), hence var.supabase_token.
 #
 # The project's own database password is set once at create and then ignored
 # (per the provider guide's recommendation): rotating it would invalidate the

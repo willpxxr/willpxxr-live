@@ -103,7 +103,7 @@ the boundary sits.
 ## Plan
 
 - **Phase 0 -- groundwork**: Terraform-created Supabase project (`supabase.tf`;
-  needs `var.supabase_access_token` + `var.supabase_organization_id` in the TFC
+  needs `var.supabase_token` + `var.supabase_organization_id` in the TFC
   workspace); `migrations/0001_init.sql`
   (`credentials(id, provider, principal, kind, access_token_enc,
   refresh_token_enc, expires_at, scopes, rotated_at, created_at)`); manual
