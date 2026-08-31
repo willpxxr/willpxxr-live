@@ -1,4 +1,5 @@
 mod admin;
+mod authz;
 mod config;
 mod crypto;
 mod oauth;
@@ -40,6 +41,16 @@ async fn main() -> Result<()> {
     tracing::info!(port = cfg.oauth_port, "oauth listening");
     tokio::spawn(async move {
         axum::serve(oauth_listener, admin::oauth_router(oauth_state))
+            .with_graceful_shutdown(shutdown())
+            .await
+            .ok();
+    });
+
+    let authz_state = state.clone();
+    let authz_listener = tokio::net::TcpListener::bind(("0.0.0.0", cfg.authz_port)).await?;
+    tracing::info!(port = cfg.authz_port, "authz listening");
+    tokio::spawn(async move {
+        axum::serve(authz_listener, authz::router(authz_state))
             .with_graceful_shutdown(shutdown())
             .await
             .ok();
