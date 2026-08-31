@@ -13,7 +13,6 @@ helm:
     values: values.yaml
 manifests:
   - network-policy.yaml
-  - ingress.yaml
   - httproute.yaml
   - security-policy.yaml
   - externalsecret.yaml

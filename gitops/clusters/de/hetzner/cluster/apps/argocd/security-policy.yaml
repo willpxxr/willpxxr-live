@@ -23,9 +23,9 @@ spec:
       name: envoy-gateway-oidc
     clientSecret:
       name: envoy-gateway-oidc
-    redirectURL: "https://argocd.tailb40090.ts.net/oauth2/callback"
+    redirectURL: "https://argocd.internal.willpxxr.com/oauth2/callback"
     logoutPath: "/oauth2/logout"
-    cookieDomain: "tailb40090.ts.net"
+    cookieDomain: "internal.willpxxr.com"
     # Puts the access token in the Authorization header for the jwt provider
     # below to validate/inspect -- see flux-operator-route for the full note.
     forwardAccessToken: true
@@ -34,7 +34,7 @@ spec:
     # RFC 8707 resource-indicator param (requires the tenant's
     # resource_parameter_profile = "compatibility" in auth0.tf).
     resources:
-      - "https://argocd.tailb40090.ts.net"
+      - "https://argocd.internal.willpxxr.com"
   jwt:
     providers:
       # Note: the real token 'iss' claim keeps the trailing slash (unlike
@@ -45,7 +45,7 @@ spec:
         remoteJWKS:
           uri: "https://auth.willpxxr.com/.well-known/jwks.json"
         audiences:
-          - "https://argocd.tailb40090.ts.net"
+          - "https://argocd.internal.willpxxr.com"
   authorization:
     defaultAction: Deny
     rules:

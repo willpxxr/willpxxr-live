@@ -7,8 +7,6 @@
 provider:
   name: cloudflare
 
-# debug until the first successful sync is confirmed (WEP-0003 follow-up)
-logLevel: debug
 
 env:
   - name: CF_API_TOKEN

@@ -16,9 +16,9 @@ spec:
       name: envoy-gateway-oidc
     clientSecret:
       name: envoy-gateway-oidc
-    redirectURL: "https://hubble.tailb40090.ts.net/oauth2/callback"
+    redirectURL: "https://hubble.internal.willpxxr.com/oauth2/callback"
     logoutPath: "/oauth2/logout"
-    cookieDomain: "tailb40090.ts.net"
+    cookieDomain: "internal.willpxxr.com"
     # Puts the access token in the Authorization header, which is also
     # where the jwt provider below looks by default -- required for the
     # authorization rule to have a token to validate/inspect claims from.
@@ -34,7 +34,7 @@ spec:
     # -- tells Auth0 which API this token request is for. Uses the route's
     # own hostname as the identifier (auth0_resource_server.hubble).
     resources:
-      - "https://hubble.tailb40090.ts.net"
+      - "https://hubble.internal.willpxxr.com"
   jwt:
     providers:
       # Note: the real token 'iss' claim keeps the trailing slash (unlike
@@ -46,7 +46,7 @@ spec:
           uri: "https://auth.willpxxr.com/.well-known/jwks.json"
         # Rejects tokens not actually issued for this API.
         audiences:
-          - "https://hubble.tailb40090.ts.net"
+          - "https://hubble.internal.willpxxr.com"
   authorization:
     defaultAction: Deny
     rules:

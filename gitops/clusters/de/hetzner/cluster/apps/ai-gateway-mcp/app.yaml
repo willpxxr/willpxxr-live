@@ -6,5 +6,4 @@ manifests:
   - mcp-route.yaml
   - backend.yaml
   - externalsecret.yaml
-  - ingress.yaml
   - dns-hostname.yaml

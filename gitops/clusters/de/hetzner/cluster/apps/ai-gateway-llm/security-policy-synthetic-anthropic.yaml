@@ -20,7 +20,7 @@ spec:
         remoteJWKS:
           uri: "https://auth.willpxxr.com/.well-known/jwks.json"
         audiences:
-          - "https://ai.tailb40090.ts.net"
+          - "https://ai.internal.willpxxr.com"
         extractFrom:
           headers:
             - name: Authorization

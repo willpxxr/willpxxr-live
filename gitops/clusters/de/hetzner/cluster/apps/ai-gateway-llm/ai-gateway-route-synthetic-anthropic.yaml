@@ -44,12 +44,8 @@ spec:
   parentRefs:
     - name: gateway
       namespace: envoy-gateway-system
-      sectionName: plaintext
-    - name: gateway
-      namespace: envoy-gateway-system
       sectionName: tls
   hostnames:
-    - "ai.tailb40090.ts.net"
     - "ai.internal.willpxxr.com"
   rules:
     - matches:

@@ -8,12 +8,8 @@ spec:
   parentRefs:
     - name: gateway
       namespace: envoy-gateway-system
-      sectionName: plaintext
-    - name: gateway
-      namespace: envoy-gateway-system
       sectionName: tls
   hostnames:
-    - "argocd.tailb40090.ts.net"
     - "argocd.internal.willpxxr.com"
   rules:
     - backendRefs:

@@ -14,5 +14,4 @@ manifests:
   - security-policy.yaml
   - security-policy-synthetic-anthropic.yaml
   - externalsecret-synthetic.yaml
-  - ingress.yaml
   - traffic-policy.yaml

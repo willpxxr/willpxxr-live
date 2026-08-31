@@ -8,7 +8,7 @@ spec:
   parentRefs:
     - name: gateway
       namespace: envoy-gateway-system
-      sectionName: plaintext
+      sectionName: tls
   path: "/mcp"
   backendRefs:
     - name: kiwi
@@ -64,9 +64,9 @@ spec:
       # Auth0 to reject the resource parameter opencode correctly sent
       # ("Service not found: https://mcp.tailb40090.ts.net/mcp").
       audiences:
-        - "https://mcp.tailb40090.ts.net/mcp"
+        - "https://mcp.internal.willpxxr.com/mcp"
       protectedResourceMetadata:
-        resource: "https://mcp.tailb40090.ts.net/mcp"
+        resource: "https://mcp.internal.willpxxr.com/mcp"
         resourceName: "willpxxr AI Gateway MCP"
         scopesSupported:
           - "mcp:use"

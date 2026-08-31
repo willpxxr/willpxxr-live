@@ -12,7 +12,7 @@
   "provider": {
     "synthetic": {
       "options": {
-        "baseURL": "https://ai.tailb40090.ts.net/v1"
+        "baseURL": "https://ai.internal.willpxxr.com/v1"
       }
     }
   }

@@ -26,19 +26,16 @@ resource "auth0_client" "envoy_gateway_oidc" {
   grant_types     = ["authorization_code", "refresh_token"]
 
   callbacks = [
-    "https://hubble.tailb40090.ts.net/oauth2/callback",
-    "https://flux.tailb40090.ts.net/oauth2/callback",
-    "https://argocd.tailb40090.ts.net/oauth2/callback",
+    "https://hubble.internal.willpxxr.com/oauth2/callback",
+    "https://argocd.internal.willpxxr.com/oauth2/callback",
   ]
   allowed_logout_urls = [
-    "https://hubble.tailb40090.ts.net",
-    "https://flux.tailb40090.ts.net",
-    "https://argocd.tailb40090.ts.net",
+    "https://hubble.internal.willpxxr.com",
+    "https://argocd.internal.willpxxr.com",
   ]
   web_origins = [
-    "https://hubble.tailb40090.ts.net",
-    "https://flux.tailb40090.ts.net",
-    "https://argocd.tailb40090.ts.net",
+    "https://hubble.internal.willpxxr.com",
+    "https://argocd.internal.willpxxr.com",
   ]
 
   jwt_configuration {
@@ -67,7 +64,7 @@ resource "auth0_client_credentials" "envoy_gateway_oidc" {
 # store.
 resource "auth0_client" "ai_gateway_llm" {
   name        = "willpxxr-live-ai-gateway-llm"
-  description = "Native/public client used by oauth2c for the self-hosted LLM gateway (ai.tailb40090.ts.net), consumed by the crush CLI."
+  description = "Native/public client used by oauth2c for the self-hosted LLM gateway (ai.internal.willpxxr.com), consumed by the crush CLI."
   app_type    = "native"
 
   oidc_conformant = true
@@ -126,7 +123,7 @@ resource "onepassword_item" "ai_gateway_llm" {
         }
         audience = {
           type  = "CONCEALED"
-          value = "https://ai.tailb40090.ts.net"
+          value = auth0_resource_server.ai_llm.identifier
         }
       }
     }
@@ -140,7 +137,7 @@ resource "onepassword_item" "ai_gateway_llm" {
 # client for personal/single-user oauth2c use, same as the LLM gateway.
 resource "auth0_client" "ai_gateway_mcp" {
   name        = "willpxxr-live-ai-gateway-mcp"
-  description = "Native/public client used by oauth2c for the self-hosted MCP gateway (mcp.tailb40090.ts.net)."
+  description = "Native/public client used by oauth2c for the self-hosted MCP gateway (mcp.internal.willpxxr.com)."
   app_type    = "native"
 
   oidc_conformant = true
@@ -202,27 +199,27 @@ resource "onepassword_item" "ai_gateway_mcp" {
 
 resource "auth0_role" "cicd_get" {
   name        = "cicd:get"
-  description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net)."
+  description = "Grants access to the flux-operator UI (flux.tailb40090.ts.net) -- flux was decommissioned in favor of ArgoCD (WEP-0001); the scope is unused and slated for removal."
 }
 
 resource "auth0_role" "argo_get" {
   name        = "argo:get"
-  description = "Grants access to the ArgoCD UI (argocd.tailb40090.ts.net)."
+  description = "Grants access to the ArgoCD UI (argocd.internal.willpxxr.com)."
 }
 
 resource "auth0_role" "hubble_use" {
   name        = "hubble:use"
-  description = "Grants access to the Hubble UI (hubble.tailb40090.ts.net) -- a network flow observability dashboard, not something administered through it."
+  description = "Grants access to the Hubble UI (hubble.internal.willpxxr.com) -- a network flow observability dashboard, not something administered through it."
 }
 
 resource "auth0_role" "llm_use" {
   name        = "llm:use"
-  description = "Grants access to the self-hosted LLM gateway (ai.tailb40090.ts.net), proxying to the Synthetic subscription."
+  description = "Grants access to the self-hosted LLM gateway (ai.internal.willpxxr.com), proxying to the Synthetic subscription."
 }
 
 resource "auth0_role" "mcp_use" {
   name        = "mcp:use"
-  description = "Grants access to the self-hosted MCP gateway (mcp.tailb40090.ts.net)."
+  description = "Grants access to the self-hosted MCP gateway (mcp.internal.willpxxr.com)."
 }
 
 data "auth0_user" "will" {
@@ -295,7 +292,7 @@ resource "auth0_tenant" "main" {
 # claim, which is what the previous (now-removed) Action-based approach did.
 resource "auth0_resource_server" "hubble" {
   name       = "willpxxr-live hubble"
-  identifier = "https://hubble.tailb40090.ts.net"
+  identifier = "https://hubble.internal.willpxxr.com"
 
   enforce_policies = true
   token_dialect    = "access_token_authz"
@@ -335,7 +332,7 @@ resource "auth0_resource_server_scopes" "cicd" {
 
 resource "auth0_resource_server" "argo" {
   name       = "willpxxr-live argo"
-  identifier = "https://argocd.tailb40090.ts.net"
+  identifier = "https://argocd.internal.willpxxr.com"
 
   enforce_policies                                = true
   token_dialect                                   = "access_token_authz"
@@ -353,7 +350,7 @@ resource "auth0_resource_server_scopes" "argo" {
 
 resource "auth0_resource_server" "ai_llm" {
   name       = "willpxxr-live ai-llm"
-  identifier = "https://ai.tailb40090.ts.net"
+  identifier = "https://ai.internal.willpxxr.com"
 
   enforce_policies                                = true
   token_dialect                                   = "access_token_authz"
@@ -384,7 +381,7 @@ resource "auth0_resource_server" "ai_mcp" {
   # including its path, not just the bare host the LLM gateway uses. identifier is
   # ForceNew, so this replaces the resource server (and its dependent scopes/
   # role_permissions, handled automatically).
-  identifier = "https://mcp.tailb40090.ts.net/mcp"
+  identifier = "https://mcp.internal.willpxxr.com/mcp"
 
   enforce_policies                                = true
   token_dialect                                   = "access_token_authz"
