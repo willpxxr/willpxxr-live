@@ -12,6 +12,16 @@ pub struct Credential {
 }
 
 pub async fn connect(url: &str) -> Result<PgPool> {
+    // One direct handshake attempt first: the pool's acquire timeout masks
+    // the real per-connection failure (auth, DNS, TLS), which is exactly
+    // what the crash log needs to show.
+    let mut conn = sqlx::postgres::PgConnection::connect(url)
+        .await
+        .context("direct database handshake failed")?;
+    conn.close()
+        .await
+        .context("closing database probe connection")?;
+
     PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(std::time::Duration::from_secs(10))
