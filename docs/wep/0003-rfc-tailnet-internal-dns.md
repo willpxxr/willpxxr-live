@@ -44,7 +44,9 @@ The Envoy data plane is already reachable over the tailnet at L3 (the
    created by Terraform (`cloudflare_api_token`) and written to the
    1Password `kubernetes` vault (`internal-dns-cloudflare/credentials/token`);
    both ExternalDNS and the cert-manager issuer consume it via ExternalSecret
-   per repo convention.
+   per repo convention. Prerequisite: the Terraform automation token holds
+   API-Tokens Read/Write so it can mint (and later rotate/revoke) downscoped
+   tokens like this one -- accepted tradeoff over hand-pasting.
 
 `AIGatewayRoute` supports `hostnames` (its generated HTTPRoutes inherit
 them, so ExternalDNS sees the new names). `MCPRoute` does not support
