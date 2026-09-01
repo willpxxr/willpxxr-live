@@ -68,3 +68,5 @@ cargo test
 cargo run            # needs env above; see docker-compose-less local flow
 docker build -t mcp-token-vault .
 ```
+
+Cache-check: warm-build probe.
