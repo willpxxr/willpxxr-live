@@ -80,17 +80,33 @@ spec:
 
 
 ---
-# Linear rides the vault's proxy listener (WEP-0006): the vault terminates
-# the MCP session on behalf of mcp.linear.app, injecting the fresh upstream
-# bearer per request. Network-trusted (CNP restricts ingress to
-# envoy-gateway-system), same posture as kagent-tools.
+# Linear's MCP server, reached DIRECTLY by Envoy -- no vault proxy hop in
+# the MCP data path (WEP-0006 amendment). The vault stays control-plane
+# only: Envoy's ext_authz check (mcp-route.yaml securityPolicy.extAuth)
+# asks the vault's /authz per tools/call, and the OK response's
+# authorization header is injected upstream (headersToBackend). TLS to the
+# public upstream uses the same pattern as kiwi/betterstack.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: mcp-linear-vault
+  name: linear
   namespace: envoy-gateway-system
 spec:
   endpoints:
     - fqdn:
-        hostname: mcp-token-vault.mcp-token-vault.svc.cluster.local
-        port: 8081
+        hostname: mcp.linear.app
+        port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: linear-tls
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: "gateway.envoyproxy.io"
+      kind: Backend
+      name: linear
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: mcp.linear.app

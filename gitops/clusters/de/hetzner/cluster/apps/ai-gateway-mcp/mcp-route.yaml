@@ -47,18 +47,14 @@ spec:
     # bearer per request and keeps it refreshed; no credential ever reaches
     # the gateway. Connect flow: /oauth/linear/start via the elicitation
     # HTTPRoute.
-    - name: mcp-linear-vault
+    - name: linear
       kind: Backend
       group: gateway.envoyproxy.io
-      # backendRefs[].path is the backend's MCP endpoint path (CRD-verified
-      # default "/mcp"): the vault's proxy listener path-dispatches on the
-      # first segment as the provider name, remainder appended to
-      # PROVIDER_LINEAR_UPSTREAM_URL (https://mcp.linear.app/mcp) -- so
-      # "/linear" with an empty remainder lands exactly on the upstream
-      # endpoint. This was previously a duplicate `path:` key (a stray
-      # kagent-tools copy-paste); YAML collapses duplicates to the LAST
-      # value, which silently shipped "/" and 404'd every Linear request.
-      path: "/linear"
+      # Linear's MCP endpoint path on the direct backend (CRD default is
+      # /mcp, which is what mcp.linear.app serves). Tool calls are prefixed
+      # `linear__` -- the vault's /authz parses that prefix to resolve the
+      # provider credential; the Backend name IS the provider key.
+      path: "/mcp"
       # No forwardHeaders/securityPolicy.apiKey -- the client's Auth0 token
       # must not reach this backend either (same reasoning as
       # kiwi/betterstack/kagent-tools); the vault injects Linear's own
@@ -90,6 +86,30 @@ spec:
       # No claimToHeaders -- nothing from the validated token gets forwarded
       # to backends via this mechanism either, consistent with the
       # forwardHeaders omission above.
+    # Upstream credential injection (WEP-0006 amendment): Envoy runs an
+    # ext_authz check per request against the vault's /authz. The check body
+    # (bodyToExtAuth) carries the JSON-RPC request; on `tools/call` the
+    # vault parses the tool's `<provider>__` prefix and answers 200 with an
+    # `authorization` header, which headersToBackend injects upstream --
+    # Envoy attaches the token, the vault never sees MCP traffic. Requests
+    # for non-vault providers (betterstack/kiwi/kagent-tools) get a bare
+    # 200 and no headers, so their own auth mechanisms are untouched.
+    # failOpen: a vault outage degrades to upstream 401s, not a gateway
+    # outage. pathOverride (not path): the original request path was
+    # reaching the vault before this fix.
+    extAuth:
+      bodyToExtAuth:
+        maxRequestBytes: 65536
+      includeRouteMetadata: true
+      failOpen: true
+      http:
+        pathOverride: /authz
+        backendRef:
+          group: gateway.envoyproxy.io
+          kind: Backend
+          name: mcp-token-vault-authz
+        headersToBackend:
+          - authorization
     authorization:
       defaultAction: Deny
       rules:

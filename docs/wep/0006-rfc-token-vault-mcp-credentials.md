@@ -38,7 +38,14 @@ the boundary sits.
 ## Decision
 
 1. **The vault is a separate in-cluster service, and it is the injection
-   point.** New app `apps/mcp-token-vault` (namespace `mcp-token-vault`, per
+   point.** (Amended 2026-09-01: the injection point moved *out of* the data
+   path -- Envoy's `extAuth` check calls the vault's `/authz` per
+   `tools/call`, the vault answers with the bearer header, and Envoy injects
+   it upstream (`headersToBackend`), so MCP traffic goes
+   client -> gateway -> upstream directly; the backend is named `linear`,
+   making the tool prefix the provider key the vault resolves on. The
+   vault's proxy listener remains as a fallback but Linear no longer rides
+   it.) New app `apps/mcp-token-vault` (namespace `mcp-token-vault`, per
    the WEP-0005 lesson: never share a namespace across ArgoCD apps). For
    OAuth-needing backends, the MCPRoute `Backend` points at the vault's
    in-cluster FQDN (the proven `kagent-tools` backend pattern: Backend object
