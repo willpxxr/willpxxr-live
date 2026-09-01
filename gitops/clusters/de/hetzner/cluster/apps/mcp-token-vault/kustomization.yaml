@@ -1,10 +1,8 @@
-# Rendered by ArgoCD's kustomize source (see app.yaml). The only dynamic
-# bit is the image-refresh annotation, stamped per-render from the build
-# environment (kustomize.commonAnnotationsEnvsubst in app.yaml) so every
-# new revision rolls the pod onto the freshly built :main image -- no
-# manual annotation bumps. Plain YAML manifests get no build-env
-# substitution, and ArgoCD 3.x removed the jsonnet source type entirely
-# (CRD-verified against v3.5.2) -- this is the one supported path.
+# Rendered by ArgoCD's kustomize source (see app.yaml): a plain wrapper so
+# ArgoCD treats this dir as kustomize. The image pin comes from the
+# Application's kustomize.images override (envsubsted from
+# $ARGOCD_APP_REVISION at render time) -- the base tag below is always
+# overridden and exists only so the manifest is valid standalone.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

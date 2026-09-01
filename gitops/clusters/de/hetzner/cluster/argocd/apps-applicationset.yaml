@@ -95,18 +95,27 @@ spec:
           {{- if hasKey . "path" }}
           path: {{ .path }}
           {{- else }}
-          # No explicit path: git-local kustomize dir == the app dir, so
-          # build-env-style values can be templated straight into the spec
-          # (e.g. images[].newTag from the generator's .sha) -- the one
-          # render-time hook plain manifests lack (ArgoCD 3.x removed the
-          # jsonnet source type; CRD-verified against v3.5.2).
+          # No explicit path: git-local kustomize dir == the app dir, the
+          # one render-time hook plain manifests lack (ArgoCD 3.x removed
+          # the jsonnet source type; CRD-verified against v3.5.2).
           path: {{ $.path.path }}
           {{- end }}
-          {{- if and (hasKey . "images") .images }}
+          {{- if or (hasKey . "commonAnnotations") (hasKey . "images") }}
           kustomize:
+            {{- if hasKey . "commonAnnotationsEnvsubst" }}
+            commonAnnotationsEnvsubst: {{ .commonAnnotationsEnvsubst }}
+            {{- end }}
+            {{- if and (hasKey . "commonAnnotations") .commonAnnotations }}
+            commonAnnotations:
+            {{- range $k, $v := .commonAnnotations }}
+              {{ $k }}: {{ $v }}
+            {{- end }}
+            {{- end }}
+            {{- if and (hasKey . "images") .images }}
             images:
             {{- range .images }}
               - {{ . }}
+            {{- end }}
             {{- end }}
           {{- end }}
         {{- end }}

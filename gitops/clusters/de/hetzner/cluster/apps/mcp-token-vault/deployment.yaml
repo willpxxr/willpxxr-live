@@ -15,21 +15,14 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: mcp-token-vault
-      # The image is a rolling :main tag; the image-refresh annotation is
-      # stamped per-render by ArgoCD's kustomize source (app.yaml:
-      # commonAnnotationsEnvsubst from $ARGOCD_APP_REVISION_SHORT -- see
-      # kustomization.yaml), so new revisions roll the pod and pull the
-      # freshly built image. Do not set a static value here; kustomize
-      # owns this annotation.
     spec:
       automountServiceAccountToken: false
       containers:
         - name: vault
-          # The tag here is only the base default: the ApplicationSet pins
-          # newTag to sha-<commit> per render (app.yaml kustomize.images
-          # <- the git generator's .sha), so every commit rolls the pod
-          # onto its own image. CI builds sha-<commit> for every push to
-          # main -- see .github/workflows/mcp-token-vault.yml.
+          # Base default only: the Application's kustomize.images override
+          # envsubsts this to :sha-<commit> at render time (see app.yaml),
+          # so every commit rolls the pod onto its own image. CI builds
+          # sha-<commit> for every push to main.
           image: ghcr.io/willpxxr/mcp-token-vault:main
           imagePullPolicy: Always
           ports:
