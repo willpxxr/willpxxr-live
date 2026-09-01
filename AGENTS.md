@@ -44,7 +44,7 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 
 - **`de/hetzner`** (`gitops/clusters/de/hetzner/cluster/`) — **the active cluster**;
   essentially all current work happens here. Talos Linux on Hetzner Cloud (`nbg1`),
-  provisioned via the `hcloud-talos` Terraform module (`hetzner.tf`). Cilium CNI
+  provisioned via the `hcloud-talos` Terraform module (`terraform/hetzner.tf`). Cilium CNI
   (kube-proxy replacement, native routing, Hubble) — with
   `socketLB.hostNamespaceOnly: true` in `cilium-values.yaml`, which is load-bearing:
   Cilium's socket-LB force-enables with kube-proxy replacement
@@ -71,8 +71,8 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 
 ## Tech stack
 
-- **Terraform** `>= 1.11` (see `providers.tf`'s `required_version`) — remote backend
-  (`backend.tf`), no local `terraform apply` expected.
+- **Terraform** `>= 1.11` (see `terraform/providers.tf`'s `required_version`) — remote backend
+  (`terraform/backend.tf`), no local `terraform apply` expected.
 - **Providers**: `cloudflare` (**v5** — see `docs/wep/0004-adr-cloudflare-provider-v5.md`;
   token minting for downscoped tokens uses the account-token surface, which
   needs the automation token to hold Account/API-Tokens Read+Write),
@@ -92,16 +92,18 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 
 ```
 .
-├── backend.tf, providers.tf, variables.tf   # TFC backend, provider config, all input vars
-├── locals.tf, main.tf                       # Cloudflare: DNS/redirects/WAF (local.records/redirects/waf)
-├── oci.tf, moves.tf                         # Legacy OCI cluster + decommission `moved` blocks
-├── hetzner.tf                               # de/hetzner Talos cluster (hcloud-talos module)
-├── tailscale.tf                             # Tailscale ACL/OAuth client + bootstrap k8s namespaces/Secret
-├── auth0.tf                                 # Auth0 clients/scopes for every Envoy Gateway SecurityPolicy
-├── betterstack.tf                           # Terraform-provisioned Better Stack API credentials/source
-├── synthetic.tf                             # Synthetic LLM key: 1Password item w/ placeholder, value pasted by hand
-├── argocd.tf                                # ArgoCD redis auth: random_password -> 1Password item (ESO-synced)
-├── data.tf                                  # Cloudflare zone/account data sources
+├── terraform/                               # ALL Terraform (TFC VCS-driven: workspace
+│   │                                        #   working dir = terraform/, trigger patterns
+│   │                                        #   terraform/** -- pushes without .tf changes
+│   │                                        #   don't trigger runs)
+│   ├── backend.tf, providers.tf, variables.tf, data.tf, locals.tf, main.tf
+│   ├── hetzner.tf                           # de/hetzner Talos cluster (hcloud-talos module)
+│   ├── tailscale.tf                         # Tailscale ACL/OAuth client + bootstrap k8s namespaces/Secret
+│   ├── auth0.tf                             # Auth0 clients/scopes for every Envoy Gateway SecurityPolicy
+│   ├── argocd.tf                            # ArgoCD redis auth: random_password -> 1Password item (ESO-synced)
+│   ├── betterstack*.tf                      # Better Stack API creds/source + dashboards/SLOs
+│   ├── synthetic.tf, supabase.tf, internaldns.tf
+│   └── oci.tf, moves.tf                     # Legacy OCI cluster + decommission `moved` blocks
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
 ├── services/                                # In-cluster services with source in this repo (mcp-token-vault, WEP-0006; CI builds/pushes the image)
@@ -132,7 +134,7 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 - A handful of k8s objects are created directly by Terraform rather than GitOps —
   only for genuine bootstrap ordering (things ArgoCD/external-secrets themselves
   depend on), e.g. the `external-secrets`/`tailscale`/`argocd` namespaces and the
-  1Password ESO service-account token Secret in `tailscale.tf`. The one-time ArgoCD
+  1Password ESO service-account token Secret in `terraform/tailscale.tf`. The one-time ArgoCD
   install itself was also bootstrap (helm, release `argocd`, which the `argocd`
   app then adopts). Everything else lives in `gitops/`.
 - Because pushing to `main` triggers a real Terraform apply and a real ArgoCD
@@ -184,11 +186,11 @@ ArgoCD renders every app from a per-app `app.yaml` via the single
   `kubernetes` 1Password vault, key convention `<item-title>/credentials/<field>`.
   When the secret's origin is another Terraform-managed provider resource rather
   than something typed in by hand, a matching `onepassword_item` resource writes
-  it into that vault from the relevant `.tf` file (see `tailscale.tf`,
-  `betterstack.tf`, `argocd.tf`) — prefer this over asking a human to paste a
+  it into that vault from the relevant `.tf` file (see `terraform/tailscale.tf`,
+  `terraform/betterstack.tf`, `terraform/argocd.tf`) — prefer this over asking a human to paste a
   secret into 1Password whenever the upstream service has a usable Terraform
   provider. When it doesn't (e.g. Synthetic's LLM-gateway API key,
-  `synthetic.tf`), Terraform creates the item with a placeholder value plus
+  `terraform/synthetic.tf`), Terraform creates the item with a placeholder value plus
   `lifecycle { ignore_changes = [section_map] }` (so later applies don't revert
   the hand-pasted key) and a human pastes the real value into the item
   afterwards; the key layout still applies.
@@ -206,7 +208,7 @@ ArgoCD renders every app from a per-app `app.yaml` via the single
   the one-time helm bootstrap) together with its exposure (Tailscale Ingress in
   `envoy-gateway-system` + HTTPRoute + Auth0 SecurityPolicy) — the app manages
   ArgoCD itself; `dex` and the redis init Job are disabled (the init Job
-  deadlocks GitOps syncs; the redis auth is ESO-managed, see `argocd.tf`).
+  deadlocks GitOps syncs; the redis auth is ESO-managed, see `terraform/argocd.tf`).
 
 ## Observability (`otel-collector`)
 
@@ -222,7 +224,7 @@ scraping, OTLP receiver) export logs/metrics/traces to Better Stack.
   `backendRefs` (Gateway API resources, e.g. `EnvoyProxy`) need a `ReferenceGrant`
   in the `otel-collector` namespace — see
   `apps/otel-collector-gateway/referencegrant.yaml` for the pattern.
-- The Better Stack source itself is Terraform-managed (`betterstack.tf`, `logtail`
+- The Better Stack source itself is Terraform-managed (`terraform/betterstack.tf`, `logtail`
   provider) — don't hand-create a source in the dashboard for this cluster.
 - **Beyla (`apps/beyla/`)** runs eBPF auto-instrumentation (Grafana's OBI) cluster-wide
   (`discovery.instrument: [k8s_namespace: "*"]`) to generate traces for services that
@@ -240,20 +242,20 @@ scraping, OTLP receiver) export logs/metrics/traces to Better Stack.
 
 ## Terraform conventions
 
-- DNS records live in `locals.tf` under `local.records`; redirects under
+- DNS records live in `terraform/locals.tf` under `local.records`; redirects under
   `local.redirects`; WAF rules under `local.waf` (VPN allow-list:
   `local.lists.vpn`).
-- Use `moved` blocks in `moves.tf` when renaming/moving resources, to avoid
+- Use `moved` blocks in `terraform/moves.tf` when renaming/moving resources, to avoid
   destructive replacement.
-- The Kubernetes version for the active cluster is `hetzner.tf`'s
+- The Kubernetes version for the active cluster is `terraform/hetzner.tf`'s
   `module.talos.kubernetes_version`/`talos_version` (keep in sync with
   `packer/talos/talos.pkr.hcl`'s default).
-- Auth0 scope naming (`auth0.tf`) is `<resource>:<tier>`, tier one of
-  `get`/`admin`/`use` — see the comment at the top of `auth0.tf` for the full
+- Auth0 scope naming (`terraform/auth0.tf`) is `<resource>:<tier>`, tier one of
+  `get`/`admin`/`use` — see the comment at the top of `terraform/auth0.tf` for the full
   rationale before adding a new scope. Auth0 resource-server identifiers and
   all SecurityPolicy redirect URLs / audiences use
   `https://<name>.internal.willpxxr.com` (MCP carries a `/mcp` path suffix) —
-  keep `auth0.tf` identifiers and the matching SecurityPolicy fields in lockstep.
+  keep `terraform/auth0.tf` identifiers and the matching SecurityPolicy fields in lockstep.
 - Run `terraform fmt` before committing.
 
 ## Sensitive information

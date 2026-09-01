@@ -12,10 +12,12 @@ tries to apply them live. Run this yourself before pushing.
 
 ## 1. Terraform
 
-For every changed/added `.tf` file:
+All Terraform lives under `terraform/` (the TFC workspace's working
+directory; trigger patterns are `terraform/**`, so pushes without `.tf`
+changes don't trigger runs). Run Terraform commands from that directory:
 
 ```
-terraform fmt -check -diff <files...>
+cd terraform && terraform fmt -check -diff <changed files>
 ```
 
 If new provider blocks or resources were added, also sanity-check

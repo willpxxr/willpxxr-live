@@ -33,7 +33,7 @@ jobs:
       - name: 'Checkov'
         uses: bridgecrewio/checkov-action@99bb2caf247dfd9f03cf984373bc6043d4e32ebf # v12.1347.0
         with:
-          directory: .
+          directory: terraform
           framework: terraform
           soft_fail: true
           # The pinned checkov-action version's underlying checkov build
