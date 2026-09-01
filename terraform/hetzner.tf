@@ -74,7 +74,7 @@ module "talos" {
   #   namespace to forward tailnet traffic to backing Services.
   #   Ref: https://tailscale.com/docs/kubernetes-operator/reference/compatibility#cilium-kube-proxy-replacement-mode
   # - Enable Hubble for flow observability and debugging network policy issues.
-  cilium_values = [file("${path.module}/cilium-values.yaml")]
+  cilium_values = [file("${path.module}/files/cilium-values.yaml")]
 }
 
 # Resolve the Talos snapshot built by Packer (packer/talos/talos.pkr.hcl).
