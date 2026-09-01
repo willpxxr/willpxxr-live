@@ -1,10 +1,10 @@
 use crate::config::ProviderConfig;
 use crate::state::{AppState, SharedState};
+use axum::Router;
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::any;
-use axum::Router;
 use std::sync::Arc;
 
 /// Envoy ext_authz HTTP check endpoint (see WEP-0006). On `tools/call` the
@@ -13,7 +13,7 @@ use std::sync::Arc;
 /// missing one becomes a 500 carrying the elicitation URL. Everything else
 /// (initialize, tools/list, notifications) passes untouched.
 async fn check(State(state): State<Arc<AppState>>, req: Request) -> Response {
-    let (parts, body) = req.into_parts();
+    let (_parts, body) = req.into_parts();
     let body_bytes = axum::body::to_bytes(body, 1024 * 1024)
         .await
         .unwrap_or_default();
@@ -30,10 +30,7 @@ async fn check(State(state): State<Arc<AppState>>, req: Request) -> Response {
             return match resolve_credential(&state, pc).await {
                 Ok(token) => (
                     StatusCode::OK,
-                    [(
-                        axum::http::header::AUTHORIZATION,
-                        format!("Bearer {token}"),
-                    )],
+                    [(axum::http::header::AUTHORIZATION, format!("Bearer {token}"))],
                 )
                     .into_response(),
                 Err(e) => {

@@ -56,25 +56,19 @@ async fn main() -> Result<()> {
             .ok();
     });
 
-    let mut handles = Vec::new();
-    for pc in cfg.providers {
-        let st = state.clone();
-        let pc_task = pc.clone();
-        let port = pc.listen_port;
+    let proxy_state = state.clone();
+    let proxy_listener = tokio::net::TcpListener::bind(("0.0.0.0", cfg.proxy_port)).await?;
+    tracing::info!(port = cfg.proxy_port, "proxy listening");
+    tokio::spawn(async move {
         let app = Router::new().fallback(move |req: axum::extract::Request| {
-            let st = st.clone();
-            let pc = pc_task.clone();
-            async move { proxy::handle(st, pc, req).await }
+            let st = proxy_state.clone();
+            async move { proxy::handle(st, req).await }
         });
-        let listener = tokio::net::TcpListener::bind(("0.0.0.0", port)).await?;
-        tracing::info!(provider = %pc.name, port, "proxy listening");
-        handles.push(tokio::spawn(async move {
-            axum::serve(listener, app)
-                .with_graceful_shutdown(shutdown())
-                .await
-                .ok();
-        }));
-    }
+        axum::serve(proxy_listener, app)
+            .with_graceful_shutdown(shutdown())
+            .await
+            .ok();
+    });
 
     shutdown().await;
     tracing::info!("shutting down");

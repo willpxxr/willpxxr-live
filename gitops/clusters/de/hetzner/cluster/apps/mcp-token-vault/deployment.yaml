@@ -25,7 +25,7 @@ spec:
           image: ghcr.io/willpxxr/mcp-token-vault:main
           imagePullPolicy: Always
           ports:
-            - name: proxy-linear
+            - name: proxy
               containerPort: 8081
             - name: admin
               containerPort: 9090
@@ -64,8 +64,6 @@ spec:
             # browser for the elicitation UX to work.
             - name: ELICITATION_BASE_URL
               value: https://mcp.internal.willpxxr.com
-            - name: PROVIDER_LINEAR_LISTEN_PORT
-              value: "8081"
             - name: PROVIDER_LINEAR_UPSTREAM_URL
               value: https://mcp.linear.app/mcp
             # TO VERIFY when creating the Linear OAuth app: confirm the

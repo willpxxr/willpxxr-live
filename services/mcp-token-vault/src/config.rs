@@ -14,7 +14,6 @@ pub struct TokenConfig {
 #[derive(Clone, Debug)]
 pub struct ProviderConfig {
     pub name: String,
-    pub listen_port: u16,
     pub upstream_url: reqwest::Url,
     pub token: Option<TokenConfig>,
 }
@@ -26,6 +25,7 @@ pub struct Config {
     pub admin_port: u16,
     pub oauth_port: u16,
     pub authz_port: u16,
+    pub proxy_port: u16,
     pub admin_token: Option<String>,
     pub elicitation_base_url: Option<String>,
     pub providers: Vec<ProviderConfig>,
@@ -34,8 +34,9 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL not set")?;
-        let admin_database_url =
-            std::env::var("ADMIN_DATABASE_URL").ok().filter(|s| !s.is_empty());
+        let admin_database_url = std::env::var("ADMIN_DATABASE_URL")
+            .ok()
+            .filter(|s| !s.is_empty());
         let admin_port = std::env::var("ADMIN_PORT")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -48,25 +49,29 @@ impl Config {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(9092);
+        let proxy_port = std::env::var("PROXY_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8081);
         let admin_token = std::env::var("ADMIN_TOKEN").ok().filter(|s| !s.is_empty());
         let elicitation_base_url = std::env::var("ELICITATION_BASE_URL")
             .ok()
             .filter(|s| !s.is_empty());
 
-        let mut names: BTreeMap<String, u16> = BTreeMap::new();
-        for (k, v) in std::env::vars() {
+        let mut names: BTreeMap<String, ()> = BTreeMap::new();
+        for k in std::env::vars().map(|(k, _)| k) {
             if let Some(rest) = k.strip_prefix("PROVIDER_")
-                && let Some(name) = rest.strip_suffix("_LISTEN_PORT") {
-                    let port: u16 = v.parse().with_context(|| format!("bad port for {name}"))?;
-                    names.insert(name.to_lowercase(), port);
-                }
+                && let Some(name) = rest.strip_suffix("_UPSTREAM_URL")
+            {
+                names.insert(name.to_lowercase(), ());
+            }
         }
         if names.is_empty() {
-            bail!("no PROVIDER_*_LISTEN_PORT configured");
+            bail!("no PROVIDER_*_UPSTREAM_URL configured");
         }
 
         let mut providers = Vec::new();
-        for (name, listen_port) in names {
+        for (name, ()) in names {
             let prefix = format!("PROVIDER_{}_", name.to_uppercase());
             let upstream = std::env::var(format!("{prefix}UPSTREAM_URL"))
                 .with_context(|| format!("{prefix}UPSTREAM_URL not set"))?;
@@ -112,7 +117,6 @@ impl Config {
             };
             providers.push(ProviderConfig {
                 name,
-                listen_port,
                 upstream_url,
                 token,
             });
@@ -124,6 +128,7 @@ impl Config {
             admin_port,
             oauth_port,
             authz_port,
+            proxy_port,
             admin_token,
             elicitation_base_url,
             providers,
@@ -139,7 +144,6 @@ mod tests {
     fn parses_provider_env() {
         unsafe {
             std::env::set_var("DATABASE_URL", "postgres://x");
-            std::env::set_var("PROVIDER_LINEAR_LISTEN_PORT", "8081");
             std::env::set_var("PROVIDER_LINEAR_UPSTREAM_URL", "https://mcp.linear.app/mcp");
             std::env::set_var(
                 "PROVIDER_LINEAR_TOKEN_URL",
@@ -152,7 +156,6 @@ mod tests {
         assert_eq!(cfg.providers.len(), 1);
         let p = &cfg.providers[0];
         assert_eq!(p.name, "linear");
-        assert_eq!(p.listen_port, 8081);
         assert_eq!(p.upstream_url.as_str(), "https://mcp.linear.app/mcp");
         assert!(p.token.is_some());
     }
