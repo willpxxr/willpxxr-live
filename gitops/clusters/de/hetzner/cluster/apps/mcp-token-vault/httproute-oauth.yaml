@@ -1,0 +1,39 @@
+---
+# Browser-facing elicitation endpoint (WEP-0006): /oauth/<provider>/start and
+# /callback, served by the vault's oauth listener. The MCPRoute's hostnames
+# entry already advertises mcp.internal.willpxxr.com to external-dns, so no
+# dns shim is needed for this route.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp-token-vault-oauth
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "mcp.internal.willpxxr.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /oauth
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: mcp-token-vault-oauth
+---
+# Cross-namespace reference: the route above (envoy-gateway-system) targets
+# the vault Service in mcp-token-vault.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: mcp-token-vault-oauth
+  namespace: envoy-gateway-system
+spec:
+  endpoints:
+    - fqdn:
+        hostname: mcp-token-vault.mcp-token-vault.svc.cluster.local
+        port: 9091

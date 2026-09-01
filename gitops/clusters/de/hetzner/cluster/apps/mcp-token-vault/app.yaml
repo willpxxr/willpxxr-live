@@ -12,3 +12,4 @@ manifests:
   - externalsecret-linear.yaml
   - deployment.yaml
   - service.yaml
+  - httproute-oauth.yaml

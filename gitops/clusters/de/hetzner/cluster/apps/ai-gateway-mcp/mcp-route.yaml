@@ -42,6 +42,9 @@ spec:
     - name: kagent-tools
       kind: Backend
       group: gateway.envoyproxy.io
+    - name: linear
+      kind: Backend
+      group: gateway.envoyproxy.io
       # The chart's kagent-tools server mounts its MCP handler at "/" (mux.Handle("/", ...)
       # in cmd/main.go), not "/mcp" -- confirmed by reading the upstream source
       # rather than assuming the field's stated default applies here too.
