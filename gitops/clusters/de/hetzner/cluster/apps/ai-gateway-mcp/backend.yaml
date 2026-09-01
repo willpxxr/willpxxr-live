@@ -77,48 +77,20 @@ spec:
         hostname: kagent-tools.kagent.svc.cluster.local
         port: 8084
 
+
+
 ---
-# The mcp-token-vault ext_authz check service (apps/mcp-token-vault/,
-# WEP-0006): Envoy calls it per MCP request; the OK response's headers are
-# injected into the upstream request (headersToBackend) and a non-200
-# denial carries the elicitation URL. In-cluster FQDN backend, same pattern
-# as kagent-tools (no BackendTLSPolicy, plain HTTP inside the cluster).
+# Linear rides the vault's proxy listener (WEP-0006): the vault terminates
+# the MCP session on behalf of mcp.linear.app, injecting the fresh upstream
+# bearer per request. Network-trusted (CNP restricts ingress to
+# envoy-gateway-system), same posture as kagent-tools.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
-  name: mcp-token-vault-authz
+  name: mcp-linear-vault
   namespace: envoy-gateway-system
 spec:
   endpoints:
     - fqdn:
         hostname: mcp-token-vault.mcp-token-vault.svc.cluster.local
-        port: 9092
-
----
-# Linear's MCP server (WEP-0006 phase 2): the first vault-managed backend --
-# no static securityPolicy; its bearer is injected per-request by the
-# ext_authz check service from the vault's encrypted store.
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: linear
-  namespace: envoy-gateway-system
-spec:
-  endpoints:
-    - fqdn:
-        hostname: mcp.linear.app
-        port: 443
----
-apiVersion: gateway.networking.k8s.io/v1alpha3
-kind: BackendTLSPolicy
-metadata:
-  name: linear-tls
-  namespace: envoy-gateway-system
-spec:
-  targetRefs:
-    - group: "gateway.envoyproxy.io"
-      kind: Backend
-      name: linear
-  validation:
-    wellKnownCACertificates: "System"
-    hostname: mcp.linear.app
+        port: 8081

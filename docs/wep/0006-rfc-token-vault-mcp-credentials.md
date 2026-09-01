@@ -142,6 +142,15 @@ the boundary sits.
   justified for one single-tenant database whose rows are ciphertext anyway.
   Revisit if Supabase ships managed OAuth DB auth (Postgres 18 adds native
   OAuth client support upstream).
+- **Migrate the injection path to AIGW-native RFC 8693 token exchange.**
+  Upstream proposal 010 (envoyproxy/ai-gateway PR #2052, merged 2026-06 as a
+  docs proposal; not in v1.1.0's CRD surface) defines `tokenExchange` as a
+  per-backend MCP upstream auth: the gateway exchanges the validated client
+  JWT at an external STS for a backend-scoped token. When a release we run
+  implements it, the vault's proxy listener retires: the vault exposes an
+  RFC 8693 token endpoint (validating the Auth0 JWT via JWKS, mcp:use scope,
+  aud pinning) and remains the credential store + refresh engine -- the part
+  the proposal explicitly delegates to an external STS.
 
 ## Risks
 
