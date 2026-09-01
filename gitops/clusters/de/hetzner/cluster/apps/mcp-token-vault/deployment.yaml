@@ -15,6 +15,11 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: mcp-token-vault
+      # The image is a rolling :main tag -- this annotation is what forces
+      # a pod restart (and therefore a fresh pull) when the service source
+      # changes; bump it alongside any services/mcp-token-vault commit.
+      annotations:
+        willpxxr.com/image-refresh: "2026-09-01-extauth-metadata-resolution"
     spec:
       automountServiceAccountToken: false
       containers:
