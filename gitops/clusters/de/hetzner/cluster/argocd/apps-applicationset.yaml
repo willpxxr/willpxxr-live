@@ -92,20 +92,24 @@ spec:
         {{- range .kustomize }}
         - repoURL: {{ .repoURL }}
           targetRevision: "{{ .revision }}"
+          {{- if hasKey . "path" }}
           path: {{ .path }}
-        {{- end }}
-      {{- end }}
-      {{- if and (hasKey . "jsonnet") .jsonnet }}
-        {{- range .jsonnet }}
-        - repoURL: https://github.com/willpxxr/willpxxr-live.git
-          targetRevision: main
-          path: diag-tlas={{ hasKey . "tlas" }};map={{ .tlas }};{{ $.path.path }}
-          {{- if and (hasKey . "tlas") .tlas }}
-          jsonnet:
-            tlas:
-            {{- range $k, $v := .tlas }}
-              - name: {{ $k }}
-                value: {{ $v }}
+          {{- else }}
+          # No explicit path: git-local kustomize dir == the app dir, so
+          # build-env-style values can be templated straight into the spec
+          # (e.g. images[].newTag from the generator's .sha) -- the one
+          # render-time hook plain manifests lack (ArgoCD 3.x removed the
+          # jsonnet source type; CRD-verified against v3.5.2).
+          path: {{ $.path.path }}
+          {{- end }}
+          {{- if and (hasKey . "images") .images }}
+          kustomize:
+            images:
+            {{- range .images }}
+              - name: {{ .name }}
+                {{- if hasKey . "newTag" }}
+                newTag: {{ .newTag }}
+                {{- end }}
             {{- end }}
           {{- end }}
         {{- end }}

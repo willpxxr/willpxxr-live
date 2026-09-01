@@ -1,11 +1,11 @@
 name: mcp-token-vault
 
+# No paths filter: the GitOps app pins its image to sha-<commit> at render
+# time (app.yaml kustomize.images <- the ApplicationSet generator's .sha),
+# so EVERY push to main needs its own image to exist for ArgoCD to pull.
 on:
   push:
     branches: [main]
-    paths:
-      - services/mcp-token-vault/**
-      - .github/workflows/mcp-token-vault.yml
   workflow_dispatch:
 
 permissions:

@@ -1,20 +1,24 @@
 # ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
-# Manifest + jsonnet app: the mcp-token-vault service (WEP-0006) --
+# Manifest + kustomize app: the mcp-token-vault service (WEP-0006) --
 # credential vault + per-provider MCP proxy for ai-gateway-mcp. Source
 # lives in services/mcp-token-vault in this repo; CI (.github/workflows/)
 # builds and pushes the image.
 #
-# The Deployment is rendered from deployment.jsonnet (the jsonnet source
-# below) rather than synced as plain YAML: ArgoCD substitutes build-env
-# variables only for Helm/Jsonnet/Kustomize/CMPs, and the pod template
-# carries the rendered app revision as an annotation, so every new revision
-# rolls the pod and pulls the freshly built :main image -- no manual
-# annotation bumps (WEP-0001 schema: jsonnet source type).
+# The Deployment is rendered through the kustomize source (kustomization.yaml)
+# so the APPLICATIONSET can pin the image tag per commit: newTag is templated
+# from the git generator's .sha, so every commit renders an image reference to
+# its own sha-<commit> image (CI builds one for every push to main) -- the
+# manifest's image change IS the rollout. Plain YAML gets no build-env
+# substitution and ArgoCD 3.x removed the jsonnet source type (CRD-verified
+# against v3.5.2); the ApplicationSet template is the one render-time hook.
 name: mcp-token-vault
 namespace: mcp-token-vault
-jsonnet:
-  - tlas:
-      revision: "$ARGOCD_APP_REVISION_SHORT"
+kustomize:
+  - repoURL: https://github.com/willpxxr/willpxxr-live.git
+    revision: main
+    images:
+      - name: ghcr.io/willpxxr/mcp-token-vault
+        newTag: sha-{{ $.sha }}
 manifests:
   - namespace.yaml
   - network-policy.yaml
