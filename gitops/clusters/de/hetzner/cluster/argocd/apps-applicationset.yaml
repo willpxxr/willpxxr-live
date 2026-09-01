@@ -99,7 +99,7 @@ spec:
         {{- range .jsonnet }}
         - repoURL: https://github.com/willpxxr/willpxxr-live.git
           targetRevision: main
-          path: {{ $.path.path }}
+          path: diag-tlas={{ hasKey . "tlas" }};map={{ .tlas }};{{ $.path.path }}
           {{- if and (hasKey . "tlas") .tlas }}
           jsonnet:
             tlas:
