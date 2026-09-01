@@ -49,47 +49,65 @@ async fn index_inner(state: &AppState) -> anyhow::Result<String> {
                 )
             }
         };
-        let action = if pc
-            .token
-            .as_ref()
-            .and_then(|t| t.authorize_url.as_ref())
-            .is_some()
-        {
-            let mut buttons = format!(
-                "<a class=\"btn\" href=\"/oauth/{}/start\">Connect {}</a>",
-                escape(&pc.name),
-                escape(&pc.name)
-            );
-            // Opt-in scope variants: each optional scope adds a button that
-            // requests defaults + that scope (Linear grants what the app
-            // requests, within what it allows -- granted scopes are shown
-            // in the status line above once stored).
-            if let Some(token) = &pc.token {
-                if let Some(optionals) = &token.optional_scopes {
-                    for opt in optionals.split(',') {
-                        let opt = opt.trim();
-                        if opt.is_empty() {
-                            continue;
-                        }
-                        let mut set: Vec<String> = token
-                            .scopes
-                            .as_deref()
-                            .map(|s| s.split(',').map(str::trim).map(String::from).collect())
-                            .unwrap_or_default();
-                        set.push(opt.to_string());
-                        buttons.push_str(&format!(
-                            " <a class=\"btn\" href=\"/oauth/{}/start?scopes={}\">{} +{}</a>",
-                            escape(&pc.name),
-                            escape(&set.join(",")),
-                            escape(&pc.name),
-                            escape(opt)
-                        ));
-                    }
+        let action = match pc.token.as_ref().filter(|t| t.authorize_url.is_some()) {
+            None => "<span class=\"hint\">non-interactive: bootstrap via the admin API</span>"
+                .to_string(),
+            Some(token) => {
+                let split = |s: &Option<String>| -> Vec<String> {
+                    s.as_deref()
+                        .map(|s| {
+                            s.split(',')
+                                .map(str::trim)
+                                .filter(|s| !s.is_empty())
+                                .map(String::from)
+                                .collect()
+                        })
+                        .unwrap_or_default()
+                };
+                let defaults = split(&token.scopes);
+                let optionals = split(&token.optional_scopes);
+                if defaults.is_empty() && optionals.is_empty() {
+                    // No scope model configured: plain connect link.
+                    format!(
+                        "<a class=\"btn\" href=\"/oauth/{}/start\">Connect {}</a>",
+                        escape(&pc.name),
+                        escape(&pc.name)
+                    )
+                } else {
+                    // Collapsible scope picker: defaults pre-checked,
+                    // optionals unticked; the ticked set is requested at
+                    // authorize (validated against this list server-side).
+                    // Submitting with nothing ticked falls back to the
+                    // default set.
+                    let checkbox = |scope: &str, checked: bool| {
+                        format!(
+                            "<label><input type=\"checkbox\" name=\"scopes\" value=\"{}\"{}> {}</label>",
+                            escape(scope),
+                            if checked { " checked" } else { "" },
+                            escape(scope)
+                        )
+                    };
+                    let mut rows: Vec<String> =
+                        defaults.iter().map(|s| checkbox(s, true)).collect();
+                    rows.extend(
+                        optionals
+                            .iter()
+                            .filter(|s| !defaults.contains(s))
+                            .map(|s| checkbox(s, false)),
+                    );
+                    format!(
+                        "<details><summary class=\"btn\">Connect {}</summary>\
+<form method=\"get\" action=\"/oauth/{}/start\">{}\
+<button type=\"submit\">Authorize</button>\
+<p class=\"hint\">untick everything to connect with the default set ({})</p>\
+</form></details>",
+                        escape(&pc.name),
+                        escape(&pc.name),
+                        rows.concat(),
+                        escape(&defaults.join(","))
+                    )
                 }
             }
-            buttons
-        } else {
-            "<span class=\"hint\">non-interactive: bootstrap via the admin API</span>".to_string()
         };
         cards.push_str(&format!(
             "<section><h2>{}</h2><p class=\"upstream\">{}</p><p class=\"status\">{}</p><p>{}</p></section>",
@@ -109,8 +127,9 @@ h1{{font-size:1.4rem}}section{{border:1px solid #ddd;border-radius:8px;padding:1
 h2{{margin:0 0 .25rem;font-size:1.1rem;text-transform:capitalize}}\
 .upstream{{margin:.1rem 0;color:#666;font-family:monospace;font-size:.85rem}}\
 .status{{margin:.5rem 0}}.missing{{color:#b3261e}}.ok{{color:#1b7f37}}\
-.hint{{color:#666}}.btn{{display:inline-block;padding:.4rem .9rem;border:1px solid #1a73e8;\
-border-radius:6px;color:#1a73e8;text-decoration:none}}\
+.hint{{color:#666;font-size:.85rem}}.btn{{display:inline-block;padding:.4rem .9rem;border:1px solid #1a73e8;\
+border-radius:6px;color:#1a73e8;text-decoration:none;cursor:pointer}}details{{margin:.5rem 0}}summary.btn{{list-style:none}}summary.btn::before{{content:\"+ \"}}details[open] summary.btn::before{{content:\"− \"}}form{{margin:.6rem 0 0}}form label{{display:block;margin:.25rem 0}}form button{{margin-top:.5rem;padding:.4rem .9rem;\
+border:1px solid #1a73e8;border-radius:6px;background:#1a73e8;color:#fff;cursor:pointer}}\
 </style></head><body><h1>MCP credential vault</h1>\
 <p>Connect third-party credentials used by the MCP gateway \
 (mcp.internal.willpxxr.com). After connecting, retry the failed tool call.</p>\
