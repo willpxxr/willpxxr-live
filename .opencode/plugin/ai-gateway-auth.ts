@@ -19,7 +19,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 // a secret (no client_secret exists -- PKCE replaces it).
 const CLIENT_ID = "U78MPGYEqod4OJzSax3HpqJwOgijXQJB"
 const ISSUER = "https://auth.willpxxr.com"
-const AUDIENCE = "https://ai.tailb40090.ts.net"
+const AUDIENCE = "https://ai.internal.willpxxr.com"
 const SCOPE = "openid offline_access llm:use"
 const CALLBACK_PORT = 9876
 const REDIRECT_URI = `http://localhost:${CALLBACK_PORT}/callback`

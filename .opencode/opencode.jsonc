@@ -15,5 +15,28 @@
         "baseURL": "https://ai.internal.willpxxr.com/v1"
       }
     }
+  },
+  // Remote MCP servers. Both use OAuth 2.1 browser flows that opencode
+  // auto-detects; authenticate via the /mcp command after (re)starting
+  // opencode.
+  // - linear: Linear's official remote MCP server (Streamable HTTP).
+  //   Read-write endpoint -- swap the URL to
+  //   https://mcp.linear.app/mcp/readonly for a read-only variant.
+  // - ai-gateway-mcp: the self-hosted AI Gateway MCP endpoint
+  //   (apps/ai-gateway-mcp/). Client auth is the Auth0 PKCE flow against
+  //   auth.willpxxr.com (mcp:use scope) via the MCP spec's OAuth discovery;
+  //   upstream credential injection is handled in-cluster by
+  //   apps/mcp-token-vault (WEP-0006) -- no Linear/API keys live client-side.
+  "mcp": {
+    "linear": {
+      "type": "remote",
+      "url": "https://mcp.linear.app/mcp",
+      "enabled": true
+    },
+    "ai-gateway-mcp": {
+      "type": "remote",
+      "url": "https://mcp.internal.willpxxr.com/mcp",
+      "enabled": true
+    }
   }
 }
