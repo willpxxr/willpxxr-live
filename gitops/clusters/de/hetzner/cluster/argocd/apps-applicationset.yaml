@@ -95,6 +95,21 @@ spec:
           path: {{ .path }}
         {{- end }}
       {{- end }}
+      {{- if and (hasKey . "jsonnet") .jsonnet }}
+        {{- range .jsonnet }}
+        - repoURL: https://github.com/willpxxr/willpxxr-live.git
+          targetRevision: main
+          path: {{ $.path.path }}
+          {{- if and (hasKey . "tlas") .tlas }}
+          jsonnet:
+            tlas:
+            {{- range $k, $v := .tlas }}
+              - name: {{ $k }}
+                value: {{ $v }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
       {{- if and (hasKey . "manifests") .manifests }}
         - repoURL: https://github.com/willpxxr/willpxxr-live.git
           targetRevision: main

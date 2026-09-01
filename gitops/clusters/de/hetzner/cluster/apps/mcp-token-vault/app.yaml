@@ -1,17 +1,26 @@
 # ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
-# Manifest-only app: the mcp-token-vault service (WEP-0006) -- credential
-# vault + elicitation proxy for ai-gateway-mcp. Source lives in
-# services/mcp-token-vault in this repo; CI (.github/workflows/) builds and
-# pushes the image.
+# Manifest + jsonnet app: the mcp-token-vault service (WEP-0006) --
+# credential vault + per-provider MCP proxy for ai-gateway-mcp. Source
+# lives in services/mcp-token-vault in this repo; CI (.github/workflows/)
+# builds and pushes the image.
+#
+# The Deployment is rendered from deployment.jsonnet (the jsonnet source
+# below) rather than synced as plain YAML: ArgoCD substitutes build-env
+# variables only for Helm/Jsonnet/Kustomize/CMPs, and the pod template
+# carries the rendered app revision as an annotation, so every new revision
+# rolls the pod and pulls the freshly built :main image -- no manual
+# annotation bumps (WEP-0001 schema: jsonnet source type).
 name: mcp-token-vault
 namespace: mcp-token-vault
+jsonnet:
+  - tlas:
+      revision: "$ARGOCD_APP_REVISION_SHORT"
 manifests:
   - namespace.yaml
   - network-policy.yaml
   - externalsecret-vault.yaml
   - externalsecret-linear.yaml
   - externalsecret-oidc.yaml
-  - deployment.yaml
   - service.yaml
   - httproute-ui.yaml
   - security-policy.yaml

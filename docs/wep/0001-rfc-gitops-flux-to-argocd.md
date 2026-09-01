@@ -96,12 +96,22 @@ declared sources as one unit:
    components distributed as kustomize (a git repo + path + revision) rather
    than as a chart. None today; part of the schema so the abstraction is
    complete.
-3. **manifests** (`manifests:`) — the app dir's own plain manifests
+3. **jsonnet** (`jsonnet:`) — one entry rendering `.jsonnet` files from the
+   app dir as a git-local source (path = the app dir). Added 2026-09-01 for
+   the one thing plain manifests can't do: **ArgoCD build-env substitution**
+   (`$ARGOCD_APP_*` reaches Helm/Kustomize/Jsonnet/CMPs only — a directory
+   source's plain YAML gets none). The TLAs map passes values referencing
+   build-env vars into the templates; first user is mcp-token-vault's
+   `deployment.jsonnet`, whose pod-template annotation is the rendered
+   revision so new commits roll the pod onto the freshly built `:main`
+   image without manual bumps. Keep Jsonnet scoped to this: it's a
+   templating escape hatch, not an invitation to rewrite apps as code.
+4. **manifests** (`manifests:`) — the app dir's own plain manifests
    (`namespace.yaml`, `network-policy.yaml`, ...). Every chart app in this
    repo carries `network-policy.yaml` (the default-deny posture convention),
    so the typical helm app declares
    `manifests: [namespace.yaml, network-policy.yaml]`. A **manifest-only**
-   app (no `helm:`/`kustomize:`) is just a `manifests:` list
+   app (no `helm:`/`kustomize:`/`jsonnet:`) is just a `manifests:` list
    (`ai-gateway-llm`, `gateway`, `policy`, ...).
 
 Bootstrap is one-time and manual (documented as a `scripts/` helper):
