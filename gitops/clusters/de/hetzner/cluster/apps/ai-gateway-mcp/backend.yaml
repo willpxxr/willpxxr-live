@@ -76,9 +76,24 @@ spec:
     - fqdn:
         hostname: kagent-tools.kagent.svc.cluster.local
         port: 8084
-
-
-
+---
+# The vault's ext_authz check service (mcp-route.yaml
+# securityPolicy.extAuth): Envoy POSTs the JSON-RPC body here per request;
+# the OK response's authorization header is what gets injected upstream.
+# In-cluster FQDN backend, plain HTTP (network-trusted: CNP restricts
+# ingress to envoy-gateway-system), same pattern as kagent-tools. This was
+# dropped when the extAuth probe was reverted -- re-added with the direct
+# linear backend (WEP-0006 amendment).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: mcp-token-vault-authz
+  namespace: envoy-gateway-system
+spec:
+  endpoints:
+    - fqdn:
+        hostname: mcp-token-vault.mcp-token-vault.svc.cluster.local
+        port: 9092
 ---
 # Linear's MCP server, reached DIRECTLY by Envoy -- no vault proxy hop in
 # the MCP data path (WEP-0006 amendment). The vault stays control-plane
