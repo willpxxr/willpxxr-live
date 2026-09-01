@@ -165,38 +165,6 @@ resource "auth0_client" "ai_gateway_mcp" {
   }
 }
 
-# Pre-registered native client for opencode's MCP OAuth against the
-# self-hosted AI Gateway MCP endpoint. opencode defaults to Dynamic Client
-# Registration (RFC 7591), which started failing with Auth0's
-# "too_many_entities" once the tenant hit its application quota (years of
-# oauth2c DCR runs) -- opencode.mcp.ai-gateway-mcp.oauth.clientId in
-# .opencode/opencode.jsonc points at this client, skipping DCR. PKCE public
-# client: no secret exists. The callback covers opencode's default local
-# OAuth listener (port 19876) on both loopback spellings.
-resource "auth0_client" "opencode_mcp" {
-  name        = "willpxxr-live-opencode-mcp"
-  description = "Native/public client used by opencode for the self-hosted MCP gateway (mcp.internal.willpxxr.com)."
-  app_type    = "native"
-
-  oidc_conformant = true
-  grant_types     = ["authorization_code", "refresh_token"]
-
-  callbacks = [
-    "http://127.0.0.1:19876/mcp/oauth/callback",
-    "http://localhost:19876/mcp/oauth/callback",
-  ]
-
-  jwt_configuration {
-    alg = "RS256"
-  }
-
-  refresh_token {
-    rotation_type   = "rotating"
-    expiration_type = "expiring"
-    token_lifetime  = 2592000
-  }
-}
-
 resource "onepassword_item" "ai_gateway_mcp" {
   vault    = data.onepassword_vault.terraform.uuid
   title    = "ai-gateway-mcp-oauth2c"
