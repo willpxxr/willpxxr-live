@@ -92,10 +92,19 @@ declared sources as one unit:
 1. **helm** (`helm:`) — one entry per Helm release (a chart app's norm). Rare
    minimal case: helm-only, no `manifests:` — the dir is just `app.yaml` +
    `values.yaml`. Rare here by convention (see below).
-2. **kustomize** (`kustomize:`) — one entry per kustomize target, for
-   components distributed as kustomize (a git repo + path + revision) rather
-   than as a chart. None today; part of the schema so the abstraction is
-   complete.
+2. **kustomize** (`kustomize:`) — one entry per kustomize target. Two uses:
+   components distributed as kustomize (a git repo + path + revision), and
+   -- added 2026-09-01 -- a **git-local kustomize dir** (path omitted
+   defaults to the app dir) for apps that need ArgoCD build-env
+   substitution in rendered manifests: `kustomize.images` values
+   envsubst `$ARGOCD_APP_*` at render time, which is how
+   mcp-token-vault pins its image to `:sha-$ARGOCD_APP_REVISION` per
+   commit (CI builds an image for every push to main) -- the image change
+   itself drives the rollout. Note plain YAML manifests get NO build-env
+   substitution, and ArgoCD 3.x removed the jsonnet source type entirely
+   (both CRD-verified against v3.5.2) -- kustomize's envsubst is the one
+   render-time hook that survives. Keep it scoped to image/annotation
+   pinning, not an invitation to rewrite apps as code.
 3. **manifests** (`manifests:`) — the app dir's own plain manifests
    (`namespace.yaml`, `network-policy.yaml`, ...). Every chart app in this
    repo carries `network-policy.yaml` (the default-deny posture convention),
