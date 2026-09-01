@@ -7,7 +7,14 @@ pub struct TokenConfig {
     pub client_id: String,
     pub client_secret: String,
     pub authorize_url: Option<String>,
+    /// Default scopes requested at connect time (keep least-privilege;
+    /// broader scopes are opt-in via optional_scopes + the UI checkboxes).
     pub scopes: Option<String>,
+    /// Extra scopes the user may opt into at connect time (UI checkboxes).
+    pub optional_scopes: Option<String>,
+    /// OAuth actor to request (e.g. Linear's actor=user) -- omit if the
+    /// provider handles it otherwise.
+    pub actor: Option<String>,
     pub redirect_uri: Option<String>,
 }
 
@@ -78,37 +85,46 @@ impl Config {
             let upstream_url: reqwest::Url = upstream
                 .parse()
                 .with_context(|| format!("bad upstream url for {name}"))?;
+            let optional_scopes = std::env::var(format!("{prefix}OPTIONAL_SCOPES"))
+                .ok()
+                .filter(|s| !s.is_empty());
+            let actor = std::env::var(format!("{prefix}ACTOR"))
+                .ok()
+                .filter(|s| !s.is_empty());
+            let default_scopes = std::env::var(format!("{prefix}SCOPES"))
+                .ok()
+                .filter(|s| !s.is_empty());
             let token = match (
                 std::env::var(format!("{prefix}TOKEN_URL")),
                 std::env::var(format!("{prefix}CLIENT_ID")),
                 std::env::var(format!("{prefix}CLIENT_SECRET")),
                 std::env::var(format!("{prefix}AUTHORIZE_URL")),
                 std::env::var(format!("{prefix}REDIRECT_URI")),
-                std::env::var(format!("{prefix}SCOPES")),
             ) {
-                (Ok(token_url), Ok(client_id), Ok(client_secret), Err(_), _, _) => {
-                    Some(TokenConfig {
-                        token_url,
-                        client_id,
-                        client_secret,
-                        authorize_url: None,
-                        scopes: None,
-                        redirect_uri: None,
-                    })
-                }
+                (Ok(token_url), Ok(client_id), Ok(client_secret), Err(_), _) => Some(TokenConfig {
+                    token_url,
+                    client_id,
+                    client_secret,
+                    authorize_url: None,
+                    scopes: None,
+                    optional_scopes: optional_scopes.clone(),
+                    actor: actor.clone(),
+                    redirect_uri: None,
+                }),
                 (
                     Ok(token_url),
                     Ok(client_id),
                     Ok(client_secret),
                     Ok(authorize_url),
                     Ok(redirect_uri),
-                    scopes,
                 ) => Some(TokenConfig {
                     token_url,
                     client_id,
                     client_secret,
                     authorize_url: Some(authorize_url),
-                    scopes: scopes.ok().filter(|s| !s.is_empty()),
+                    scopes: default_scopes,
+                    optional_scopes: optional_scopes.clone(),
+                    actor: actor.clone(),
                     redirect_uri: Some(redirect_uri),
                 }),
                 _ => bail!(

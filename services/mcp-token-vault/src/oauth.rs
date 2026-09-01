@@ -26,8 +26,12 @@ fn pkce_challenge(verifier: &str) -> String {
     b64url(&Sha256::digest(verifier.as_bytes()))
 }
 
-pub async fn start(State(state): State<Arc<AppState>>, Path(provider): Path<String>) -> Response {
-    match start_inner(&state, &provider).await {
+pub async fn start(
+    State(state): State<Arc<AppState>>,
+    Path(provider): Path<String>,
+    Query(pairs): Query<Vec<(String, String)>>,
+) -> Response {
+    match start_inner(&state, &provider, &pairs).await {
         Ok(url) => Redirect::to(url.as_str()).into_response(),
         Err(e) => Html(format!(
             "<html><body><h3>Elicitation error</h3><p>{e:#}</p></body></html>"
@@ -36,7 +40,11 @@ pub async fn start(State(state): State<Arc<AppState>>, Path(provider): Path<Stri
     }
 }
 
-async fn start_inner(state: &AppState, provider: &str) -> Result<String> {
+async fn start_inner(
+    state: &AppState,
+    provider: &str,
+    query: &[(String, String)],
+) -> Result<String> {
     let pc = state
         .config
         .providers
@@ -71,8 +79,48 @@ async fn start_inner(state: &AppState, provider: &str) -> Result<String> {
         q.append_pair("response_type", "code");
         q.append_pair("client_id", &token.client_id);
         q.append_pair("redirect_uri", redirect_uri);
-        if let Some(scopes) = &token.scopes {
-            q.append_pair("scope", scopes);
+        // Scope selection: defaults from config; the UI may opt into extra
+        // scopes via ?scopes= (repeated or comma-separated). Requested
+        // scopes must be declared in config (defaults + optional) -- a typo
+        // should error loudly, not silently change the consent screen.
+        let split = |s: &Option<String>| -> Vec<String> {
+            s.as_deref()
+                .map(|s| {
+                    s.split(',')
+                        .map(str::trim)
+                        .filter(|s| !s.is_empty())
+                        .map(String::from)
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        let defaults = split(&token.scopes);
+        let optionals = split(&token.optional_scopes);
+        let mut requested: Vec<String> = query
+            .iter()
+            .filter(|(k, _)| k == "scopes")
+            .flat_map(|(_, v)| split(&Some(v.clone())))
+            .collect();
+        requested.dedup();
+        if requested.is_empty() {
+            requested = defaults.clone();
+        } else {
+            let allowed: Vec<&String> = defaults.iter().chain(optionals.iter()).collect();
+            for s in &requested {
+                if !allowed.contains(&s) {
+                    bail!(
+                        "scope {s} is not configured for provider {provider} (defaults: {}; optional: {})",
+                        defaults.join(","),
+                        optionals.join(",")
+                    );
+                }
+            }
+        }
+        if !requested.is_empty() {
+            q.append_pair("scope", &requested.join(","));
+        }
+        if let Some(actor) = &token.actor {
+            q.append_pair("actor", actor);
         }
         q.append_pair("state", &state_param);
         q.append_pair("code_challenge", &pkce_challenge(&code_verifier));

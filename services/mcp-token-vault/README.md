@@ -13,8 +13,12 @@ fresh bearer injected.
 - Credential UI: browser-facing oauth listener (9091) on
   `tokens.internal.willpxxr.com` (HTTPRoute + Auth0 SecurityPolicy, see
   `gitops/.../apps/mcp-token-vault/httproute-ui.yaml`). `GET /` lists
-  providers with stored-credential status; `/oauth/<provider>/start` runs
-  the PKCE authorization. The provider callback lives under `/cb/` on an
+  providers with stored-credential status (kind, expiry, granted scopes);
+  `/oauth/<provider>/start` runs the PKCE authorization with the provider's
+  default scopes, and the UI offers opt-in buttons for extra scopes
+  (e.g. `linear +write`) -- requested scopes are validated against the
+  provider's configured defaults+optionals, and the granted scopes are
+  stored and displayed so drift is visible. The provider callback lives under `/cb/` on an
   unpolicied route (a provider redirect can't do Auth0 login mid-flow);
   it's protected by the single-use PKCE `state` table. The UI exists
   because MCP in-band elicitations are swallowed by the AI Gateway proxy
@@ -42,7 +46,9 @@ fresh bearer injected.
 | `PROVIDER_<NAME>_TOKEN_URL` | OAuth token endpoint (enables refresh) |
 | `PROVIDER_<NAME>_AUTHORIZE_URL` | OAuth authorize endpoint (enables elicitation UX) |
 | `PROVIDER_<NAME>_REDIRECT_URI` | OAuth redirect URI (must match the provider app) |
-| `PROVIDER_<NAME>_SCOPES` | optional space-separated scopes |
+| `PROVIDER_<NAME>_SCOPES` | default OAuth scopes requested at connect (keep least-privilege, e.g. `read`) |
+| `PROVIDER_<NAME>_OPTIONAL_SCOPES` | extra scopes the credential UI offers as opt-in connect buttons (e.g. `write`) |
+| `PROVIDER_<NAME>_ACTOR` | OAuth actor to request (e.g. Linear's `user`) |
 | `PROVIDER_<NAME>_CLIENT_ID` / `_CLIENT_SECRET` | OAuth client for refresh + elicitation |
 
 ## Deploy order

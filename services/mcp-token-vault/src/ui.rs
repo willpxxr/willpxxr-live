@@ -35,7 +35,18 @@ async fn index_inner(state: &AppState) -> anyhow::Result<String> {
                     ),
                     None => String::new(),
                 };
-                format!("<span class=\"ok\">{}</span>{}", escape(&info.kind), expiry)
+                let scopes = info
+                    .scopes
+                    .as_deref()
+                    .filter(|s| !s.is_empty())
+                    .map(|s| format!(", granted scopes: <code>{}</code>", escape(s)))
+                    .unwrap_or_default();
+                format!(
+                    "<span class=\"ok\">{}</span>{}{}",
+                    escape(&info.kind),
+                    expiry,
+                    scopes
+                )
             }
         };
         let action = if pc
@@ -44,11 +55,39 @@ async fn index_inner(state: &AppState) -> anyhow::Result<String> {
             .and_then(|t| t.authorize_url.as_ref())
             .is_some()
         {
-            format!(
+            let mut buttons = format!(
                 "<a class=\"btn\" href=\"/oauth/{}/start\">Connect {}</a>",
                 escape(&pc.name),
                 escape(&pc.name)
-            )
+            );
+            // Opt-in scope variants: each optional scope adds a button that
+            // requests defaults + that scope (Linear grants what the app
+            // requests, within what it allows -- granted scopes are shown
+            // in the status line above once stored).
+            if let Some(token) = &pc.token {
+                if let Some(optionals) = &token.optional_scopes {
+                    for opt in optionals.split(',') {
+                        let opt = opt.trim();
+                        if opt.is_empty() {
+                            continue;
+                        }
+                        let mut set: Vec<String> = token
+                            .scopes
+                            .as_deref()
+                            .map(|s| s.split(',').map(str::trim).map(String::from).collect())
+                            .unwrap_or_default();
+                        set.push(opt.to_string());
+                        buttons.push_str(&format!(
+                            " <a class=\"btn\" href=\"/oauth/{}/start?scopes={}\">{} +{}</a>",
+                            escape(&pc.name),
+                            escape(&set.join(",")),
+                            escape(&pc.name),
+                            escape(opt)
+                        ));
+                    }
+                }
+            }
+            buttons
         } else {
             "<span class=\"hint\">non-interactive: bootstrap via the admin API</span>".to_string()
         };

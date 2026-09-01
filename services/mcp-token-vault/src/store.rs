@@ -157,12 +157,15 @@ pub async fn get(pool: &PgPool, key: &Key, provider: &str) -> Result<Option<Cred
 pub struct CredentialMeta {
     pub kind: String,
     pub expires_at: Option<DateTime<Utc>>,
+    /// Scopes the provider actually granted -- surfaced on the credential
+    /// UI so drift between configured and granted scopes is visible.
+    pub scopes: Option<String>,
 }
 
 /// Status-only lookup for the credential UI: never decrypts token material.
 pub async fn get_metadata(pool: &PgPool, provider: &str) -> Result<Option<CredentialMeta>> {
     let row = sqlx::query(
-        "SELECT kind, expires_at
+        "SELECT kind, expires_at, scopes
          FROM credentials
          WHERE provider = $1 AND principal = 'default'",
     )
@@ -173,6 +176,7 @@ pub async fn get_metadata(pool: &PgPool, provider: &str) -> Result<Option<Creden
     Ok(row.map(|r| CredentialMeta {
         kind: r.get("kind"),
         expires_at: r.try_get("expires_at").ok(),
+        scopes: r.try_get("scopes").ok(),
     }))
 }
 

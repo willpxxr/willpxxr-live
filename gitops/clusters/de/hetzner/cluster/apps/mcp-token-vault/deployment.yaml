@@ -75,6 +75,16 @@ spec:
               value: https://api.linear.app/oauth/token
             - name: PROVIDER_LINEAR_AUTHORIZE_URL
               value: https://linear.app/oauth/authorize
+            # OAuth scope model: Linear grants scopes at authorize time (the
+            # app dashboard has no scope list). Default least-privilege
+            # (read); the credential UI offers opt-in extras (--write for
+            # issue creation). Granted scopes are stored + shown on the UI.
+            - name: PROVIDER_LINEAR_SCOPES
+              value: read
+            - name: PROVIDER_LINEAR_OPTIONAL_SCOPES
+              value: write
+            - name: PROVIDER_LINEAR_ACTOR
+              value: user
             - name: PROVIDER_LINEAR_REDIRECT_URI
               value: https://tokens.internal.willpxxr.com/cb/oauth/linear/callback
             - name: PROVIDER_LINEAR_CLIENT_ID
