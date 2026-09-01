@@ -38,14 +38,21 @@ the boundary sits.
 ## Decision
 
 1. **The vault is a separate in-cluster service, and it is the injection
-   point.** (Amended 2026-09-01: the injection point moved *out of* the data
-   path -- Envoy's `extAuth` check calls the vault's `/authz` per
-   `tools/call`, the vault answers with the bearer header, and Envoy injects
-   it upstream (`headersToBackend`), so MCP traffic goes
-   client -> gateway -> upstream directly; the backend is named `linear`,
-   making the tool prefix the provider key the vault resolves on. The
-   vault's proxy listener remains as a fallback but Linear no longer rides
-   it.) New app `apps/mcp-token-vault` (namespace `mcp-token-vault`, per
+   point.** (Amended 2026-09-01: the vault rides the MCP data path as a
+   per-provider proxy -- the MCPRoute's linear backendRef points at the
+   vault's proxy listener, which injects the fresh upstream bearer. An
+   attempt to move injection into Envoy itself was investigated and
+   abandoned: route-level `extAuth` only wraps client-facing requests --
+   the gateway's own per-backend fan-out never passes the filter (verified
+   live: zero authz checks during fan-out, upstream 401s instead) --
+   `MCPBackendSecurityPolicy` has no `credentialOverride` (only
+   `BackendSecurityPolicy` does, for LLM routes: envoyproxy/ai-gateway
+   PR #2253/#2216, and upstream main still lacks MCP parity), so a proxy
+   is the only per-caller-capable injection point in v1.1.0. Revisit when
+   upstream ships MCP backend credential override or the MCPBackend CRD;
+   multi-user will ride this same proxy once callers' identities are
+   forwarded to it (claimToHeaders) and the vault resolves per-principal
+   rows.) New app `apps/mcp-token-vault` (namespace `mcp-token-vault`, per
    the WEP-0005 lesson: never share a namespace across ArgoCD apps). For
    OAuth-needing backends, the MCPRoute `Backend` points at the vault's
    in-cluster FQDN (the proven `kagent-tools` backend pattern: Backend object

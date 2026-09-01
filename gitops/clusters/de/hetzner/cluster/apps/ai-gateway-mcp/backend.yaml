@@ -76,31 +76,20 @@ spec:
     - fqdn:
         hostname: kagent-tools.kagent.svc.cluster.local
         port: 8084
+        port: 8084
 ---
-# The vault's ext_authz check service (mcp-route.yaml
-# securityPolicy.extAuth): Envoy POSTs the JSON-RPC body here per request;
-# the OK response's authorization header is what gets injected upstream.
-# In-cluster FQDN backend, plain HTTP (network-trusted: CNP restricts
-# ingress to envoy-gateway-system), same pattern as kagent-tools. This was
-# dropped when the extAuth probe was reverted -- re-added with the direct
-# linear backend (WEP-0006 amendment).
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
-metadata:
-  name: mcp-token-vault-authz
-  namespace: envoy-gateway-system
-spec:
-  endpoints:
-    - fqdn:
-        hostname: mcp-token-vault.mcp-token-vault.svc.cluster.local
-        port: 9092
----
-# Linear's MCP server, reached DIRECTLY by Envoy -- no vault proxy hop in
-# the MCP data path (WEP-0006 amendment). The vault stays control-plane
-# only: Envoy's ext_authz check (mcp-route.yaml securityPolicy.extAuth)
-# asks the vault's /authz per tools/call, and the OK response's
-# authorization header is injected upstream (headersToBackend). TLS to the
-# public upstream uses the same pattern as kiwi/betterstack.
+# Linear rides the vault's proxy listener (WEP-0006): the vault terminates
+# the MCP session on behalf of mcp.linear.app, injecting the fresh upstream
+# bearer per request. Network-trusted (CNP restricts ingress to
+# envoy-gateway-system), same posture as kagent-tools. This is a deliberate
+# fallback until Envoy AI Gateway can attach per-caller credentials at the
+# fan-out itself: route-level extAuth never fires on the gateway's own
+# backend fan-out (verified live), MCPBackendSecurityPolicy has no
+# credentialOverride (only BackendSecurityPolicy does -- envoyproxy/ai-gateway
+# PR #2253, LLM routes only), so the only per-caller injection point in
+# v1.1.0 is a proxy. Backend name == tool prefix (`linear__*`) == the
+# provider key the vault's proxy path-dispatches on (backendRef path
+# /linear).
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: Backend
 metadata:
@@ -109,19 +98,5 @@ metadata:
 spec:
   endpoints:
     - fqdn:
-        hostname: mcp.linear.app
-        port: 443
----
-apiVersion: gateway.networking.k8s.io/v1alpha3
-kind: BackendTLSPolicy
-metadata:
-  name: linear-tls
-  namespace: envoy-gateway-system
-spec:
-  targetRefs:
-    - group: "gateway.envoyproxy.io"
-      kind: Backend
-      name: linear
-  validation:
-    wellKnownCACertificates: "System"
-    hostname: mcp.linear.app
+        hostname: mcp-token-vault.mcp-token-vault.svc.cluster.local
+        port: 8081
