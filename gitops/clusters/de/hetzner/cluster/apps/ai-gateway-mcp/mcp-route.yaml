@@ -9,6 +9,11 @@ spec:
     - name: gateway
       namespace: envoy-gateway-system
       sectionName: tls
+  # v1.1: places the generated route in the per-host vhost (instead of the
+  # wildcard vhost it lost in the v1.1 regeneration) and is what
+  # external-dns reads -- this makes the mcp-dns-shim route obsolete.
+  hostnames:
+    - "mcp.internal.willpxxr.com"
   path: "/mcp"
   backendRefs:
     - name: kiwi
@@ -73,6 +78,24 @@ spec:
       # No claimToHeaders -- nothing from the validated token gets forwarded
       # to backends via this mechanism either, consistent with the
       # forwardHeaders omission above.
+    # WEP-0006 probe: upstream credential injection via ext_authz. The
+    # vault's /authz logs the check request (route metadata? JSON-RPC body?)
+    # and allows without headers for now; provider resolution + header
+    # injection land once the request shape is observed. failOpen keeps the
+    # gateway resilient during the probe.
+    extAuth:
+      bodyToExtAuth:
+        maxRequestBytes: 65536
+      includeRouteMetadata: true
+      failOpen: true
+      http:
+        path: /authz
+        backendRef:
+          group: gateway.envoyproxy.io
+          kind: Backend
+          name: mcp-token-vault-authz
+        headersToBackend:
+          - authorization
     authorization:
       defaultAction: Deny
       rules:

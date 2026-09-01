@@ -1,0 +1,17 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only app: the mcp-token-vault service (WEP-0006) -- credential
+# vault + elicitation proxy for ai-gateway-mcp. Source lives in
+# services/mcp-token-vault in this repo; CI (.github/workflows/) builds and
+# pushes the image.
+name: mcp-token-vault
+namespace: mcp-token-vault
+manifests:
+  - namespace.yaml
+  - network-policy.yaml
+  - externalsecret-vault.yaml
+  - externalsecret-linear.yaml
+  - externalsecret-oidc.yaml
+  - deployment.yaml
+  - service.yaml
+  - httproute-ui.yaml
+  - security-policy.yaml

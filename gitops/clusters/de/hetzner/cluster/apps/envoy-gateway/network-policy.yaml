@@ -70,7 +70,7 @@ metadata:
   name: allow-backend-egress
   namespace: envoy-gateway-system
 spec:
-  description: "Envoy proxies requests to the actual backends routed via HTTPRoute: Hubble UI (kube-system), the Flux Operator UI (flux-system), kagent-tools (kagent) and the ArgoCD UI (argocd)."
+  description: "Envoy proxies requests to the actual backends routed via HTTPRoute: Hubble UI (kube-system), the Flux Operator UI (flux-system), kagent-tools (kagent), the ArgoCD UI (argocd) and mcp-token-vault (mcp-token-vault, WEP-0006)."
   endpointSelector: {}
   egress:
     - toEndpoints:
@@ -104,6 +104,18 @@ spec:
       toPorts:
         - ports:
             - port: "8080"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: mcp-token-vault
+            io.kubernetes.pod.namespace: mcp-token-vault
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+            - port: "9091"
+              protocol: TCP
+            - port: "9092"
               protocol: TCP
 ---
 apiVersion: "cilium.io/v2"

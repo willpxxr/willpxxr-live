@@ -1,0 +1,90 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: mcp-token-vault
+spec:
+  description: "The vault's proxy, oauth and admin listeners talk to the same pod's Postgres pool; liveness probes come from the local node."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: mcp-token-vault
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: mcp-token-vault
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: mcp-token-vault
+spec:
+  description: "DNS resolution via CoreDNS for the Supabase database host and the MCP upstreams."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-gateway-ingress
+  namespace: mcp-token-vault
+spec:
+  description: "The ai-gateway-mcp MCPRoute (apps/ai-gateway-mcp/) calls the vault ext_authz endpoint (9092) for upstream credential injection, proxies MCP traffic via the vault proxy listener (8081, phase-2 fallback), and the /oauth elicitation HTTPRoute lands on 9091. The admin listener (9090) is deliberately NOT reachable -- kubectl port-forward only."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway-system
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+            - port: "9091"
+              protocol: TCP
+            - port: "9092"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-supabase-egress
+  namespace: mcp-token-vault
+spec:
+  description: "The vault stores encrypted third-party credentials in the Supabase Postgres project (WEP-0006). The Supavisor session pooler speaks the TLS-wrapped Postgres wire protocol on 5432 -- not 443 -- and Supabase hosts aren't IP-enumerable, so this allows world egress on 5432."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-linear-egress
+  namespace: mcp-token-vault
+spec:
+  description: "The vault proxies MCP traffic to Linear's MCP server (mcp.linear.app) and performs OAuth token refresh/exchange against Linear's OAuth endpoints; Linear's IPs aren't enumerable, so world egress on 443 only."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

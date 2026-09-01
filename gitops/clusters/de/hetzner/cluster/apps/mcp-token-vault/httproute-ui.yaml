@@ -1,0 +1,75 @@
+---
+# Out-of-band credential UI (WEP-0006): the browser front door for the
+# vault's oauth listener (9091). Sits on its own host instead of under
+# mcp.internal.willpxxr.com so the Auth0 SecurityPolicy split (below) never
+# risks shadowing the MCPRoute-generated /mcp paths -- the mcp-dns-shim
+# lesson (apps/ai-gateway-mcp/dns-hostname.yaml) about route overlap applies
+# doubly here. DNS + TLS need no extra config: ExternalDNS syncs hostnames
+# from Gateway HTTPRoutes, and the gateway's wildcard *.internal.willpxxr.com
+# cert covers this host.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: token-vault-ui
+  namespace: mcp-token-vault
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "tokens.internal.willpxxr.com"
+  rules:
+    - matches:
+        # Exact /: the credential UI landing page. A bare exact match (not
+        # PathPrefix /) is deliberate -- prefix / would swallow the oidc
+        # filter's own callback path handling AND overlap the unpolicied
+        # /cb/ route below.
+        - path:
+            type: Exact
+            value: /
+        # Provider connect flow: /oauth/<provider>/start (Auth0-gated; only
+        # the vault's provider callback must stay outside the policy).
+        - path:
+            type: PathPrefix
+            value: /oauth/
+        # Envoy Gateway's OIDC filter answers these paths itself (session
+        # handshake with Auth0 / logout) -- they must match a route carrying
+        # the SecurityPolicy or the redirects from Auth0 404. Disjoint from
+        # /oauth/ by one character on purpose: /oauth2/ is not /oauth/.
+        - path:
+            type: Exact
+            value: /oauth2/callback
+        - path:
+            type: Exact
+            value: /oauth2/logout
+      backendRefs:
+        - name: mcp-token-vault
+          port: 9091
+---
+# The upstream provider's authorization-code redirect. Deliberately NOT
+# covered by token-vault-ui's SecurityPolicy: Linear's browser redirect
+# cannot perform an Auth0 login mid-flow. Its protection is protocol-level
+# instead: the single-use PKCE state row (pending_elicitations,
+# store::take_pending) created by /oauth/<provider>/start. Reachable only
+# from the tailnet anyway -- the Envoy data plane is a Tailscale LB Service.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: token-vault-callback
+  namespace: mcp-token-vault
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "tokens.internal.willpxxr.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cb/
+      backendRefs:
+        - name: mcp-token-vault
+          port: 9091
