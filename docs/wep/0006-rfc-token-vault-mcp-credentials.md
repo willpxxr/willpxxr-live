@@ -2,8 +2,9 @@
 
 ## Status
 
-Proposed (2026-08-31) -- awaits review; phases ship as separate applies (see
-Plan).
+Implemented (phases 0-2 live as of 2026-09-01; see WEP-0007 for the
+credential-injection architecture amendment -- the vault proxies MCP
+per-provider pending upstream per-backend credential support).
 
 ## Context
 
@@ -42,17 +43,10 @@ the boundary sits.
    per-provider proxy -- the MCPRoute's linear backendRef points at the
    vault's proxy listener, which injects the fresh upstream bearer. An
    attempt to move injection into Envoy itself was investigated and
-   abandoned: route-level `extAuth` only wraps client-facing requests --
-   the gateway's own per-backend fan-out never passes the filter (verified
-   live: zero authz checks during fan-out, upstream 401s instead) --
-   `MCPBackendSecurityPolicy` has no `credentialOverride` (only
-   `BackendSecurityPolicy` does, for LLM routes: envoyproxy/ai-gateway
-   PR #2253/#2216, and upstream main still lacks MCP parity), so a proxy
-   is the only per-caller-capable injection point in v1.1.0. Revisit when
-   upstream ships MCP backend credential override or the MCPBackend CRD;
-   multi-user will ride this same proxy once callers' identities are
-   forwarded to it (claimToHeaders) and the vault resolves per-principal
-   rows.) New app `apps/mcp-token-vault` (namespace `mcp-token-vault`, per
+   abandoned; the full reasoning and the upstream-migration plan are
+   recorded in
+   [WEP-0007](0007-adr-mcp-upstream-credential-injection.md).) New app
+   `apps/mcp-token-vault` (namespace `mcp-token-vault`, per
    the WEP-0005 lesson: never share a namespace across ArgoCD apps). For
    OAuth-needing backends, the MCPRoute `Backend` points at the vault's
    in-cluster FQDN (the proven `kagent-tools` backend pattern: Backend object

@@ -21,4 +21,5 @@ reasoning fits on a page, it's an ADR.
 | [0002](0002-adr-kagent-tools-shared-service-account.md) | ADR | kagent-tools MCP server: shared read-only ServiceAccount, defer per-caller OBO token exchange | Accepted |
 | [0003](0003-rfc-tailnet-internal-dns.md) | RFC | Tailnet service DNS via ExternalDNS on `*.internal.willpxxr.com` | Accepted |
 | [0004](0004-adr-cloudflare-provider-v5.md) | ADR | Cloudflare provider v5 | Accepted |
-| [0006](0006-rfc-token-vault-mcp-credentials.md) | RFC | Token vault for ai-gateway-mcp third-party credentials (Supabase-backed) | Proposed |
+| [0006](0006-rfc-token-vault-mcp-credentials.md) | RFC | Token vault for ai-gateway-mcp third-party credentials (Supabase-backed) | Implemented |
+| [0007](0007-adr-mcp-upstream-credential-injection.md) | ADR | MCP upstream credential injection: vault proxy fallback, defer Envoy-side injection | Accepted |

@@ -62,6 +62,9 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   The MCP gateway fronts third-party MCP servers; its credential vault
   (`apps/mcp-token-vault`, WEP-0006) stores per-provider OAuth tokens
   (envelope-encrypted in Supabase Postgres) and injects them upstream —
+  OAuth-needing MCP backends ride the vault's single path-dispatched proxy
+  listener (`/<provider>` path on 8081; direct Envoy-side injection awaits
+  upstream `credentialOverride` support for MCP backends, see WEP-0007) —
   credentials are connected out of band via its browser UI at
   `tokens.internal.willpxxr.com` (Auth0 `token_vault:use`), since MCP
   in-band elicitations are swallowed by the AI Gateway proxy.
