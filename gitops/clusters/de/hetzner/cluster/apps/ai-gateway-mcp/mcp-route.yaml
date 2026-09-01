@@ -89,7 +89,7 @@ spec:
       includeRouteMetadata: true
       failOpen: true
       http:
-        path: /authz
+        pathOverride: /authz
         backendRef:
           group: gateway.envoyproxy.io
           kind: Backend
