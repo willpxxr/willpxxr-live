@@ -8,11 +8,11 @@ helm:
   # targetRevision stay per the Application spec -- see envoy-gateway.
   - chart: ai-gateway-crds-helm
     repoURL: oci://docker.io/envoyproxy/ai-gateway-crds-helm
-    version: v1.0.0
+    version: v1.1.0
     releaseName: envoy-ai-gateway-system-ai-gateway-crds
   - chart: ai-gateway-helm
     repoURL: oci://docker.io/envoyproxy/ai-gateway-helm
-    version: v1.0.0
+    version: v1.1.0
     releaseName: envoy-ai-gateway-system-ai-gateway
     values: values.yaml
 manifests:
