@@ -40,3 +40,17 @@ variable "betterstack_api_token" {
   sensitive   = true
   description = "Better Stack Telemetry API token (from https://betterstack.com/docs/logs/api/getting-started/#get-an-logs-api-token), used to authenticate the logtail Terraform provider so it can create the OTel Collector's Source via logtail_source. Distinct from the source token that resource then produces."
 }
+
+variable "supabase_token" {
+  sensitive   = true
+  description = "Supabase Management API personal access token (from https://supabase.com/dashboard/account/tokens), used to authenticate the supabase Terraform provider. The Management API has no OIDC/federation surface (unlike Tailscale above), so this is a static token by necessity."
+}
+
+variable "supabase_organization_id" {
+  description = "Supabase organization slug the mcp-token-vault project is created in (from the dashboard URL: supabase.com/dashboard/org/<id>). The supabase provider has no organization data source, so this is user-supplied."
+}
+
+variable "supabase_region" {
+  description = "AWS region for the Supabase project; picked to sit near the de/hetzner cluster (nbg1)."
+  default     = "eu-central-1"
+}
