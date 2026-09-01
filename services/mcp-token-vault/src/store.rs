@@ -154,6 +154,28 @@ pub async fn get(pool: &PgPool, key: &Key, provider: &str) -> Result<Option<Cred
     }))
 }
 
+pub struct CredentialMeta {
+    pub kind: String,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+/// Status-only lookup for the credential UI: never decrypts token material.
+pub async fn get_metadata(pool: &PgPool, provider: &str) -> Result<Option<CredentialMeta>> {
+    let row = sqlx::query(
+        "SELECT kind, expires_at
+         FROM credentials
+         WHERE provider = $1 AND principal = 'default'",
+    )
+    .bind(provider)
+    .fetch_optional(pool)
+    .await
+    .context("fetching credential metadata")?;
+    Ok(row.map(|r| CredentialMeta {
+        kind: r.get("kind"),
+        expires_at: r.try_get("expires_at").ok(),
+    }))
+}
+
 pub struct PendingElicitation {
     pub provider: String,
     pub code_verifier: String,

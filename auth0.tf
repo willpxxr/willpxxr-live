@@ -19,7 +19,7 @@
 # rather than inventing a new verb by default.
 resource "auth0_client" "envoy_gateway_oidc" {
   name        = "willpxxr-live-envoy-gateway-oidc"
-  description = "Confidential client used by Envoy Gateway SecurityPolicy (native OIDC) for hubble/flux-operator/argocd"
+  description = "Confidential client used by Envoy Gateway SecurityPolicy (native OIDC) for hubble/flux-operator/argocd/mcp-token-vault"
   app_type    = "regular_web"
 
   oidc_conformant = true
@@ -28,14 +28,17 @@ resource "auth0_client" "envoy_gateway_oidc" {
   callbacks = [
     "https://hubble.internal.willpxxr.com/oauth2/callback",
     "https://argocd.internal.willpxxr.com/oauth2/callback",
+    "https://tokens.internal.willpxxr.com/oauth2/callback",
   ]
   allowed_logout_urls = [
     "https://hubble.internal.willpxxr.com",
     "https://argocd.internal.willpxxr.com",
+    "https://tokens.internal.willpxxr.com",
   ]
   web_origins = [
     "https://hubble.internal.willpxxr.com",
     "https://argocd.internal.willpxxr.com",
+    "https://tokens.internal.willpxxr.com",
   ]
 
   jwt_configuration {
@@ -222,6 +225,11 @@ resource "auth0_role" "mcp_use" {
   description = "Grants access to the self-hosted MCP gateway (mcp.internal.willpxxr.com)."
 }
 
+resource "auth0_role" "token_vault_use" {
+  name        = "token_vault:use"
+  description = "Grants access to the MCP credential vault UI (tokens.internal.willpxxr.com), where third-party OAuth credentials for MCP backends are connected (WEP-0006)."
+}
+
 data "auth0_user" "will" {
   query = "email:\"williamparr96@gmail.com\""
 }
@@ -237,6 +245,7 @@ resource "auth0_user_roles" "will" {
     auth0_role.hubble_use.id,
     auth0_role.llm_use.id,
     auth0_role.mcp_use.id,
+    auth0_role.token_vault_use.id,
   ]
 }
 
@@ -401,6 +410,28 @@ resource "auth0_resource_server_scopes" "ai_mcp" {
   }
 }
 
+# Browser-facing credential UI for the vault (tokens.internal.willpxxr.com,
+# gitops apps/mcp-token-vault/httproute-ui.yaml + security-policy.yaml) --
+# not the MCP gateway itself, which has its own resource server above with
+# the /mcp path suffix.
+resource "auth0_resource_server" "token_vault" {
+  name       = "willpxxr-live token-vault"
+  identifier = "https://tokens.internal.willpxxr.com"
+
+  enforce_policies                                = true
+  token_dialect                                   = "access_token_authz"
+  skip_consent_for_verifiable_first_party_clients = false
+}
+
+resource "auth0_resource_server_scopes" "token_vault" {
+  resource_server_identifier = auth0_resource_server.token_vault.identifier
+
+  scopes {
+    name        = "token_vault:use"
+    description = "Connect third-party credentials in the MCP credential vault"
+  }
+}
+
 # Required for opencode's DCR-created client to access this API at all --
 # confirmed live via an actual Auth0 log entry ("Client ... is not
 # authorized to access resource server ..."): Auth0 has no way to
@@ -493,6 +524,17 @@ resource "auth0_role_permissions" "mcp_use" {
   }
 
   depends_on = [auth0_resource_server_scopes.ai_mcp]
+}
+
+resource "auth0_role_permissions" "token_vault_use" {
+  role_id = auth0_role.token_vault_use.id
+
+  permissions {
+    name                       = "token_vault:use"
+    resource_server_identifier = auth0_resource_server.token_vault.identifier
+  }
+
+  depends_on = [auth0_resource_server_scopes.token_vault]
 }
 
 resource "onepassword_item" "envoy_gateway_oidc" {

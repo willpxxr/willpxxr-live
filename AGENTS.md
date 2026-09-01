@@ -59,6 +59,12 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   tailscale` LoadBalancer Service (the Envoy data plane); the per-hostname
   Tailscale L7 Ingresses were removed (WEP-0003) — their hostname machinery is
   what caused the 2026-07/08 `svc:gateway` outage, so prefer not to bring them back.
+  The MCP gateway fronts third-party MCP servers; its credential vault
+  (`apps/mcp-token-vault`, WEP-0006) stores per-provider OAuth tokens
+  (envelope-encrypted in Supabase Postgres) and injects them upstream —
+  credentials are connected out of band via its browser UI at
+  `tokens.internal.willpxxr.com` (Auth0 `token_vault:use`), since MCP
+  in-band elicitations are swallowed by the AI Gateway proxy.
 
 ## Tech stack
 

@@ -13,9 +13,9 @@ spec:
   selector:
     app.kubernetes.io/name: mcp-token-vault
   ports:
-    - name: proxy
+    - name: proxy-linear
       port: 8081
-      targetPort: proxy
+      targetPort: proxy-linear
     - name: oauth
       port: 9091
       targetPort: oauth

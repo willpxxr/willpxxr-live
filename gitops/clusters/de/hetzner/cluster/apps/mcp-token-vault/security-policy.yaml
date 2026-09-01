@@ -1,0 +1,62 @@
+---
+# Same Auth0-at-the-gateway model as apps/argocd/security-policy.yaml
+# (and hubble/flux): Envoy Gateway terminates the browser OIDC flow,
+# validates the JWT, and only forwards authorized requests. The vault itself
+# never sees Auth0 credentials. Shares the envoy-gateway-oidc Auth0 client
+# with hubble/flux/argocd (this host's callback registered in auth0.tf); the
+# token_vault resource server + token_vault:use scope are what gate access.
+#
+# Targeting token-vault-ui only -- the token-vault-callback route
+# (provider authorization-code redirect) must stay outside this policy; see
+# httproute-ui.yaml. Path sets of the two routes are disjoint, so nothing
+# slips past the policy by accident.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: token-vault-oidc
+  namespace: mcp-token-vault
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: token-vault-ui
+  oidc:
+    provider:
+      issuer: "https://auth.willpxxr.com"
+    clientIDRef:
+      name: envoy-gateway-oidc
+    clientSecret:
+      name: envoy-gateway-oidc
+    redirectURL: "https://tokens.internal.willpxxr.com/oauth2/callback"
+    logoutPath: "/oauth2/logout"
+    cookieDomain: "internal.willpxxr.com"
+    # Puts the access token in the Authorization header for the jwt provider
+    # below to validate/inspect -- see apps/argocd/security-policy.yaml for
+    # the full note.
+    forwardAccessToken: true
+    scopes:
+      - "token_vault:use"
+    # RFC 8707 resource-indicator param (requires the tenant's
+    # resource_parameter_profile = "compatibility" in auth0.tf).
+    resources:
+      - "https://tokens.internal.willpxxr.com"
+  jwt:
+    providers:
+      # Note: the real token 'iss' claim keeps the trailing slash (unlike
+      # oidc.provider.issuer above, which is used to build the discovery
+      # URL and 404s with one -- see the earlier fix in flux-operator-route).
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://tokens.internal.willpxxr.com"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "token_vault:use"

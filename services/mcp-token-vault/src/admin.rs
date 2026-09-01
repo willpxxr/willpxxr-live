@@ -125,9 +125,18 @@ pub fn router(state: SharedState) -> Router {
         .with_state(state)
 }
 
+/// Browser-facing router (OAUTH_PORT). Path layout mirrors the gateway
+/// route split in apps/mcp-token-vault/httproute-ui.yaml: `/` and
+/// `/oauth/{provider}/start` sit behind the Auth0 SecurityPolicy, while the
+/// provider callback lives under `/cb/` on an unpolicied HTTPRoute -- the
+/// upstream provider redirects there with the authorization code and cannot
+/// perform Auth0 browser login mid-redirect. The callback's protection is
+/// the single-use PKCE state table (store::take_pending) instead.
 pub fn oauth_router(state: SharedState) -> Router {
+    let callback = Router::new().route("/oauth/{provider}/callback", get(crate::oauth::callback));
     Router::new()
+        .route("/", get(crate::ui::index))
         .route("/oauth/{provider}/start", get(crate::oauth::start))
-        .route("/oauth/{provider}/callback", get(crate::oauth::callback))
+        .nest("/cb", callback)
         .with_state(state)
 }

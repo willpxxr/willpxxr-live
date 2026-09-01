@@ -25,7 +25,7 @@ spec:
           image: ghcr.io/willpxxr/mcp-token-vault:main
           imagePullPolicy: Always
           ports:
-            - name: proxy
+            - name: proxy-linear
               containerPort: 8081
             - name: admin
               containerPort: 9090
@@ -59,11 +59,13 @@ spec:
               value: "9091"
             - name: AUTHZ_PORT
               value: "9092"
-            # Public hostname the Gateway serves; the /oauth HTTPRoute (phase
-            # 2) must make ELICITATION_BASE_URL + path reachable from a
-            # browser for the elicitation UX to work.
+            # Public hostname the Gateway serves for the browser-facing
+            # credential UI (/oauth/<provider>/start); exposed by
+            # httproute-ui.yaml behind the Auth0 SecurityPolicy.
             - name: ELICITATION_BASE_URL
-              value: https://mcp.internal.willpxxr.com
+              value: https://tokens.internal.willpxxr.com
+            - name: PROVIDER_LINEAR_LISTEN_PORT
+              value: "8081"
             - name: PROVIDER_LINEAR_UPSTREAM_URL
               value: https://mcp.linear.app/mcp
             # TO VERIFY when creating the Linear OAuth app: confirm the
@@ -75,7 +77,7 @@ spec:
             - name: PROVIDER_LINEAR_AUTHORIZE_URL
               value: https://linear.app/oauth/authorize
             - name: PROVIDER_LINEAR_REDIRECT_URI
-              value: https://mcp.internal.willpxxr.com/oauth/linear/callback
+              value: https://tokens.internal.willpxxr.com/cb/oauth/linear/callback
             - name: PROVIDER_LINEAR_CLIENT_ID
               valueFrom:
                 secretKeyRef:

@@ -86,13 +86,24 @@ the boundary sits.
 
 4. **Credential bootstrap is human-in-the-loop, once per provider.** A
    headless vault can never perform the initial OAuth `authorization_code`
-   dance (no provider offers client-credentials for this). A `scripts/`
-   helper (pattern: `scripts/gateway-login`) drives PKCE authorization in a
-   browser and POSTs the resulting refresh token to the vault's admin
-   endpoint -- which is **cluster-internal only** (no Ingress/HTTPRoute; the
-   MCPRoute's Auth0 policy already gates all client traffic). From then on
-   the vault owns the token lifecycle: refresh ahead of `expires_at`, on 401
-   -> refresh -> retry once.
+   dance (no provider offers client-credentials for this). The connect flow
+   runs through an **out-of-band browser UI**: `tokens.internal.willpxxr.com`
+   (HTTPRoute to the vault's oauth listener, Auth0 SecurityPolicy gating it
+   with the shared `envoy-gateway-oidc` client + a `token_vault:use` scope)
+   lists configured providers and links each to the vault's
+   `/oauth/<provider>/start`, which runs the PKCE authorization and stores
+   the result. The provider's authorization-code callback lands on a
+   separate **unpolicied** `/cb/` HTTPRoute -- a provider redirect cannot
+   perform Auth0 browser login mid-flow -- and is protected by the
+   single-use PKCE `state` table instead. The UI exists because the
+   in-band alternative is a dead end: MCP `elicitation/create` requests
+   from behind the AI Gateway proxy get swallowed (the elicitation error
+   never reaches the client), so the connect URL must be a stable address
+   the user knows, not a payload relayed through the proxy. This mirrors
+   how the MCP spec itself handles OAuth: the client opens a browser out
+   of band. A cluster-internal `/bootstrap` admin endpoint (port-forward)
+   remains for scripting. From then on the vault owns the token lifecycle:
+   refresh ahead of `expires_at`, on 401 -> refresh -> retry once.
 
 5. **Sequencing: Linear can land before the vault exists.** A Linear API key
    works today through the unchanged `securityPolicy.apiKey` + ESO path if a
@@ -123,8 +134,9 @@ the boundary sits.
   (default-deny, allow-dns, allow-kube-apiserver not needed) + ExternalSecrets
   + admin endpoint bound to the in-cluster interface only.
 - **Phase 2 -- first backend**: Linear OAuth app (minimal scopes); one-time
-  authorization via the script helper; `Backend` + `BackendTLSPolicy` for the
-  vault in `apps/ai-gateway-mcp` (or FQDN-only, in-cluster) and the MCPRoute
+  authorization via the credential UI (`tokens.internal.willpxxr.com`,
+  decision 4); `Backend` + `BackendTLSPolicy` for the vault in
+  `apps/ai-gateway-mcp` (or FQDN-only, in-cluster) and the MCPRoute
   backendRef pointed at it.
 - **Phase 3 -- cutover/cleanup**: retire the demo `kiwi` backend once a real
   one is proven; decide whether Better Stack moves behind the vault (probably
@@ -170,4 +182,5 @@ the boundary sits.
 Per-backend: point the MCPRoute backendRef back at a direct `Backend`
 (static key via `securityPolicy.apiKey`, ESO) -- one manifest diff, no
 cluster state to unwind. The vault app prunes independently. Supabase data
-is disposable (re-bootstrap credentials via the script helper).
+is disposable (re-bootstrap credentials via the credential UI or the
+`/bootstrap` admin endpoint).

@@ -7,6 +7,7 @@ mod proxy;
 mod refresh;
 mod state;
 mod store;
+mod ui;
 
 use anyhow::Result;
 use axum::Router;

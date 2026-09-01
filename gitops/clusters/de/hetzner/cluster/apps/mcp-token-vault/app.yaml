@@ -10,6 +10,8 @@ manifests:
   - network-policy.yaml
   - externalsecret-vault.yaml
   - externalsecret-linear.yaml
+  - externalsecret-oidc.yaml
   - deployment.yaml
   - service.yaml
-  - httproute-oauth.yaml
+  - httproute-ui.yaml
+  - security-policy.yaml
