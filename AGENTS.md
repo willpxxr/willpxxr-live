@@ -69,6 +69,12 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   runbook (the hcloud-talos module only seeds machine config at provision —
   re-verify the gates at every Talos/k8s upgrade, see WEP-0005), and its LLM
   calls go direct to Synthetic, bypassing the Auth0-gated LLM gateway route.
+  The MCP gateway fronts third-party MCP servers; its credential vault
+  (`apps/mcp-token-vault`, WEP-0006) stores per-provider OAuth tokens
+  (envelope-encrypted in Supabase Postgres) and injects them upstream —
+  credentials are connected out of band via its browser UI at
+  `tokens.internal.willpxxr.com` (Auth0 `token_vault:use`), since MCP
+  in-band elicitations are swallowed by the AI Gateway proxy.
 
 ## Tech stack
 
@@ -137,9 +143,12 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 
 `.opencode/` holds the canonical opencode global config: `opencode.jsonc`
 repoints the built-in `synthetic` provider at the AI gateway
-(`https://ai.tailb40090.ts.net/v1`), and `plugin/ai-gateway-auth.ts` registers
+(`https://ai.internal.willpxxr.com/v1`), `plugin/ai-gateway-auth.ts` registers
 the Auth0 PKCE OAuth flow on it (`opencode auth login synthetic`, silent
-refresh afterwards). `~/.config/opencode/` symlinks to these files, so edit
+refresh afterwards), and the `mcp.*` entries wire up Linear's official remote MCP server
+(`https://mcp.linear.app/mcp`) and the self-hosted AI Gateway MCP endpoint
+(`https://mcp.internal.willpxxr.com/mcp` -- OAuth via opencode's `/mcp`
+command). `~/.config/opencode/` symlinks to these files, so edit
 them here, not there. The Auth0 `client_id` in the plugin is a public PKCE
 native client (no secret exists), so committing it is fine.
 
