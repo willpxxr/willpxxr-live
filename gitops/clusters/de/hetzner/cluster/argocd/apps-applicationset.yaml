@@ -106,10 +106,7 @@ spec:
           kustomize:
             images:
             {{- range .images }}
-              - name: {{ .name }}
-                {{- if hasKey . "newTag" }}
-                newTag: {{ .newTag }}
-                {{- end }}
+              - {{ . }}
             {{- end }}
           {{- end }}
         {{- end }}

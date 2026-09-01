@@ -17,8 +17,8 @@ kustomize:
   - repoURL: https://github.com/willpxxr/willpxxr-live.git
     revision: main
     images:
-      - name: ghcr.io/willpxxr/mcp-token-vault
-        newTag: sha-{{ $.sha }}
+      # ArgoCD 3.x: KustomizeImage is a plain string ([image]:[tag] form).
+      - "ghcr.io/willpxxr/mcp-token-vault:sha-{{ $.sha }}"
 manifests:
   - namespace.yaml
   - network-policy.yaml
