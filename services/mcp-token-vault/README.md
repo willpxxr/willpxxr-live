@@ -20,9 +20,12 @@ fresh bearer injected.
   because MCP in-band elicitations are swallowed by the AI Gateway proxy
   (WEP-0006 decision 4) — the connect URL must be a stable address, not a
   payload relayed through the proxy.
-- Proxy: one listener per provider (`PROVIDER_<NAME>_LISTEN_PORT`); forwards
-  to the upstream MCP server with `Authorization: Bearer <access token>`,
-  refreshing on 401 and ahead of expiry.
+- Proxy: one listener (`PROXY_PORT`, default 8081), path-dispatched by the
+  first path segment (`/<provider>/...` -- the MCPRoute backendRef path);
+  forwards to the upstream MCP server with
+  `Authorization: Bearer <access token>`, refreshing on 401 and ahead of
+  expiry. Providers are enumerated by their `PROVIDER_<NAME>_UPSTREAM_URL`
+  env; adding one is env config + a new MCPRoute backendRef, no new ports.
 
 ## Config (env)
 
@@ -34,7 +37,7 @@ fresh bearer injected.
 | `OAUTH_PORT` | browser-facing credential-UI listener, default `9091` |
 | `ELICITATION_BASE_URL` | public Gateway hostname serving `/` and `/oauth/*` (`tokens.internal.willpxxr.com`) |
 | `ADMIN_TOKEN` | optional bearer required on `/bootstrap` |
-| `PROVIDER_<NAME>_LISTEN_PORT` | proxy listener for provider `<name>` |
+| `PROVIDER_<NAME>_UPSTREAM_URL` | upstream MCP server base URL; also enumerates the provider |
 | `PROVIDER_<NAME>_UPSTREAM_URL` | upstream MCP server base URL |
 | `PROVIDER_<NAME>_TOKEN_URL` | OAuth token endpoint (enables refresh) |
 | `PROVIDER_<NAME>_AUTHORIZE_URL` | OAuth authorize endpoint (enables elicitation UX) |

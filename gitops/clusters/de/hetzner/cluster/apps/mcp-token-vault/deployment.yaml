@@ -69,8 +69,6 @@ spec:
             # httproute-ui.yaml behind the Auth0 SecurityPolicy.
             - name: ELICITATION_BASE_URL
               value: https://tokens.internal.willpxxr.com
-            - name: PROVIDER_LINEAR_LISTEN_PORT
-              value: "8081"
             - name: PROVIDER_LINEAR_UPSTREAM_URL
               value: https://mcp.linear.app/mcp
             # TO VERIFY when creating the Linear OAuth app: confirm the
