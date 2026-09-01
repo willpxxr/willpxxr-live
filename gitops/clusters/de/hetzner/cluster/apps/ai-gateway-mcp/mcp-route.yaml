@@ -9,6 +9,11 @@ spec:
     - name: gateway
       namespace: envoy-gateway-system
       sectionName: tls
+  # v1.1: places the generated route in the per-host vhost (instead of the
+  # wildcard vhost it lost in the v1.1 regeneration) and is what
+  # external-dns reads -- this makes the mcp-dns-shim route obsolete.
+  hostnames:
+    - "mcp.internal.willpxxr.com"
   path: "/mcp"
   backendRefs:
     - name: kiwi
