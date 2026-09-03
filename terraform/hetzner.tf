@@ -19,7 +19,9 @@ module "talos" {
 
   # Keep in sync with the talos_version default in packer/talos/talos.pkr.hcl --
   # the snapshot image and the generated machine config must match.
-  talos_version      = "v1.12.2"
+  # v1.13.9 bump: Phase A of WEP-0009 (Talos-only; k8s stays 1.35.0 until
+  # Phase B -- cilium prerequisite + WEP-0005 gate verification first).
+  talos_version      = "v1.13.9"
   kubernetes_version = "1.35.0"
 
   # Packer only builds an x86 snapshot (see packer/talos/talos.pkr.hcl) -- without
@@ -49,9 +51,13 @@ module "talos" {
   ]
 
   # 2x CX23 workers.
+  # id 3 = Phase A throwaway/validation worker (WEP-0009): boots the v1.13.9
+  # snapshot first so the image + machine-config contracts are proven before
+  # the in-place CP upgrade and the worker blue/green. Destroyed at the end.
   worker_nodes = [
     { id = 1, type = "cx23" },
     { id = 2, type = "cx23" },
+    { id = 3, type = "cx23" },
   ]
 
   # Public IPs so Terraform Cloud's remote runners can reach the cluster
@@ -96,6 +102,11 @@ module "talos" {
 # Resolve the Talos snapshot built by Packer (packer/talos/talos.pkr.hcl).
 # The snapshot is labelled os=talos,tailscale=true and includes both
 # siderolabs/qemu-guest-agent and siderolabs/tailscale.
+# Schematic is content-addressed: re-POSTing packer/talos/schematic.yaml to
+# factory.talos.dev/schematics deterministically returns
+# 7d4c31cbd96db9f90c874990697c523482b2bae27fb4631d5583dcd9c281b1ff -- the
+# installer-image reference for in-place upgrades (WEP-0009):
+#   factory.talos.dev/installer/7d4c31cbd96d…:v<version>
 data "hcloud_image" "talos" {
   with_selector     = "os=talos,tailscale=true"
   with_architecture = "x86"
