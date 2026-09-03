@@ -15,8 +15,14 @@ variable "hcloud_token" {
 
 variable "talos_version" {
   type        = string
-  default     = "v1.12.2"
-  description = "Talos Linux version to build (e.g. v1.12.2). Must match the talos_version set in hetzner.tf's talos module block."
+  default     = "v1.13.9"
+  description = "Talos Linux version to build (e.g. v1.13.2). Must match the talos_version set in hetzner.tf's talos module block."
+
+  # NOTE (2026-09-03): this default leads hetzner.tf's talos_version on
+  # purpose -- this file is in the talos-image workflow's paths filter, so
+  # bumping it builds the new snapshot first; the hetzner.tf bump follows
+  # once the snapshot exists (its data source selects the newest os=talos
+  # snapshot). See docs/wep/0009 for the phased upgrade plan.
 }
 
 variable "location" {
