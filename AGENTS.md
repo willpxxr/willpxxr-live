@@ -165,6 +165,13 @@ ArgoCD renders every app from a per-app `app.yaml` via the single
   registered hostname-only in `apps/argocd/values.yaml`), `kustomize:` entries
   (`repoURL`/`path`/`revision`), and `manifests:` (path globs, synced as plain
   manifests — nothing is synced implicitly). See WEP-0001 for the full schema.
+- **Disabling an app** — rename `app.yaml` → `app.yaml.disabled` (and
+  back to re-enable). The generator glob (`apps/*/app.yaml`) matches by
+  filename, so a disabled app stops being generated and the ApplicationSet
+  controller (default `sync` policy) deletes the Application; the
+  `resources-finalizer` cascades the delete to the helm release and manifests.
+  There is no in-file `enabled:` flag — the generator matches filenames, not
+  content, and `templatePatch` cannot prevent Application creation.
 - **`values.yaml`** — helm values (never synced as a manifest; consumed via the
   `$app` valueFiles reference).
 - **`namespace.yaml`** + **`network-policy.yaml`** — `CiliumNetworkPolicy`,
@@ -210,35 +217,32 @@ ArgoCD renders every app from a per-app `app.yaml` via the single
   ArgoCD itself; `dex` and the redis init Job are disabled (the init Job
   deadlocks GitOps syncs; the redis auth is ESO-managed, see `terraform/argocd.tf`).
 
-## Observability (`otel-collector`)
+## Observability (`otel-collector`) — DISABLED
 
-An OpenTelemetry Collector agent (DaemonSet: host metrics, kubelet stats, container
-log tailing) + gateway (Deployment: cluster metrics, k8s events, Prometheus
-scraping, OTLP receiver) export logs/metrics/traces to Better Stack.
+The observability stack is **disabled as of 2026-09-03** (app dirs kept,
+definitions renamed to `app.yaml.disabled`; see the disabling convention in the
+GitOps app conventions above): the `otel-collector-agent` DaemonSet (host
+metrics, kubelet stats, container log tailing), the `otel-collector-gateway`
+Deployment (cluster metrics, k8s events, Prometheus scraping, OTLP receiver —
+they exported to Better Stack), and **Beyla** (eBPF auto-instrumentation,
+Grafana's OBI). The Better Stack source itself is still Terraform-managed
+(`terraform/betterstack.tf`, `logtail` provider) — it simply receives nothing.
+Re-enable by renaming the `app.yaml.disabled` files back to `app.yaml`.
 
-- Any component whose pods carry `prometheus.io/scrape: "true"` (+ `.../port`,
-  `.../path`) is picked up automatically by the gateway's `prometheus` receiver —
-  no otel-collector change needed to add a new metrics source.
-- To add tracing from a new component, point its OTLP/gRPC exporter at
-  `otel-collector-gateway.otel-collector.svc.cluster.local:4317`. Cross-namespace
-  `backendRefs` (Gateway API resources, e.g. `EnvoyProxy`) need a `ReferenceGrant`
-  in the `otel-collector` namespace — see
-  `apps/otel-collector-gateway/referencegrant.yaml` for the pattern.
-- The Better Stack source itself is Terraform-managed (`terraform/betterstack.tf`, `logtail`
-  provider) — don't hand-create a source in the dashboard for this cluster.
-- **Beyla (`apps/beyla/`)** runs eBPF auto-instrumentation (Grafana's OBI) cluster-wide
-  (`discovery.instrument: [k8s_namespace: "*"]`) to generate traces for services that
-  don't natively export OTLP (e.g. nginx in the Hubble UI frontend). Beyla's own
-  built-in defaults *hard-exclude* `kube-system` (and several other platform
-  namespaces) from instrumentation regardless of the `discovery.instrument` glob —
-  this is `DefaultExcludeInstrument` in OBI's `pkg/obi/config.go`, layered on top of
-  and independent from any `discovery.instrument`/`exclude_instrument` config we set.
-  So components living in `kube-system` (Hubble UI, Cilium, CoreDNS, etc.) will never
-  get server-side Beyla spans; traffic to them only shows up as the *client-side*
-  span from whatever's calling in (e.g. Envoy Gateway's HTTPClient span). This is
-  accepted as-is — overriding `discovery.default_exclude_instrument` to claw back
-  `kube-system` was considered and deliberately not done, to keep the
-  self-instrumentation/system-noise protection.
+Caveats while disabled:
+
+- `apps/otel-collector/`'s namespace/network-policies/externalsecret are Flux-era
+  orphans (no ArgoCD Application ever synced them — no `app.yaml` was carried
+  over in WEP-0001) — they needed a one-time manual `kubectl delete ns
+  otel-collector` once the workloads dropped.
+- `apps/envoy-gateway-config/`'s `EnvoyProxy` still points its OTLP export at
+  `otel-collector-gateway.otel-collector.svc:4317` — expect connection-refused
+  log noise from the Envoy data plane until that block is dropped or the
+  collector is re-enabled.
+- If Beyla comes back, remember its built-in `DefaultExcludeInstrument`
+  hard-excludes `kube-system` (and other platform namespaces) regardless of the
+  `discovery.instrument` glob (OBI `pkg/obi/config.go`) — components living
+  there only ever get client-side spans.
 
 ## Terraform conventions
 
