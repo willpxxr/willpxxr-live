@@ -58,7 +58,6 @@ module "talos" {
   worker_nodes = [
     { id = 1, type = "cx23" },
     { id = 2, type = "cx23" },
-    { id = 3, type = "cx23" },
   ]
 
   # Public IPs so Terraform Cloud's remote runners can reach the cluster
