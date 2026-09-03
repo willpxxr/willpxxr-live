@@ -50,12 +50,10 @@ module "talos" {
     { id = 1, type = "cx23" },
   ]
 
-  # 2x CX23 workers.
-  # id 3 = Phase A throwaway/validation worker (WEP-0009): boots the v1.13.9
-  # snapshot first so the image + machine-config contracts are proven before
-  # the in-place CP upgrade and the worker blue/green. Destroyed at the end.
+  # Worker blue/green (WEP-0009 Phase A): old v1.12.2 workers destroyed and
+  # re-provisioned onto the v1.13.9 snapshot one at a time. id 1 currently
+  # removed for replacement; id 3 (validated throwaway) is now permanent.
   worker_nodes = [
-    { id = 1, type = "cx23" },
     { id = 2, type = "cx23" },
     { id = 3, type = "cx23" },
   ]
