@@ -66,6 +66,22 @@ module "talos" {
     auth_key = tailscale_tailnet_key.cluster_nodes.key
   }
 
+  # The hcloud-talos module only appends its Tailscale ExtensionServiceConfig to
+  # the control-plane machine config (talos.tf adds tailscale_config_patch to the
+  # control-plane config_patches, never to the workers'), so worker nodes never
+  # receive TS_AUTHKEY. The ext-tailscale extension then waits forever on its
+  # `configuration: true` dependency, blocking startAllServices and leaving
+  # workers stuck in the BOOTING stage permanently (the 2026-09 reboot-loop
+  # incident). user_data is lifecycle-ignored, so this only reaches future
+  # re-provisions; the live workers were fixed by the one-time `talosctl patch mc`
+  # runbook in docs/wep (WEP-0005 precedent).
+  talos_worker_extra_config_patches = [yamlencode({
+    apiVersion  = "v1alpha1"
+    kind        = "ExtensionServiceConfig"
+    name        = "tailscale"
+    environment = ["TS_AUTHKEY=${tailscale_tailnet_key.cluster_nodes.key}"]
+  })]
+
   # Custom Cilium values:
   # - Enable bpf.socketLB.hostNetworkOnly so socket load balancing only applies to
   #   host-network traffic, not pod namespaces. Without this, Cilium's BPF socket LB
