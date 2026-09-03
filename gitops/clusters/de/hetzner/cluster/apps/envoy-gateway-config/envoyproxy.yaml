@@ -4,6 +4,14 @@ kind: EnvoyProxy
 metadata:
   name: envoy-gateway-config
   namespace: envoy-gateway-system
+  # Replace, not ServerSideApply: this object was adopted from Flux and its
+  # spec carries stale field-manager claims (kustomize-controller + an older
+  # argocd-controller manager name) that SSA cannot delete -- partial removals
+  # merge into an object that fails the CRD's "host or backendRefs" validation
+  # (2026-09-03, tracing-block removal). Replace swaps the whole spec and the
+  # EG controller re-applies its defaults on the next reconcile.
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   provider:
     type: Kubernetes
