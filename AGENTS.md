@@ -235,10 +235,10 @@ Caveats while disabled:
   orphans (no ArgoCD Application ever synced them — no `app.yaml` was carried
   over in WEP-0001) — they needed a one-time manual `kubectl delete ns
   otel-collector` once the workloads dropped.
-- `apps/envoy-gateway-config/`'s `EnvoyProxy` still points its OTLP export at
-  `otel-collector-gateway.otel-collector.svc:4317` — expect connection-refused
-  log noise from the Envoy data plane until that block is dropped or the
-  collector is re-enabled.
+- Envoy data-plane tracing is commented out in
+  `apps/envoy-gateway-config/envoyproxy.yaml` (the `telemetry.tracing` block
+  targets the dropped collector; its `ReferenceGrant` went with it) — kept
+  inline to uncomment together with the collector's re-enable.
 - If Beyla comes back, remember its built-in `DefaultExcludeInstrument`
   hard-excludes `kube-system` (and other platform namespaces) regardless of the
   `discovery.instrument` glob (OBI `pkg/obi/config.go`) — components living

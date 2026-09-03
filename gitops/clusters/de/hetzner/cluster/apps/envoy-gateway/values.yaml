@@ -35,3 +35,8 @@ config:
         fqdn:
           hostname: ai-gateway-controller.envoy-ai-gateway-system.svc.cluster.local
           port: 1063
+
+# 2 controller pods (leader-elected by the chart) so a worker reboot cycle
+# doesn't take Gateway reconciliation down with it.
+deployment:
+  replicas: 2

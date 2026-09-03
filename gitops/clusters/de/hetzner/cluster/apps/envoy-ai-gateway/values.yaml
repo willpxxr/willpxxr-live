@@ -16,3 +16,8 @@
 # rate limiting isn't configured anywhere in this repo.
 envoyGateway:
   namespace: envoy-ai-gateway-system
+
+# 2 controller pods; the chart renders --enableLeaderElection by default
+# (controller.leaderElection.enabled: true), so replicas are split-brain safe.
+controller:
+  replicaCount: 2
