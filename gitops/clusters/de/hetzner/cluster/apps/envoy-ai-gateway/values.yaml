@@ -19,5 +19,12 @@ envoyGateway:
 
 # 2 controller pods; the chart renders --enableLeaderElection by default
 # (controller.leaderElection.enabled: true), so replicas are split-brain safe.
+# The webhook cert MUST be cert-manager-owned at this replica count: the
+# controller's self-generated cert is regenerated per pod and races the
+# MutatingWebhookConfiguration's caBundle, failing pod creation with
+# "certificate signed by unknown authority" (2026-09-03).
 controller:
   replicaCount: 2
+  mutatingWebhook:
+    certManager:
+      enable: true
