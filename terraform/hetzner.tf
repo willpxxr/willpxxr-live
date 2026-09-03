@@ -50,10 +50,13 @@ module "talos" {
     { id = 1, type = "cx23" },
   ]
 
-  # Worker blue/green (WEP-0009 Phase A): old v1.12.2 workers destroyed and
-  # re-provisioned onto the v1.13.9 snapshot one at a time. id 1 currently
-  # removed for replacement; id 3 (validated throwaway) is now permanent.
+  # Worker upgrade (WEP-0009 Phase A): the module requires contiguous ids
+  # (1..N), so node replacement is done by DRAIN + `terraform taint` on the
+  # server resource + any .tf push (one apply = destroy+create, fresh
+  # v1.13.9 snapshot + regenerated config). Old v1.12.2 worker-1 was drained
+  # and tainted 2026-09-03; worker-2 follows.
   worker_nodes = [
+    { id = 1, type = "cx23" },
     { id = 2, type = "cx23" },
     { id = 3, type = "cx23" },
   ]
