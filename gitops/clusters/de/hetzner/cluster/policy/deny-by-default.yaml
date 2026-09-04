@@ -11,3 +11,8 @@ spec:
         operator: NotIn
         values:
           - kube-system
+  # Explicit empty rule lists: deny-all semantics are unchanged, but Cilium
+  # 1.20's CRD schema requires ingress or egress to be present (empty specs
+  # are rejected at admission).
+  ingress: []
+  egress: []
