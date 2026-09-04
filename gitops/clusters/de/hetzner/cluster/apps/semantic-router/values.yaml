@@ -65,6 +65,18 @@ config:
     # in ext-proc mode vSR classifies and rewrites, it does not proxy.
     models: []
 
+  # The chart's default config deep-merges disabled feature stores whose
+  # embedding_model (mmbert) still triggers a HuggingFace download + model
+  # load (OOM pressure on 8GB nodes) — null deletes them from the merge.
+  global:
+    stores:
+      memory:
+        embedding_model: null
+      semantic_cache:
+        embedding_model: null
+      vector_store:
+        embedding_model: null
+
   routing:
     modelCards:
       - name: syn:large
