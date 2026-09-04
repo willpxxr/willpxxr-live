@@ -70,8 +70,16 @@ metadata:
   name: allow-backend-egress
   namespace: envoy-gateway-system
 spec:
-  description: "Envoy proxies requests to the actual backends routed via HTTPRoute: Hubble UI (kube-system), the Flux Operator UI (flux-system), kagent-tools (kagent), the ArgoCD UI (argocd) and mcp-token-vault (mcp-token-vault, WEP-0006)."
+  description: "Envoy proxies requests to the actual backends routed via HTTPRoute: Hubble UI (kube-system), the Flux Operator UI (flux-system), kagent-tools (kagent), the ArgoCD UI (argocd), mcp-token-vault (mcp-token-vault, WEP-0006) and the vLLM Semantic Router ext-proc (vllm-semantic-router-system, WEP-0013)."
   endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: vllm-semantic-router-system
+      toPorts:
+        - ports:
+            - port: "50051"
+              protocol: TCP
   egress:
     - toEndpoints:
         - matchLabels:

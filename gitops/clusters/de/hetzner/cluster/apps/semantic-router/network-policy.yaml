@@ -1,0 +1,70 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: vllm-semantic-router-system
+spec:
+  description: "Default-deny posture; intra-namespace traffic stays allowed."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: vllm-semantic-router-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: vllm-semantic-router-system
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ai-gateway-ingress
+  namespace: vllm-semantic-router-system
+spec:
+  description: "The Envoy data plane (envoy-gateway-system) calls the vSR ext-proc gRPC listener (WEP-0013)."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: envoy-gateway-system
+      toPorts:
+        - ports:
+            - port: "50051"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: vllm-semantic-router-system
+spec:
+  description: "DNS resolution via CoreDNS."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-huggingface-egress
+  namespace: vllm-semantic-router-system
+spec:
+  description: "Classifier models download from HuggingFace at startup; endpoints are CDN-fronted and not IP-enumerable, so egress is world-restricted to 443 per convention."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

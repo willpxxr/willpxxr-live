@@ -1,0 +1,110 @@
+# vLLM Semantic Router (vSR) values — WEP-0013.
+# The chart (vendored at ./chart/, upstream v0.3.0) deploys the vSR ext-proc
+# classifier service; the canonical Router document below is the complete
+# config (chart README: provide the whole document, not hand-converted parts).
+# It is attached to the AI gateway's Gateway via EnvoyExtensionPolicy
+# (apps/ai-gateway-llm/) — vSR classifies the prompt and rewrites the
+# request's `model` field; the gateway routes as usual.
+#
+# NOTE: no StorageClass exists in this cluster, so model caching via PVC is
+# disabled — classifier models re-download from HuggingFace at startup
+# (10-20 min, the startupProbe allows up to 60). Adding a StorageClass
+# (hcloud CSI) and re-enabling persistence is a recorded follow-up.
+
+replicaCount: 1
+
+image:
+  tag: v0.3.0
+
+dashboard:
+  enabled: false
+ingress:
+  enabled: false
+autoscaling:
+  enabled: false
+persistence:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+config:
+  version: v0.3
+
+  listeners:
+    - name: grpc-50051
+      address: 0.0.0.0
+      port: 50051
+      timeout: 300s
+    - name: http-8080
+      address: 0.0.0.0
+      port: 8080
+      timeout: 300s
+
+  providers:
+    defaults:
+      # Fallback for prompts no decision matches.
+      default_model: syn:small
+
+  routing:
+    modelCards:
+      - name: syn:large
+        param_size: 16B
+        context_window_size: 200000
+        description: Frontier tier for code, math, and complex reasoning.
+        capabilities: [chat, reasoning, tools]
+        quality_score: 0.95
+        modality: ar
+        tags: [premium]
+      - name: syn:small
+        param_size: 8B
+        context_window_size: 128000
+        description: Fast, cheap tier for routine chat and general work.
+        capabilities: [chat, tools]
+        quality_score: 0.8
+        modality: ar
+        tags: [default, fast]
+
+    signals:
+      keywords:
+        - name: code_keywords
+          operator: OR
+          method: bm25
+          keywords: ["code", "function", "debug", "algorithm", "refactor", "typescript", "python", "rust", "compile", "stack trace"]
+          bm25_threshold: 0.1
+          case_sensitive: false
+        - name: math_keywords
+          operator: OR
+          method: bm25
+          keywords: ["calculate", "equation", "proof", "derivative", "integral", "theorem", "probability"]
+          bm25_threshold: 0.1
+          case_sensitive: false
+      pii:
+        # Detection-only for now: v0.3 decisions can route but not block
+        # (Decision struct has no deny outcome). Detections land in vSR
+        # metrics/logs; blocking is recorded as the follow-up in WEP-0013.
+        - name: strict_pii
+          threshold: 0.85
+          include_history: false
+          pii_types_allowed: []
+          description: Flag any detectable PII in prompts (observability).
+
+    decisions:
+      - name: technical-large-route
+        description: Code and math prompts go to the frontier tier.
+        priority: 100
+        rules:
+          operator: OR
+          conditions:
+            - type: keyword
+              name: code_keywords
+            - type: keyword
+              name: math_keywords
+        modelRefs:
+          - model: syn:large
+            use_reasoning: false

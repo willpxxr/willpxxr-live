@@ -1,0 +1,27 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: semantic-router
+  namespace: envoy-gateway-system
+spec:
+  description: "WEP-0013: run prompts through the vLLM Semantic Router ext-proc, which classifies each prompt and rewrites the `model` field to the category's model (syn:large for code/math, syn:small default)."
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway
+  extProc:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: semantic-router
+          namespace: vllm-semantic-router-system
+          port: 50051
+      # The classifier needs the full prompt body.
+      processingMode:
+        request:
+          body: Buffered
+      # If vSR is down, pass the request through with the client's original
+      # model rather than failing the gateway (availability > routing).
+      failOpen: true
+      messageTimeout: 5s
