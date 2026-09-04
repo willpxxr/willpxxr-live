@@ -88,15 +88,12 @@ module "talos" {
     environment = ["TS_AUTHKEY=${tailscale_tailnet_key.cluster_nodes.key}"]
   })]
 
-  # Custom Cilium values:
-  # - Enable bpf.socketLB.hostNetworkOnly so socket load balancing only applies to
-  #   host-network traffic, not pod namespaces. Without this, Cilium's BPF socket LB
-  #   intercepts pod-to-ClusterIP traffic before it reaches netfilter hooks, breaking
-  #   the Tailscale operator's proxy pods which use netfilter rules in their network
-  #   namespace to forward tailnet traffic to backing Services.
-  #   Ref: https://tailscale.com/docs/kubernetes-operator/reference/compatibility#cilium-kube-proxy-replacement-mode
-  # - Enable Hubble for flow observability and debugging network policy issues.
-  cilium_values = [file("${path.module}/files/cilium-values.yaml")]
+  # Cilium moved to ArgoCD (gitops apps/cilium, WEP-0011, 2026-09-04).
+  # deploy_cilium=false closes the module's for_each gate; the corresponding
+  # kubectl_manifest.apply_cilium instances were removed from state via
+  # `terraform state rm` (no destroy -- the live objects stay and are adopted
+  # by ArgoCD's ServerSideApply). Do not re-enable deploy_cilium.
+  deploy_cilium = false
 }
 
 # Resolve the Talos snapshot built by Packer (packer/talos/talos.pkr.hcl).

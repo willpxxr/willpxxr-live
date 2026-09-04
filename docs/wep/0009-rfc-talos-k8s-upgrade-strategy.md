@@ -25,11 +25,17 @@ Constraints discovered along the way:
   `factory.talos.dev/installer/7d4c31cb…:v<version>`.
 - Extension *versions* are resolved by the factory per Talos version — the
   config contract must be re-verified after every Talos bump (ADR-0007).
-- WEP-0005 pod-certificate alpha gates live in machine config on the live CP;
-  a k8s bump that renames/GAs those gates changes machine config → lands via
-  one-time `talosctl apply-config`, never via TF.
+- WEP-0005 pod-certificate alpha gates: post-incident verification showed the
+  substrate gates are **branch-only and never served live** (no runtime-config
+  flag, no ClusterTrustBundle API), so a k8s bump carries no gate-removal risk
+  in practice. Should machine config ever need changing for a k8s bump, the
+  2026-09-04 rule applies: no `talosctl apply-config` — the change lands in
+  `hetzner.tf` and the CP is drained, tainted, and replaced with
+  `bootstrap --recover-from` (see the Phase A execution record).
 - Cilium 1.16.2 predates k8s 1.36 support — the Cilium upgrade is a
   prerequisite of the k8s phase, not something bundled into it.
+- k8s 1.37 requires Talos ≥ 1.14 (v1.13 tops out at 1.36); the control-plane
+  upgrade path cannot skip minors: 1.35 → 1.36 → 1.37.
 
 ## Decision
 
@@ -59,19 +65,62 @@ Two separate operations, smallest blast radius each:
    worker-1 → CCM cleans the node object → repeat for worker-2. PVs reattach
    via CSI on reschedule.
 
-### Phase B — Kubernetes bump (separate change)
+### Phase B — Kubernetes bump (rewritten post-incident, 2026-09-04)
 
-1. Cilium upgrade first (1.16.2 → ≥1.18, own change, matrix-checked).
-2. Verify WEP-0005 gate names against 1.36 (GA'd gates may be removed from
-   the flag — kube-apiserver refuses to start on unknown gates); push corrected
-   args to the live CP via `talosctl apply-config` runbook step if changed.
-3. Bump `hetzner.tf` `kubernetes_version` (future provisions) + run
-   `talosctl upgrade-k8s --to 1.36.x`.
+Every step below follows the incident lessons: snapshot first, one change at
+a time, verify the derived state (routes, providerIDs, pod paths) after each
+step, and let controllers converge before intervening manually.
 
-### Phase C — verify
+1. **B0 — preconditions**: fresh `talosctl etcd snapshot` to
+   `~/etcd-snapshots/` (hash-verified) — this is now the *primary* rollback
+   primitive, not a last resort (proven: 66 MB restore in minutes). Confirm
+   the cluster is converged first: all nodes Ready with correct
+   `hcloud://` providerIDs, 3 Hetzner routes present, 0 CrashLoops, ArgoCD
+   synced. If the etcd-snapshot CronJob automation is in place (INF-13),
+   this step is a read of the newest backup.
+2. **Cilium upgrade, own change** (1.16.2 → ≥1.18, matrix-checked against
+   1.36). Verify the socketLB contract from AGENTS.md survives the chart bump
+   (`bpf.socketLB.hostNamespaceOnly` renders — the helm-values lesson), then
+   verify connectivity with a **workload-path probe**, not health endpoints:
+   throwaway busybox pod → `nslookup` via the *real* ClusterIP (this cluster
+   is `10.0.8.10`, not a 10.96 default) + cross-node `wget` to a pod IP.
+   HostNetwork paths (API server) succeeding proves nothing about the pod
+   network (recovery addendum).
+3. **Gate verification, read-only**: check WEP-0005 gate names against 1.36's
+   API surface *against the live cluster* — expected outcome is "no gates are
+   live" (branch-only), i.e. nothing to change. If a correction were ever
+   needed: it goes into `hetzner.tf`'s `kube_api_extra_args` (front door) and
+   the CP is drained + tainted + replaced with `bootstrap --recover-from` —
+   never `apply-config`.
+4. **`talosctl upgrade-k8s --to 1.36.x`** (control-plane components only —
+   not machine config, so it's inside the rules). Retry on the known
+   `registry.k8s.io` 403 flake before diagnosing. After: `talosctl health`,
+   node versions, pod sweep, and the workload-path probe again (the CCM's
+   route state is the most likely casualty of any controller restart churn).
+5. **Talos 1.14 bump** (prerequisite for 1.37, separate change):
+   CP in-place via the schematic installer image (the 1.13→1.14 path is not
+   the legacy path that rewrote cmdline, but **verify kernel args + machine
+   config doc count after every node upgrade** — `read /proc/cmdline` and
+   the config document list); workers via drain + taint + replace, one at a
+   time (contiguous-id constraint). After each replacement: node Ready,
+   providerID is the *current* server (`hcloud://` + real ID — the CCM has
+   stamped a destroyed server's ID from a stale cache), route for the new
+   podCIDR exists, kubelet re-registered (restart the kubelet service if the
+   node object was deleted mid-run — kubelets register at startup only).
+6. **`talosctl upgrade-k8s --to 1.37.x`** — same ritual as step 4.
 
-`talosctl health`; substrate/gates; tailscale ingress path end-to-end; ArgoCD
-synced; restart counters flat; snapshot becomes canonical for future nodes.
+### Phase C — verify (with the triage checklist)
+
+- `talosctl health`; ArgoCD synced; restart counters flat.
+- Connectivity by workload path, not health probes: busybox pod → DNS via
+  ClusterIP, cross-node pod-to-pod TCP (HTTP health ports, e.g. coredns
+  `:8080`), ClusterIP TCP (API server via service name).
+- Infrastructure derived state: 3 Hetzner routes match the live podCIDRs
+  (`GET /v1/networks/{id}`), all node providerIDs resolve to running servers,
+  machine configs are single-v1alpha1 documents with intact
+  `network.interfaces` and kernel args.
+- The etcd snapshot taken in B0 becomes the canonical rollback point for
+  this change; the next snapshot closes the loop.
 
 ## Consequences
 

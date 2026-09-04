@@ -1,0 +1,14 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Cilium CNI, migrated from the hcloud-talos module's kubectl_manifest
+# resources to GitOps on 2026-09-04 (WEP-0011; the module's deploy_cilium is
+# now false and its resources were state-removed with destroy=false).
+# The ApplicationSet's ServerSideApply=true adopts the existing objects;
+# values.yaml pins the exact running images so adoption causes no rollouts.
+name: cilium
+namespace: kube-system
+helm:
+  - repoURL: https://helm.cilium.io
+    chart: cilium
+    version: 1.16.2
+    releaseName: cilium
+    values: values.yaml

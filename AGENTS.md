@@ -45,8 +45,10 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 - **`de/hetzner`** (`gitops/clusters/de/hetzner/cluster/`) — **the active cluster**;
   essentially all current work happens here. Talos Linux on Hetzner Cloud (`nbg1`),
   provisioned via the `hcloud-talos` Terraform module (`terraform/hetzner.tf`). Cilium CNI
-  (kube-proxy replacement, native routing, Hubble) — with
-  `socketLB.hostNamespaceOnly: true` in `cilium-values.yaml`, which is load-bearing:
+  (kube-proxy replacement, native routing, Hubble; ArgoCD-managed via
+  `apps/cilium/` since WEP-0011 — do not re-enable the module's
+  `deploy_cilium`) — with
+  `socketLB.hostNamespaceOnly: true` in `apps/cilium/values.yaml`, which is load-bearing:
   Cilium's socket-LB force-enables with kube-proxy replacement
   (cilium/cilium#47417), and with it active in pod namespaces, pod→ClusterIP
   traffic bypasses the netfilter DNAT hooks the Tailscale operator's proxies

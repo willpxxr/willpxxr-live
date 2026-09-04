@@ -61,6 +61,15 @@ Two gotchas learned the hard way:
   hostname validators count kernel args), so even "temp" patches are risky.
   Any out-of-band emergency change is temporary by definition: reconcile it
   into `hetzner.tf` immediately and expect to replace the node anyway.
+- **Handing a module-internal resource to another manager (e.g. GitOps)**
+  (2026-09-04, WEP-0011): `removed` blocks are rejected while the resource
+  block still exists in the module source — even with its `count`/`for_each`
+  gate closed — and closing the gate alone makes the next apply *destroy* the
+  resources. The safe handoff is `terraform state pull` → filter out the
+  resource instances (scrub dangling `dependencies` references too) → bump
+  `serial` → `terraform state push -ignore-remote-version`, with the gate
+  closed in the same push. Verify with a speculative plan: it must show
+  zero destroys.
 - **Node objects are derived state — recreate, never patch.** A kubelet
   registers its node at *startup only*: delete a node object mid-run and the
   kubelet keeps running but never re-registers on its own — recover with

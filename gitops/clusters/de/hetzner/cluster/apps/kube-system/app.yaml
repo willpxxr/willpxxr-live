@@ -1,6 +1,6 @@
 # ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
 # Manifest-only app: Hubble UI exposure bolted onto kube-system (the Cilium
-# operator itself stays OVH-managed/unmanaged).
+# workloads themselves are ArgoCD-managed via apps/cilium since WEP-0011).
 name: kube-system
 namespace: kube-system
 manifests:
