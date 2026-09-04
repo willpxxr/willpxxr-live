@@ -74,6 +74,7 @@ spec:
           {{- else if hasKey . "chart" }}
           chart: {{ .chart }}
           {{- end }}
+          {{- if .version }}
           targetRevision: "{{ .version }}"
           {{- else }}
           # targetRevision is REQUIRED for helm sources (empty or omitted
