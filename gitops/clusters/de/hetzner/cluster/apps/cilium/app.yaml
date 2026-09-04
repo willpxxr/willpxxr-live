@@ -2,13 +2,15 @@
 # Cilium CNI, migrated from the hcloud-talos module's kubectl_manifest
 # resources to GitOps on 2026-09-04 (WEP-0011; the module's deploy_cilium is
 # now false and its resources were state-removed with destroy=false).
-# The ApplicationSet's ServerSideApply=true adopts the existing objects;
-# values.yaml pins the exact running images so adoption causes no rollouts.
+# The ApplicationSet's ServerSideApply=true adopts the existing objects.
+# Upgrades: consecutive minor hops only (cilium upgrade guide); CRDs are
+# applied/updated by the cilium-operator's createCRDs start hook -- no manual
+# CRD steps. k8s 1.36 support requires >=1.20 (WEP-0009 Phase B).
 name: cilium
 namespace: kube-system
 helm:
   - repoURL: https://helm.cilium.io
     chart: cilium
-    version: 1.16.2
+    version: 1.17.18
     releaseName: cilium
     values: values.yaml

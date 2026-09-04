@@ -1,24 +1,11 @@
-# Cilium helm values (ArgoCD-managed since 2026-09-04, WEP-0011; previously
-# applied by the hcloud-talos module via kubectl_manifest resources).
-# Migrated to match the live install exactly -- verify any change against the
-# rendered cilium-config before merging (verify-infra-change skill §3).
+# Cilium helm values (ArgoCD-managed since 2026-09-04, WEP-0011).
+# upgradeCompatibility: the version this cluster FIRST ran, kept for
+# datapath-preserving upgrade rendering (cilium upgrade guide). CRDs are
+# managed by the cilium-operator itself at startup (createCRDs hook) -- the
+# chart ships none and needs no manual CRD applies.
+upgradeCompatibility: "1.16"
 operator:
   replicas: 1
-# Exact refs of the running images (tag@digest, as cilium-cli installed them)
-# so the ArgoCD adoption causes zero pod rollouts. Drop the override on the
-# next deliberate version bump.
-image:
-  override: quay.io/cilium/cilium:v1.16.2@sha256:4386a8580d8d86934908eea022b0523f812e6a542f30a86a47edd8bed90d51ea
-envoy:
-  image:
-    override: quay.io/cilium/cilium-envoy:v1.29.9-1726784081-a90146d13b4cd7d168d573396ccf2b3db5a3b047@sha256:9762041c3760de226a8b00cc12f27dacc28b7691ea926748f9b5c18862db503f
-hubble:
-  relay:
-    image:
-      override: quay.io/cilium/hubble-relay:v1.16.2@sha256:4b559907b378ac18af82541dafab430a857d94f1057f2598645624e6e7ea286c
-  ui:
-    image:
-      override: quay.io/cilium/hubble-ui:v0.13.1@sha256:e2e9313eb7caf64b0061d9da0efbdad59c6c461f6ca1752768942bfeda0796c6
 ipam:
   mode: kubernetes
 routingMode: native
