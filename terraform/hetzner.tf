@@ -50,11 +50,11 @@ module "talos" {
     { id = 1, type = "cx23" },
   ]
 
-  # Worker upgrade (WEP-0009 Phase A): the module requires contiguous ids
-  # (1..N), so node replacement is done by DRAIN + `terraform taint` on the
-  # server resource + any .tf push (one apply = destroy+create, fresh
-  # v1.13.9 snapshot + regenerated config). Old v1.12.2 worker-1 was drained
-  # and tainted 2026-09-03; worker-2 follows.
+  # Worker state (WEP-0009 Phase A complete): all servers on the v1.13.9
+  # snapshot. Post etcd-restore (2026-09-04) the restored node objects carried
+  # stale providerIDs (dead pre-recreation servers) and were deleted by the
+  # hcloud-CCM lifecycle controller -- both worker servers tainted + replaced
+  # via TFC for a coherent registration state.
   worker_nodes = [
     { id = 1, type = "cx23" },
     { id = 2, type = "cx23" },

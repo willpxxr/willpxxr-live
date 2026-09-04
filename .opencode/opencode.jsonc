@@ -12,7 +12,7 @@
   "provider": {
     "synthetic": {
       "options": {
-        "baseURL": "https://ai.internal.willpxxr.com/v1"
+        "baseURL": "https://api.synthetic.new/v1"
       }
     }
   }
