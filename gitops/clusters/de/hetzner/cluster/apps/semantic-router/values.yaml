@@ -40,8 +40,8 @@ resources:
     cpu: 500m
     memory: 1Gi
   limits:
-    cpu: "2"
-    memory: 4Gi
+    cpu: "1"
+    memory: 2Gi
 
 config:
   version: v0.3
