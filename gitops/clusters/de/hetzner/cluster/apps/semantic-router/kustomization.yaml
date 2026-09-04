@@ -1,0 +1,10 @@
+# Vendored chart inflation: kustomize's helmCharts renders the local chart
+# (upstream v0.3.0, no OCI publish) with values.yaml. ArgoCD syncs the
+# rendered manifests; upgrades are chart-dir + values commits.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+helmCharts:
+  - name: semantic-router
+    includeCRDs: true
+    releaseName: semantic-router
+    valuesFile: values.yaml
