@@ -182,3 +182,27 @@ The recovery's endgame surfaced derived-state cascades worth recording:
   password-auth mismatch) self-resolved after restart cycles; no manual DB
   repair was needed — let the bootstrap/retry paths converge before
   intervening.
+
+### Phase B execution record (2026-09-04)
+
+- B0: etcd snapshot (66 MB, sha256 8401bc77…) + full convergence check
+  (3/3 nodes Ready, correct providerIDs, 3 routes, 0 CrashLoops).
+- Cilium: the upgrade guide allows **consecutive minors only** — executed as
+  four chart-bump hops via ArgoCD (1.16.2 → 1.17.18 → 1.18.12 → 1.19.7 →
+  1.20.1; 1.20 is the first line e2e-testing k8s 1.36). Discovery: the
+  cilium chart ships **no CRDs** (and no `crds:` helm value) in any of these
+  versions — the **cilium-operator applies and updates CRDs itself at
+  startup** (`apis.createCRDs` hook), so no manual CRD steps exist. The
+  1.20 preflight CNP validator caught `deny-by-default` (empty spec now
+  rejected); fixed with explicit `ingress: []`/`egress: []` (semantics
+  unchanged). Post-rollout: workload-path probes green; tailscale LB path
+  needs a device-side check (the 1.20 socketLB-NodePort behavior change).
+- Gate verification: no feature-gates flag on the live apiserver — no-op.
+- `upgrade-k8s --to 1.36.4`: the command derives the kube API endpoint from
+  the Talos config (`kube.cluster.local`), which is node-only — from a
+  workstation use `--endpoint https://5.75.173.162:6443`. First run updated
+  all components + kubelets but failed the manifest dry-runs against the
+  apiserver **mid-restart** (a kubescape ValidatingAdmissionPolicy could not
+  resolve its paramKind during the rollout window and denied everything it
+  binds); the idempotent re-run completed cleanly. Nodes: 3/3 v1.36.4.
+- Remaining: Talos 1.14 bump, then `upgrade-k8s --to 1.37.x`.
