@@ -15,6 +15,9 @@ replicaCount: 1
 
 image:
   tag: v0.3.0
+  # The chart's values carry later duplicate `image:` blocks with
+  # pullPolicy: Never (last-wins YAML) — force IfNotPresent.
+  pullPolicy: IfNotPresent
 
 dashboard:
   enabled: false
