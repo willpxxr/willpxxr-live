@@ -5,7 +5,6 @@ metadata:
   name: semantic-router
   namespace: envoy-gateway-system
 spec:
-  description: "WEP-0013: run prompts through the vLLM Semantic Router ext-proc, which classifies each prompt and rewrites the `model` field to the category's model (syn:large for code/math, syn:small default)."
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
