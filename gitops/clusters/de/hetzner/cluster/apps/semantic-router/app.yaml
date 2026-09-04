@@ -11,3 +11,4 @@ kustomize:
   - repoURL: https://github.com/willpxxr/willpxxr-live.git
     path: gitops/clusters/de/hetzner/cluster/apps/semantic-router
     revision: main
+    enableHelm: true

@@ -100,10 +100,13 @@ spec:
           # the jsonnet source type; CRD-verified against v3.5.2).
           path: {{ $.path.path }}
           {{- end }}
-          {{- if or (hasKey . "commonAnnotations") (hasKey . "images") }}
+          {{- if or (hasKey . "commonAnnotations") (hasKey . "images") (hasKey . "enableHelm") }}
           kustomize:
             {{- if hasKey . "commonAnnotationsEnvsubst" }}
             commonAnnotationsEnvsubst: {{ .commonAnnotationsEnvsubst }}
+            {{- end }}
+            {{- if and (hasKey . "enableHelm") .enableHelm }}
+            enableHelm: {{ .enableHelm }}
             {{- end }}
             {{- if and (hasKey . "commonAnnotations") .commonAnnotations }}
             commonAnnotations:
