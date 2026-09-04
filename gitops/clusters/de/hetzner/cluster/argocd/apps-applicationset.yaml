@@ -66,10 +66,14 @@ spec:
           ref: app
         {{- range .helm }}
         - repoURL: {{ .repoURL }}
-          {{- if and (hasKey . "chart") .chart }}
+          {{- if hasKey . "path" }}
+          # Git-hosted helm chart: `path` points at the chart directory
+          # within the repo (the `chart` field is helm-REPOSITORY-only and
+          # makes ArgoCD fetch <repoURL>/index.yaml, which 404s on git).
+          path: {{ .path }}
+          {{- else if hasKey . "chart" }}
           chart: {{ .chart }}
           {{- end }}
-          {{- if .version }}
           targetRevision: "{{ .version }}"
           {{- else }}
           # targetRevision is REQUIRED for helm sources (empty or omitted
@@ -100,13 +104,10 @@ spec:
           # the jsonnet source type; CRD-verified against v3.5.2).
           path: {{ $.path.path }}
           {{- end }}
-          {{- if or (hasKey . "commonAnnotations") (hasKey . "images") (hasKey . "enableHelm") }}
+          {{- if or (hasKey . "commonAnnotations") (hasKey . "images") }}
           kustomize:
             {{- if hasKey . "commonAnnotationsEnvsubst" }}
             commonAnnotationsEnvsubst: {{ .commonAnnotationsEnvsubst }}
-            {{- end }}
-            {{- if and (hasKey . "enableHelm") .enableHelm }}
-            enableHelm: {{ .enableHelm }}
             {{- end }}
             {{- if and (hasKey . "commonAnnotations") .commonAnnotations }}
             commonAnnotations:

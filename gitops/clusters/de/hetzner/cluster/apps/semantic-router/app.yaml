@@ -1,14 +1,16 @@
 # ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
 # vLLM Semantic Router (vSR) — the prompt-classification ext-proc service
 # attached to the AI gateway's Gateway via EnvoyExtensionPolicy (WEP-0013).
-# The helm chart is VENDORED at ./semantic-router/ (upstream v0.3.0 publishes
-# no OCI chart — verified) and inflated via kustomize helmCharts; note this
-# ArgoCD version does NOT support chart-in-git helm sources (tried first:
-# repo-index 404).
+# The helm chart is VENDORED at ./semantic-router/ (upstream v0.3.0, deps
+# stripped) and consumed as a GIT-HOSTED helm chart: the appset's helm
+# source uses `path` (the chart dir within this repo) — the `chart` field is
+# helm-repository-only and 404s on git. First git-hosted-chart app (the
+# appset's helm template grew the path variant for it).
 name: semantic-router
 namespace: vllm-semantic-router-system
-kustomize:
+helm:
   - repoURL: https://github.com/willpxxr/willpxxr-live.git
-    path: gitops/clusters/de/hetzner/cluster/apps/semantic-router
-    revision: main
-    enableHelm: true
+    path: gitops/clusters/de/hetzner/cluster/apps/semantic-router/semantic-router
+    version: main
+    releaseName: semantic-router
+    values: values.yaml
