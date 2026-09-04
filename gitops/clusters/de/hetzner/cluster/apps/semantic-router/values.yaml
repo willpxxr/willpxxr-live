@@ -68,7 +68,12 @@ config:
   # The chart's default config deep-merges disabled feature stores whose
   # embedding_model (mmbert) still triggers a HuggingFace download + model
   # load (OOM pressure on 8GB nodes) — null deletes them from the merge.
+  # global.router.model_selection is the MoM-selection ML machinery (its
+  # models_path/pretrained paths are what the downloader picks up); unused
+  # by our decisions — nulled as well.
   global:
+    router:
+      model_selection: null
     stores:
       memory:
         embedding_model: null
