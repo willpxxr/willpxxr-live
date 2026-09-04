@@ -37,11 +37,11 @@ extraVolumeMounts: []
 
 resources:
   requests:
-    cpu: 500m
-    memory: 1Gi
+    cpu: 100m
+    memory: 256Mi
   limits:
-    cpu: "1"
-    memory: 2Gi
+    cpu: 500m
+    memory: 512Mi
 
 config:
   version: v0.3
@@ -110,15 +110,10 @@ config:
           keywords: ["calculate", "equation", "proof", "derivative", "integral", "theorem", "probability"]
           bm25_threshold: 0.1
           case_sensitive: false
-      pii:
-        # Detection-only for now: v0.3 decisions can route but not block
-        # (Decision struct has no deny outcome). Detections land in vSR
-        # metrics/logs; blocking is recorded as the follow-up in WEP-0013.
-        - name: strict_pii
-          threshold: 0.85
-          include_history: false
-          pii_types_allowed: []
-          description: Flag any detectable PII in prompts (observability).
+      # PII detection is DEFERRED (WEP-0013 follow-up): vSR's PII classifier
+      # is embedding-model-based (mmbert) — the download+load OOMs at 2Gi on
+      # these 8GB nodes. Land it with a PVC-cached model on a node with
+      # headroom, or after the node/Talos bump changes the memory map.
 
     decisions:
       - name: technical-large-route
