@@ -82,3 +82,29 @@ synced; restart counters flat; snapshot becomes canonical for future nodes.
 - The hetzner.tf `talos_version` bump deliberately LAGS the packer build:
   its image data source selects the newest `os=talos` snapshot, so pushing
   the version bump before the build exists would fail the TFC apply.
+
+## Phase A execution record (2026-09-03/04)
+
+What actually happened, for the runbook's benefit:
+
+- The in-place path hit the known 1.12→1.13 legacy-upgrade pitfall: the legacy
+  installer rewrote the kernel cmdline (`talos.platform=metal` on a Hetzner
+  host) and dropped custom args/hostname. Follow-up out-of-band config surgery
+  (`talosctl patch mc`/`apply-config`) then corrupted the machine configs —
+  multi-document duplication, a dropped `network.interfaces` section, hostname
+  conflicts — cascading into a private-network blackout and hcloud-CCM
+  node-deletion loops.
+- Recovery executed for real, and it was cheap: the pre-upgrade etcd snapshot
+  (66 MB, hash-verified) → CP server tainted and replaced via TFC →
+  `talosctl bootstrap --recover-from <snapshot>` restored full etcd state in
+  minutes. Workers replaced the same way (taint + TFC, contiguous ids). This
+  is the "DR drill" INF-13 asked for, executed as the primary repair path.
+- Binding rule landed in `verify-infra-change/SKILL.md`: machine configs are
+  provision-time state; no out-of-band patching; live changes are
+  drain + taint + replace; the control plane is cheaper to replace than to
+  patch given `bootstrap --recover-from`.
+- Deviations: node names reverted to module-canonical `control-plane-1` /
+  `worker-1..2` (custom hostnames have no module input — one of the
+  motivations for the Omni evaluation in WEP-0010); worker-3 retired
+  (`worker_nodes = [1, 2]`).
+- Phase B (k8s bump) still pending.

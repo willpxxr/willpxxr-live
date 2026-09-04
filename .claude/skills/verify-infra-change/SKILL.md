@@ -43,6 +43,24 @@ Two gotchas learned the hard way:
   can therefore surface unrelated in-place changes from a newer upstream
   module release riding along with your change; call these out to the user
   rather than assuming they're an error in your diff.
+- **Machine configs are provision-time state; treat them as immutable.**
+  The hcloud-talos module seeds each node's config from `talos_machine_configuration`
+  data sources into the server's `user_data` (ignored after creation) — there is
+  no apply step, so `.tf` config changes only affect future re-provisions. The
+  front door for live nodes is **DRAIN + `terraform taint` + any `.tf` push**
+  (one apply = destroy + create, fresh image + fresh config; the module requires
+  contiguous worker ids, so replace one id at a time). `_ABSOLUTELY_ no
+  out-of-band `talosctl patch mc`/`apply-config` modification of live machine
+  configs` — 2026-09-03/04 this cascaded through multi-document config
+  corruption (duplicate v1alpha1/HostnameConfig docs), a dropped
+  `network.interfaces` (private-network blackout), hostname conflicts, and
+  hcloud-CCM node-deletion loops, ending in a full etcd recovery
+  (`bootstrap --recover-from`, which is trivial — the control plane is cheaper
+  to replace than to patch). Also: Talos config-patch semantics shift across
+  versions (JSON6902 unsupported on multi-doc; merge patches append to lists;
+  hostname validators count kernel args), so even "temp" patches are risky.
+  Any out-of-band emergency change is temporary by definition: reconcile it
+  into `hetzner.tf` immediately and expect to replace the node anyway.
 
 ## 2. Kubernetes manifests (`gitops/`)
 
