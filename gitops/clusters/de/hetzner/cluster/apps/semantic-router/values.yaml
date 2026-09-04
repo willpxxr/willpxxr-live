@@ -25,6 +25,13 @@ autoscaling:
 persistence:
   enabled: false
 
+# The chart's own values carry an uncommented hostPath `ml-models` default
+# (duplicate key, last-wins) — violating PodSecurity baseline. Override with
+# empty; models live in the container FS and re-download per restart (see
+# the persistence note above).
+extraVolumes: []
+extraVolumeMounts: []
+
 resources:
   requests:
     cpu: 500m
