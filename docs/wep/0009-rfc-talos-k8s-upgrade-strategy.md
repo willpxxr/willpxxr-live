@@ -108,3 +108,28 @@ What actually happened, for the runbook's benefit:
   motivations for the Omni evaluation in WEP-0010); worker-3 retired
   (`worker_nodes = [1, 2]`).
 - Phase B (k8s bump) still pending.
+
+### Recovery completion addendum (2026-09-04)
+
+The recovery's endgame surfaced derived-state cascades worth recording:
+
+- The restored node objects carried dead providerIDs → hcloud-CCM deletion
+  loop → its route controller deleted the Hetzner network route for the CP's
+  podCIDR → cross-node pod traffic (all protocols) blackholed, while
+  hostNetwork paths (API server) kept "working" over the underlay — a
+  deceptive signal. Route repaired via the hcloud API
+  (`POST /networks/{id}/actions/add_route`), then kept by the CCM.
+- Kubelets register at startup only: the CP's deleted node object orphaned
+  the kubelet until `talosctl service kubelet restart` re-registered it.
+- The CCM stamped a destroyed server's providerID from a stale server list;
+  a fresh registration stamped the right one. Node objects are derived
+  state — recreate, never patch (`providerID` patches are API-forbidden).
+- The etcd restore also rolled back config drift (the Cilium ConfigMap's
+  out-of-band tunnel-mode values reverted to the repo's native-routing
+  values) — an accidental benefit of snapshot-based recovery.
+- `bootstrap --recover-from` takes a client-side local file path and streams
+  it over the Talos API (URL-form arguments fail).
+- The mcp-token-vault CrashLoop (Supabase-reset fallout: `token_vault` role
+  password-auth mismatch) self-resolved after restart cycles; no manual DB
+  repair was needed — let the bootstrap/retry paths converge before
+  intervening.

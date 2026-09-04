@@ -61,6 +61,32 @@ Two gotchas learned the hard way:
   hostname validators count kernel args), so even "temp" patches are risky.
   Any out-of-band emergency change is temporary by definition: reconcile it
   into `hetzner.tf` immediately and expect to replace the node anyway.
+- **Node objects are derived state — recreate, never patch.** A kubelet
+  registers its node at *startup only*: delete a node object mid-run and the
+  kubelet keeps running but never re-registers on its own — recover with
+  `talosctl service kubelet restart` (2026-09-04: the CP sat orphaned for
+  minutes until this). The hcloud-CCM stamps `providerID` by resolving the
+  node against its server list, and that list can be stale — post-replacement
+  it stamped a *destroyed* server's ID; only a fresh node registration got
+  the right one. `providerID` is API-forbidden to patch on an existing node
+  (`node updates may not change providerID except from "" to valid`). Node
+  deletion also cascades: the hcloud-CCM route controller immediately deletes
+  the Hetzner network route for that node's podCIDR, blackholing cross-node
+  pod traffic (all protocols) until the node re-registers and the route is
+  recreated. hcloud network routes are action endpoints:
+  `POST /v1/networks/{id}/actions/add_route` (a `/routes` resource 404s).
+- **Connectivity triage traps** (2026-09-04): a passing TCP check against a
+  hostNetwork backend (e.g. the kube-apiserver ClusterIP) proves nothing
+  about the pod network — it rides the underlay while pod-to-pod paths are
+  blackholed. Read the real service CIDR from the live cluster (this one is
+  `10.0.8.0/x`, not the `10.96.0.0/12` default) before probing. busybox
+  `nc -z` is non-functional ("punt!") — probe TCP via HTTP health endpoints
+  (coredns `:8080/health`, `:8181/ready`) or `wget`. cilium-health
+  "Endpoint connectivity ICMP: connection timed out" can be cosmetic —
+  cross-check with a real workload path (throwaway busybox pod +
+  `nslookup`/`wget`) before believing a datapath failure. And an exec
+  exiting 137 into a `sleep`-based throwaway pod usually means the sleep
+  window expired mid-exec, not a real failure.
 
 ## 2. Kubernetes manifests (`gitops/`)
 
