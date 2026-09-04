@@ -10,4 +10,4 @@ namespace: vllm-semantic-router-system
 kustomize:
   - repoURL: https://github.com/willpxxr/willpxxr-live.git
     path: gitops/clusters/de/hetzner/cluster/apps/semantic-router
-    version: main
+    revision: main
