@@ -1,70 +1,107 @@
 # WEP-0010: Evaluate Omni as the Talos controller
 
-**Status**: draft — for discussion
+**Status**: rejected 2026-09-04 — see Decision at the end
 **Type**: RFC
-**Related**: WEP-0009 (upgrade strategy), INF-13
+**Related**: WEP-0009 (upgrade strategy), WEP-0011 (Cilium → ArgoCD), INF-13
 
 ## Summary
 
-Terraform + `user_data` gives this cluster provision-time config only: there is
-no declarative front door for live-node machine-config changes, and the ad-hoc
-alternative (`talosctl patch mc` on live nodes) just caused a full etcd
-recovery (2026-09-03/04). Sidero's [Omni](https://omni.sidero.dev) is a
-management plane that owns Talos machine configs declaratively — versioned
-config patches applied **in place**, drift-detected — and drives Talos and
-Kubernetes upgrades natively. This WEP proposes a time-boxed evaluation before
-Phase B of WEP-0009, since Phase B/C are exactly the kind of repeated in-place
-operations Omni exists to manage.
+Terraform + the hcloud-talos module gives this cluster provision-time config
+only: there is no declarative front door for live-node machine-config
+changes, and the ad-hoc alternative (`talosctl patch mc`) caused the
+2026-09-03/04 etcd-recovery incident. Omni (Sidero Labs) is a continuously-
+reconciling control plane for Talos clusters — the Kubernetes-of-cluster-
+management model (declarative API, etcd-backed state, controllers) — and it
+directly targets every gap we hit.
 
-## Why now
+## What Omni gives over TF + the module (verified against docs)
 
-- The incident showed the cost of the current model: every config change is
-  either "future re-provisions only" (module inputs) or hand-run surgery.
-- WEP-0009 Phase B needs `upgrade-k8s`, Cilium coordination, and possibly
-  kernel-arg fixes — all manual today, and all repeated for 1.37.
-- Worker/CP replacement (taint + replace + recover-from) works but is a
-  workaround for missing config lifecycle, not a design.
+- **In-place config as patches**: machine config changes are declarative
+  patches, applied and continuously reconciled in place — drift is detected,
+  not discovered. Kills the taint+replace necessity for config changes.
+- **Cluster templates**: multi-doc YAML declaring cluster, talosVersion,
+  kubernetesVersion, machine sets, patches. `omnictl cluster template sync`
+  reconciles — Talos *and* k8s upgrades become template field changes with
+  etcd-safe rolling orchestration. WEP-0009's runbook (§0–§5) collapses into
+  the template + a sync.
+- **Node lifecycle**: machine classes / explicit UUIDs; join, replace,
+  scale, decommission are reconciled operations. Built-in etcd backup/restore
+  story (documented template-managed restore).
+- **SideroLink management plane**: nodes connect to Omni over WireGuard;
+  Omni proxies the kube-apiserver (k8s proxy) — a stable, firewall-friendly
+  management path and the option to stop exposing the API publicly.
+- **GitOps-native**: templates in git + apply-only CI (`omnictl cluster
+  template sync`) is the documented recommended flow — matches "Git ships,
+  hands don't". (Not ArgoCD-style two-way sync; ArgoCD itself stays
+  untouched for the app layer.)
+- **Auth0 integration** built in (`--auth-auth0-enabled`), omnictl + UI +
+  a Terraform provider (alpha; prefer omnictl for now).
 
-## What Omni would change
+## Verified costs / facts
 
-- **Config**: patches live in git, synced via `omnictl` or the Omni Terraform
-  provider, applied in place with drift detection — keeps "Git ships, hands
-  don't" while restoring in-place capability (Talos supports it; our IaC
-  currently doesn't).
-- **Upgrades**: a cluster template (`talosVersion`, `kubernetesVersion`,
-  patches) — Omni drives etcd-safe rolling upgrades; WEP-0009's runbooks
-  collapse into template syncs.
-- **IaC split**: Terraform keeps Hetzner server lifecycle (Omni TF provider
-  machine requests, or omnictl enrollment of TF-created servers); Omni owns
-  config.
-- **Recovery**: Omni handles etcd member replacement/join natively, replacing
-  the manual snapshot choreography.
+- **License**: self-hosted Omni is BSL 1.1 — free for non-production;
+  production self-hosting requires a Sidero contract.
+- **Pricing**: **Omni Hobby (SaaS): $10/mo — 10 nodes, 1 user,
+  non-commercial** (explicitly "Running a homelab?"). Business tier is
+  $100/node/mo with a 10-node minimum (irrelevant here).
+- **Self-hosted footprint**: Docker host, 2 vCPU/4 GB, ports 443/8090/8091/
+  8100/5556/50180-udp, TLS (cfssl), GPG key for etcd-at-rest, Dex or direct
+  Auth0, embedded etcd (or external for HA).
+- **TF provider is early alpha** — for Omni resources use omnictl/templates;
+  TF keeps provisioning the raw infra (network, servers, DNS).
 
-## Costs / risks (to verify during the spike)
+## Migration (non-disruptive import path)
 
-- Another control plane: self-hosted Omni needs its own VM + object storage
-  (ops burden), vs Omni Cloud (paid SaaS) — pick one.
-- Migration cost: re-enrollment/re-provision of all nodes once. Cheap here
-  (single CP + 2 workers, proven `bootstrap --recover-from`).
-- **Hetzner machine-request support and the exact Omni TF-provider surface
-  are unverified** — Omni's docs were unreachable when this was written;
-  confirm before the spike.
-- New failure domain: Omni availability gates config changes and upgrades
-  (not day-2 operation of a running cluster).
+1. Stand up Omni (Hobby SaaS, or self-host on a small hcloud VM).
+2. **`omnictl import`**: connects the EXISTING cluster without disruption —
+   discovers state, validates health, zips a backup of all machine configs,
+   wires nodes to Omni (SideroLink), and registers the cluster as **locked**
+   until verified. Existing customizations are preserved as **config
+   patches** (diff of Omni's default vs live config). Our nodes boot
+   factory-schematic installers (WEP-0009) — the schematic is detected and
+   reused, so upgrade continuity holds.
+3. `omnictl cluster template export` → commit the template to git
+   (`gitops/clusters/de/hetzner/omni/cluster-template.yaml`) — it becomes
+   the authoritative cluster definition.
+4. Verify workloads, then unlock. From here: config/version changes are
+   template edits + sync.
+5. **Slim `hetzner.tf`**: TF keeps network/firewall/DNS and server
+   lifecycle; the module's config/bootstrap/CNI roles move to Omni
+   (`deploy_cilium` already false per WEP-0011). New-node flow: TF (or an
+   Omni machine class) creates the server, Omni enrolls and reconciles it
+   into the cluster.
+6. CI: an apply-only GitHub Action running `omnictl cluster template sync`
+   on changes to the template path.
+7. Cleanup: the talos-CCM's CSR-approval role is subsumed by Omni's node
+   identity handling; the hcloud-CCM stays (routes/LB are Hetzner-specific).
 
-## Proposal
+## Recommendation
 
-1. Spike (time-boxed): self-hosted Omni on a small hcloud VM (or Omni Cloud
-   trial), enroll one throwaway worker; exercise in-place config patch,
-   Talos upgrade, and node replacement.
-2. Compare against WEP-0009's manual runbooks for the Phase B operations.
-3. Decide: migrate `de/hetzner` (one re-provision cycle) or stay TF-native
-   with the SKILL.md taint+replace discipline.
+Adopt via the **Omni Hobby SaaS ($10/mo)** for the least operational burden,
+or self-host on a small VM if data- locality of the management plane
+matters (free for non-commercial homelab use under the BSL). Either way:
+migrate by import (no rebuild), move config/version authority to a git-
+synced cluster template, and reduce the TF module to infrastructure-only.
+Time-box: the import + export + unlock is an evening, given tonight's
+proven recovery path as the fallback.
 
 ## Consequences
 
-- **Adopted**: WEP-0009's manual paths become Omni template syncs;
-  `hetzner.tf` slims to server lifecycle; the SKILL.md machine-config rule
-  restates as "patches go through Omni, never the node".
-- **Rejected**: document why here; the taint+replace discipline remains the
-  front door.
+- WEP-0009's manual upgrade paths become template syncs; the runbook keeps
+  its value for the migration window and for Omni-outage scenarios.
+- `hetzner.tf` slims to infra; `verify-infra-change` gains an omnictl/
+  template verification step (render/validate the template before sync).
+- If rejected: the taint+replace discipline remains the front door, and this
+  WEP records why.
+
+## Decision (2026-09-04): rejected
+
+Not worth it at this scale. The cluster is 3 nodes; the upgrade runbook is
+now written down and was executed end-to-end successfully the same day
+(Cilium 1.16.2 → 1.20.1 + k8s 1.36.4); recovery is proven and cheap
+(`bootstrap --recover-from`). Against that: $10/mo recurring, a second
+control plane to run/patch/backup (self-host) or a dependency on Sidero's
+SaaS, an apply-only (non-two-way) GitOps flow for the cluster layer, and a
+migration + de-module ceremony. Revisit if the cluster grows past what one
+runbook can hold, or if in-place config changes become frequent enough that
+taint+replace stops being acceptable.
