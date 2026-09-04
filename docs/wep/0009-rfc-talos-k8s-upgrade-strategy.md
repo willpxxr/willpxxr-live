@@ -67,6 +67,12 @@ Two separate operations, smallest blast radius each:
 
 ### Phase B — Kubernetes bump (rewritten post-incident, 2026-09-04)
 
+> Executed 2026-09-04 (1.35.0 → 1.36.4, Cilium 1.16.2 → 1.20.1); the
+> step-by-step procedure now lives in
+> [`docs/runbooks/k8s-upgrade.md`](../runbooks/k8s-upgrade.md) — consult and
+> extend that file for future bumps. The steps below record the decision and
+> its rationale.
+
 Every step below follows the incident lessons: snapshot first, one change at
 a time, verify the derived state (routes, providerIDs, pod paths) after each
 step, and let controllers converge before intervening manually.

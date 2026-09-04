@@ -111,6 +111,7 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 ├── services/                                # In-cluster services with source in this repo (mcp-token-vault, WEP-0006; CI builds/pushes the image)
 ├── .opencode/                               # opencode global config + ai-gateway-auth plugin (see "opencode config" below)
 ├── docs/wep/                                 # Willpxxr enhancement proposals (RFC + ADR subtypes) -- see docs/wep/README.md
+├── docs/runbooks/                            # Operational runbooks (e.g. docs/runbooks/k8s-upgrade.md for Kubernetes version bumps)
 └── gitops/clusters/de/hetzner/cluster/
     ├── argocd/        # root-app (app-of-apps) + the single apps ApplicationSet
     ├── policy/        # cluster-wide Cilium policies (its own app)
