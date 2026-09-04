@@ -21,8 +21,11 @@ module "talos" {
   # the snapshot image and the generated machine config must match.
   # v1.13.9 bump: Phase A of WEP-0009 (Talos-only; k8s stays 1.35.0 until
   # Phase B -- cilium prerequisite + WEP-0005 gate verification first).
-  talos_version      = "v1.13.9"
-  kubernetes_version = "1.35.0"
+  talos_version = "v1.13.9"
+  # Live cluster upgraded to 1.36.4 via `talosctl upgrade-k8s` (WEP-0009
+  # Phase B, 2026-09-04); this bump keeps future provisions at the running
+  # version. 1.37 requires a Talos 1.14 bump first.
+  kubernetes_version = "1.36.4"
 
   # Packer only builds an x86 snapshot (see packer/talos/talos.pkr.hcl) -- without
   # this the module also looks up an ARM image by label selector and fails to find one.
