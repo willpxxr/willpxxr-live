@@ -8,6 +8,8 @@
 # appset's helm template grew the path variant for it).
 name: semantic-router
 namespace: vllm-semantic-router-system
+manifests:
+  - referencegrant.yaml
 helm:
   - repoURL: https://github.com/willpxxr/willpxxr-live.git
     path: gitops/clusters/de/hetzner/cluster/apps/semantic-router/semantic-router
