@@ -66,3 +66,48 @@ verified: v1alpha1 serves `extProc`).
 - If EnvoyExtensionPolicy extproc cannot coexist with the AI extproc
   (filter-chain conflict), fall back to the vSR-bundled-Envoy path (2) and
   record why.
+
+## Implementation record (2026-09-04/05) — ext-proc invocation BLOCKED, evidence trail
+
+Deployed: vendored vSR chart v0.3.0 (lean: keyword signals, hf: modelCards —
+the `syn:*` aliases are dead upstream), `EnvoyExtensionPolicy` retargeted at
+the generated LLM HTTPRoutes (`ai-gateway-llm`,
+`ai-gateway-llm-synthetic-anthropic`; Gateway-scoped attachment skips
+AI-controller routes), `ReferenceGrant` for the cross-namespace ext-proc
+backendRef, NP wiring. vSR: 1/1 Running at 512Mi, no model downloads
+(lean mode).
+
+BLOCKER: the extproc filter never invokes (cluster `upstream_rq_total: 0`
+on both envoy replicas) while the AI gateway's own extproc serves all
+traffic. Verified working: policy Accepted (grant), HCM-level filter enabled
+with the correct cluster + `request_body_mode: BUFFERED`, per-route configs
+present on ALL LLM route entries with exact filter-name match.
+
+Root-cause lead: EG renders the per-route config for the extension filter as
+`{"@type": "envoy.config.route.v3.FilterConfig", "config": {}}` — an EMPTY
+generic FilterConfig rather than a real `ExtProcPerRoute`. Envoy gets an
+empty per-route override and never dials the processor. Suspected EG
+limitation/bug in extension-policy attachment on AI-gateway co-generated
+routes.
+
+Debug scars (for the next attempt):
+- The chart's values.yaml is a duplicate-key minefield (3× `image:` blocks —
+  the later `pullPolicy: Never` wins; an uncommented hostPath `extraVolumes`
+  violating PodSecurity baseline; a default `providers.models` that fails
+  cross-validation against routing.modelCards; `global.router.model_selection`
+  ML paths that trigger the mmbert download; and `mmbert_model_path` is a
+  GO-LEVEL default (`canonical_defaults.go`) that YAML nulls cannot remove —
+  override with an explicit empty string).
+- vSR's CR reconciler watches namespace `default` by default (the
+  IntelligentPool/IntelligentRoute CRs for the CR-driven refactor need the
+  namespace configured or CRs placed there).
+- ArgoCD's diff normalizer rejects plain `[]` in jqPathExpressions (use the
+  null-safe `[]?.`) — a bad expression breaks comparison for ALL apps.
+- This ArgoCD version does not support chart-in-git helm sources (`chart:`
+  field → repo-index 404); git-hosted charts go via `path` (appset change).
+
+Next options: (a) EG upgrade / upstream issue with the empty-FilterConfig
+evidence; (b) the Lua-after-AI-extproc path (the AI gateway's v0.6+ slot)
+calling vSR's classify API to rewrite the model; (c) the CR-driven refactor
+(IntelligentPool/IntelligentRoute) once invocation works. The chain is
+fail-open: requests always work, just without classification.
