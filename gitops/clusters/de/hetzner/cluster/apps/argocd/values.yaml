@@ -62,6 +62,11 @@ configs:
         - .spec.telemetry.tracing.provider.backendRefs[]?.weight
       jsonPointers:
         - /spec/logging
+    # WEP-0013: the controller defaults backendRef weight on the semantic
+    # router's extProc policy.
+    "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_EnvoyExtensionPolicy": |
+      jqPathExpressions:
+        - .spec.extProc[].backendRefs[]?.weight
         - /spec/provider/kubernetes/envoyService/externalTrafficPolicy
     "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_SecurityPolicy": |
       jqPathExpressions:
