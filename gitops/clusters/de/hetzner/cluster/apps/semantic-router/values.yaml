@@ -81,6 +81,14 @@ config:
         embedding_model: null
       vector_store:
         embedding_model: null
+    # Go-level defaults fill model_catalog.embeddings.semantic.mmbert_model_path
+    # when absent (canonical_defaults.go) — YAML nulls can't remove it. Setting
+    # the path empty explicitly makes the model-downloader skip it; our signals
+    # (keywords only) never load embeddings.
+    model_catalog:
+      embeddings:
+        semantic:
+          mmbert_model_path: ""
 
   routing:
     modelCards:
