@@ -66,7 +66,7 @@ configs:
     # router's extProc policy.
     "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_EnvoyExtensionPolicy": |
       jqPathExpressions:
-        - .spec.extProc[].backendRefs[]?.weight
+        - .spec.extProc[]?.backendRefs[]?.weight
         - /spec/provider/kubernetes/envoyService/externalTrafficPolicy
     "resource.customizations.ignoreDifferences.gateway.envoyproxy.io_SecurityPolicy": |
       jqPathExpressions:
