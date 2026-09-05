@@ -16,6 +16,10 @@ spec:
           name: semantic-router
           namespace: vllm-semantic-router-system
           port: 50051
+          # Match the controller's default explicitly — keeps live == git
+          # without an ignoreDifferences entry (the plain-[] jq form broke
+          # the diff normalizer; see the reverted argocd-values section).
+          weight: 1
       # The classifier needs the full prompt body.
       processingMode:
         request:
