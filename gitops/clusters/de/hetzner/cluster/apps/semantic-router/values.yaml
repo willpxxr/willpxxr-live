@@ -59,7 +59,7 @@ config:
   providers:
     defaults:
       # Fallback for prompts no decision matches.
-      default_model: syn:small
+      default_model: hf:zai-org/GLM-5.3-Flash
     # The chart's default models list (placeholder gpt-oss-20b) fails
     # cross-validation against routing.modelCards on merge — empty it:
     # in ext-proc mode vSR classifies and rewrites, it does not proxy.
