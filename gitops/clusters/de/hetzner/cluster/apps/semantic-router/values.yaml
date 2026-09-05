@@ -92,18 +92,18 @@ config:
 
   routing:
     modelCards:
-      - name: syn:large
+      - name: hf:zai-org/GLM-5.2
         param_size: 16B
         context_window_size: 200000
-        description: Frontier tier for code, math, and complex reasoning.
+        description: Frontier tier for code, math, and complex reasoning (synthetic hf: id — the syn:* aliases are dead upstream).
         capabilities: [chat, reasoning, tools]
         quality_score: 0.95
         modality: ar
         tags: [premium]
-      - name: syn:small
+      - name: hf:zai-org/GLM-5.3-Flash
         param_size: 8B
         context_window_size: 128000
-        description: Fast, cheap tier for routine chat and general work.
+        description: Fast, cheap tier for routine chat and general work (synthetic hf: id).
         capabilities: [chat, tools]
         quality_score: 0.8
         modality: ar
@@ -140,5 +140,5 @@ config:
             - type: keyword
               name: math_keywords
         modelRefs:
-          - model: syn:large
+          - model: hf:zai-org/GLM-5.2
             use_reasoning: false

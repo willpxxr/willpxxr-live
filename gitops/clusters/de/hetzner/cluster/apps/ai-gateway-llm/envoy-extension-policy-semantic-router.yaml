@@ -5,10 +5,18 @@ metadata:
   name: semantic-router
   namespace: envoy-gateway-system
 spec:
+  # Target the AI gateway's GENERATED LLM HTTPRoutes directly: a
+  # Gateway-scoped policy attaches per-route configs to non-AI routes only
+  # (the AI controller owns its routes' filter configs — verified in the
+  # envoy config dump: 0 attachments on the LLM routes). Per-route keys are
+  # policy-scoped, so both extprocs coexist on these routes.
   targetRefs:
     - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway
+      kind: HTTPRoute
+      name: ai-gateway-llm
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm-synthetic-anthropic
   extProc:
     - backendRefs:
         - group: ""
