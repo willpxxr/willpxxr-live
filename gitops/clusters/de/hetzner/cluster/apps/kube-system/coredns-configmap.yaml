@@ -49,7 +49,7 @@ data:
         # Forward willpxxr.com directly to Cloudflare instead of the node's
         # /etc/resolv.conf (which points to Tailscale MagicDNS and doesn't
         # resolve non-proxied Cloudflare DNS-only records like auth.willpxr.com).
-        forward willpxxr.com 1.1.1.1 1.0.0.1
+        forward willpxxr.com. 1.1.1.1 1.0.0.1
         forward . /etc/resolv.conf {
            max_concurrent 1000
         }
