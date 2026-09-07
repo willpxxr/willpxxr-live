@@ -1,0 +1,97 @@
+---
+# Hermes model-provider plugin for the in-cluster AI gateway (WEP-0014).
+# Mounted read-only at /opt/data/plugins/model-providers/willpxxr-gateway/
+# (a subdirectory of the PVC) so the plugin code is git-managed and cannot
+# drift between sessions. Hermes's plugin discovery scans this directory
+# lazily on first provider resolution.
+#
+# The plugin overrides create_client to return an openai.OpenAI client
+# backed by a custom httpx transport that mints and refreshes Auth0 M2M
+# tokens (client_credentials grant) and injects them as Bearer headers on
+# every request. This is the only way to get M2M OAuth into Hermes without
+# forking -- the built-in auth types (api_key, oauth_external,
+# external_process) don't handle client_credentials with auto-refresh.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-plugin
+  namespace: hermes
+data:
+  __init__.py: |
+    import os
+    import time
+    import httpx
+    from providers import register_provider
+    from providers.base import ProviderProfile
+
+    _GATEWAY_URL = "https://ai.internal.willpxxr.com/v1"
+    _AUTH0_TOKEN_URL = "https://auth.willpxxr.com/oauth/token"
+    _AUTH0_AUDIENCE = "https://ai.internal.willpxxr.com"
+
+    _token_cache = {"token": None, "expires_at": 0.0}
+
+    def _refresh_token():
+        now = time.time()
+        if _token_cache["token"] and now < _token_cache["expires_at"] - 60:
+            return _token_cache["token"]
+
+        client_id = os.environ.get("HERMES_AUTH0_CLIENT_ID", "")
+        client_secret = os.environ.get("HERMES_AUTH0_CLIENT_SECRET", "")
+        if not client_id or not client_secret:
+            raise RuntimeError(
+                "HERMES_AUTH0_CLIENT_ID / HERMES_AUTH0_CLIENT_SECRET not set; "
+                "cannot mint M2M token for the AI gateway"
+            )
+
+        resp = httpx.post(
+            _AUTH0_TOKEN_URL,
+            json={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "audience": _AUTH0_AUDIENCE,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        _token_cache["token"] = data["access_token"]
+        _token_cache["expires_at"] = now + data.get("expires_in", 3600)
+        return _token_cache["token"]
+
+    class _Auth0M2MTransport(httpx.BaseTransport):
+        def __init__(self):
+            self._inner = httpx.HTTPTransport()
+
+        def handle_request(self, request):
+            request.headers["Authorization"] = f"Bearer {_refresh_token()}"
+            return self._inner.handle_request(request)
+
+    class WillpxxrGatewayProfile(ProviderProfile):
+        def create_client(self, **client_kwargs):
+            import openai
+            http_client = httpx.Client(transport=_Auth0M2MTransport())
+            return openai.OpenAI(
+                base_url=_GATEWAY_URL,
+                api_key="managed-by-plugin",
+                http_client=http_client,
+            )
+
+    register_provider(WillpxxrGatewayProfile(
+        name="willpxxr-gateway",
+        aliases=("willpxxr", "gateway"),
+        display_name="willpxxr AI Gateway",
+        description="In-cluster AI gateway (Auth0 M2M, Synthetic backend)",
+        env_vars=("WILLPXR_GATEWAY_API_KEY",),
+        base_url=_GATEWAY_URL,
+        auth_type="api_key",
+        supports_health_check=False,
+        fallback_models=("hf:zai-org/GLM-5.3-Flash",),
+        default_aux_model="hf:zai-org/GLM-5.3-Flash",
+    ))
+  plugin.yaml: |
+    name: willpxxr-gateway
+    kind: model-provider
+    version: 1.0.0
+    description: In-cluster AI gateway via Auth0 M2M token refresh
+    author: willpxxr

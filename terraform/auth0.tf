@@ -599,3 +599,55 @@ resource "auth0_connection" "google" {
 
   is_domain_connection = true
 }
+
+# M2M client for the Hermes agent (apps/hermes/, WEP-0014) to access the
+# AI gateway (ai.internal.willpxxr.com). Hermes has no built-in M2M/OAuth
+# provider type, so a custom model-provider plugin (ConfigMap-mounted into
+# the pod) overrides create_client with an httpx transport that mints and
+# refreshes tokens via client_credentials against this client. The client
+# grant authorizes llm:use on the ai_llm resource server, satisfying the
+# gateway's SecurityPolicy JWT validation.
+resource "auth0_client" "hermes_m2m" {
+  name        = "willpxxr-live-hermes-m2m"
+  description = "M2M client for Hermes agent to access the AI gateway (ai.internal.willpxxr.com) via client_credentials grant."
+  app_type    = "non_interactive"
+
+  oidc_conformant = true
+  grant_types     = ["client_credentials"]
+
+  jwt_configuration {
+    alg = "RS256"
+  }
+}
+
+resource "auth0_client_credentials" "hermes_m2m" {
+  client_id             = auth0_client.hermes_m2m.client_id
+  authentication_method = "client_secret_post"
+}
+
+resource "auth0_client_grant" "hermes_m2m_llm" {
+  client_id = auth0_client.hermes_m2m.client_id
+  audience  = auth0_resource_server.ai_llm.identifier
+  scopes    = ["llm:use"]
+}
+
+resource "onepassword_item" "hermes_m2m" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "hermes-m2m"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        client_id = {
+          type  = "CONCEALED"
+          value = auth0_client.hermes_m2m.client_id
+        }
+        client_secret = {
+          type  = "CONCEALED"
+          value = auth0_client_credentials.hermes_m2m.client_secret
+        }
+      }
+    }
+  }
+}

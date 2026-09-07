@@ -1,0 +1,91 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes
+  namespace: hermes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hermes
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hermes
+    spec:
+      initContainers:
+        - name: init-config
+          image: nousresearch/hermes-agent:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cp -n /opt/hermes-staging/config.yaml /opt/data/config.yaml || true
+              cp -n /opt/hermes-staging/SOUL.md /opt/data/SOUL.md || true
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: config
+              mountPath: /opt/hermes-staging
+              readOnly: true
+      containers:
+        - name: hermes
+          image: nousresearch/hermes-agent:latest
+          command: ["gateway", "run"]
+          env:
+            - name: HERMES_HOME
+              value: /opt/data
+            - name: WILLPXR_GATEWAY_API_KEY
+              value: managed-by-plugin
+            - name: HERMES_AUTH0_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-m2m
+                  key: HERMES_AUTH0_CLIENT_ID
+            - name: HERMES_AUTH0_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-m2m
+                  key: HERMES_AUTH0_CLIENT_SECRET
+          ports:
+            - name: gateway-api
+              containerPort: 8642
+            - name: dashboard
+              containerPort: 9119
+          resources:
+            requests:
+              cpu: 100m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: plugin
+              mountPath: /opt/data/plugins/model-providers/willpxxr-gateway
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hermes
+        - name: config
+          configMap:
+            name: hermes-config
+        - name: plugin
+          configMap:
+            name: hermes-plugin
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes
+  namespace: hermes
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

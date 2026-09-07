@@ -23,3 +23,4 @@ reasoning fits on a page, it's an ADR.
 | [0004](0004-adr-cloudflare-provider-v5.md) | ADR | Cloudflare provider v5 | Accepted |
 | [0006](0006-rfc-token-vault-mcp-credentials.md) | RFC | Token vault for ai-gateway-mcp third-party credentials (Supabase-backed) | Implemented |
 | [0007](0007-adr-mcp-upstream-credential-injection.md) | ADR | MCP upstream credential injection: vault proxy fallback, defer Envoy-side injection | Accepted |
+| [0014](0014-adr-hermes-agent-via-ai-gateway.md) | ADR | Hermes agent via AI gateway with custom provider plugin (Auth0 M2M token refresh) | Accepted |

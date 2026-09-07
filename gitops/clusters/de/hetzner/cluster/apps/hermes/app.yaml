@@ -1,0 +1,15 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# Manifest-only app: Hermes agent (Nous Research) running as a stateful
+# gateway workload. See docs/wep/0014-adr-hermes-agent-via-ai-gateway.md
+# for the provider plugin approach (Auth0 M2M token refresh via
+# create_client hook, ConfigMap-mounted, not in the PVC).
+name: hermes
+namespace: hermes
+manifests:
+  - namespace.yaml
+  - network-policy.yaml
+  - externalsecret.yaml
+  - configmap.yaml
+  - configmap-plugin.yaml
+  - deployment.yaml
+  - service.yaml

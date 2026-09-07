@@ -1,0 +1,53 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: hermes
+spec:
+  description: "Hermes is a single-pod workload; same-namespace traffic is its own probes."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: hermes
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: hermes
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: hermes
+spec:
+  description: "DNS resolution via CoreDNS for ai.internal.willpxxr.com, auth.willpxxr.com, and any messaging platform endpoints."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ai-gateway-and-auth0-egress
+  namespace: hermes
+spec:
+  description: "Hermes calls the in-cluster AI gateway (ai.internal.willpxxr.com, served via the Tailscale-exposed Envoy data plane) for LLM inference, and Auth0 (auth.willpxxr.com) for M2M token exchange. Both resolve to non-enumerable IPs (Tailscale / Cloudflare), so world egress on 443 -- see WEP-0014."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

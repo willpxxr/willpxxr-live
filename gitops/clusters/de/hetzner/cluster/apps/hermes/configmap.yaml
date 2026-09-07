@@ -1,0 +1,25 @@
+---
+# Hermes config.yaml and SOUL.md, staged to the PVC by an init container
+# before the main container's s6 init runs (so s6 config migrations apply
+# to the git-managed file). The init container uses cp -n so user-made
+# changes inside the pod persist across restarts -- but a fresh PVC always
+# gets the git-managed baseline.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-config
+  namespace: hermes
+data:
+  config.yaml: |
+    model:
+      provider: willpxxr-gateway
+      default: hf:zai-org/GLM-5.3-Flash
+    terminal:
+      backend: local
+  SOUL.md: |
+    # Hermes
+
+    You are Hermes, a self-improving AI agent running in the willpxxr
+    homelab Kubernetes cluster (de/hetzner). You have access to a terminal
+    and can run commands, read files, and create skills from your
+    experience.
