@@ -46,11 +46,6 @@ data:
             fallthrough in-addr.arpa ip6.arpa
             ttl 30
         }
-        # Forward willpxxr.com to Google DNS instead of the node's
-        # /etc/resolv.conf (Tailscale MagicDNS doesn't resolve non-proxied
-        # Cloudflare DNS-only records like auth.willpxr.com). Using 8.8.8.8
-        # instead of 1.1.1.1 to avoid a broken Cloudflare anycast PoP.
-        forward willpxxr.com. 8.8.8.8 8.8.4.4
         forward . /etc/resolv.conf {
            max_concurrent 1000
         }
