@@ -27,29 +27,3 @@ resource "onepassword_item" "argocd_redis" {
     }
   }
 }
-
-# Dashboard basic auth password for Hermes (WEP-0014). The dashboard requires
-# an auth provider when bound to non-loopback; Envoy Gateway's OIDC SecurityPolicy
-# handles the real auth, but the dashboard's own gate needs basic auth to start.
-# Same pattern as argocd_redis: random_password -> 1Password -> ExternalSecret.
-resource "random_password" "hermes_dashboard" {
-  length  = 32
-  special = false
-}
-
-resource "onepassword_item" "hermes_dashboard" {
-  vault    = data.onepassword_vault.kubernetes.uuid
-  title    = "hermes-dashboard"
-  category = "login"
-
-  section_map = {
-    credentials = {
-      field_map = {
-        password = {
-          type  = "CONCEALED"
-          value = random_password.hermes_dashboard.result
-        }
-      }
-    }
-  }
-}
