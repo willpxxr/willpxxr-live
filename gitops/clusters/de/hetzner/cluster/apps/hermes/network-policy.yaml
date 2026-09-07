@@ -39,10 +39,28 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
-  name: allow-ai-gateway-and-auth0-egress
+  name: allow-ai-gateway-egress
   namespace: hermes
 spec:
-  description: "Hermes calls the in-cluster AI gateway (ai.internal.willpxxr.com, served via the Tailscale-exposed Envoy data plane) for LLM inference, and Auth0 (auth.willpxxr.com) for M2M token exchange. Both resolve to non-enumerable IPs (Tailscale / Cloudflare), so world egress on 443 -- see WEP-0014."
+  description: "Hermes calls the in-cluster AI gateway (ai.internal.willpxxr.com) for LLM inference. Split-brain DNS (apps/kube-system/coredns-configmap.yaml) rewrites the hostname to the Envoy data-plane Service in envoy-gateway-system, so this allows egress to those pods on 443 -- see WEP-0014."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: envoy
+            io.kubernetes.pod.namespace: envoy-gateway-system
+      toPorts:
+        - ports:
+            - port: "10443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-auth0-egress
+  namespace: hermes
+spec:
+  description: "Hermes mints and refreshes Auth0 M2M tokens (client_credentials grant) at auth.willpxr.com for the AI gateway's JWT SecurityPolicy. Auth0's IPs aren't enumerable (Cloudflare-fronted), so world egress on 443."
   endpointSelector: {}
   egress:
     - toEntities:
