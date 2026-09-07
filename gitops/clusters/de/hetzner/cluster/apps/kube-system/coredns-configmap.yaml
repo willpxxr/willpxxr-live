@@ -1,0 +1,58 @@
+---
+# Split-brain DNS: pods resolve *.internal.willpxxr.com names to the in-cluster
+# Envoy gateway Service (ClusterIP) instead of the Tailscale IP that Cloudflare
+# advertises externally. This lets in-cluster workloads (Hermes, WEP-0014) call
+# the AI gateway at https://ai.internal.willpxxr.com/v1 with working TLS (the
+# cert matches the hostname) without needing Tailscale network reachability.
+#
+# CoreDNS `rewrite name` rewrites the query before the `kubernetes` plugin
+# resolves it, so the Envoy Service's ClusterIP is always current (no hardcoded
+# IPs). The `fallthrough` ensures unknown names in the zone still forward to
+# upstream DNS (Cloudflare) as before.
+#
+# This ConfigMap is Talos-bootstrap-owned (annotation below); ArgoCD manages
+# it via Replace (not SSA) to avoid field-manager conflicts with the Talos
+# inventory annotation -- same pattern as apps/envoy-gateway-config/envoyproxy.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log . {
+            class error
+        }
+        prometheus :9153
+
+        # Split-brain DNS: rewrite *.internal.willpxxr.com names that have
+        # in-cluster Service backends to their Service DNS names, so pods
+        # reach the Envoy data plane directly (ClusterIP) instead of the
+        # Tailscale IP. TLS works because the cert matches the original
+        # hostname (SNI is set by the client, not by DNS).
+        rewrite name ai.internal.willpxxr.com envoy-envoy-gateway-system-gateway-4864c4ea.envoy-gateway-system.svc.cluster.local
+
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
+        cache 30 {
+           disable success cluster.local
+           disable denial cluster.local
+        }
+        loop
+        reload
+        loadbalance
+    }

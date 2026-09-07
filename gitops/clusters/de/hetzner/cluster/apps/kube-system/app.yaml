@@ -8,3 +8,4 @@ manifests:
   - hubble-oidc-externalsecret.yaml
   - hubble-route.yaml
   - hubble-security-policy.yaml
+  - coredns-configmap.yaml
