@@ -1,19 +1,16 @@
 ---
-# Hermes dashboard exposure (WEP-0014): HTTPRoute + ExternalSecrets.
+# Hermes dashboard exposure (WEP-0014): HTTPRoute + ExternalSecret.
 # The dashboard handles its own Auth0 OIDC flow directly (self-hosted OIDC
-# provider, HERMES_DASHBOARD_OIDC_*), so no Envoy SecurityPolicy is needed
-# -- one clean auth layer instead of Envoy OIDC + basic auth.
-#
-# The envoy-gateway-oidc Auth0 client is reused (its callback URLs already
-# include hermes.internal.willpxxr.com from auth0.tf). The dashboard reads
-# client-id/client-secret from the ExternalSecret and runs the authorization
-# code flow itself.
+# provider, HERMES_DASHBOARD_OIDC_*). The OIDC provider requires a public
+# PKCE client (no client secret) -- auth0_client.hermes_dashboard is a native
+# client, separate from the confidential envoy_gateway_oidc client used by
+# the Envoy SecurityPolicy flows (hubble/argocd/tokens).
 
-# ExternalSecret for the shared envoy-gateway-oidc Auth0 client creds.
+# ExternalSecret for the hermes-dashboard Auth0 public client ID.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
-  name: envoy-gateway-oidc
+  name: hermes-dashboard-oidc
   namespace: hermes
 spec:
   refreshInterval: 6h
@@ -21,15 +18,12 @@ spec:
     kind: ClusterSecretStore
     name: onepassword
   target:
-    name: envoy-gateway-oidc
+    name: hermes-dashboard-oidc
     creationPolicy: Owner
   data:
     - secretKey: client-id
       remoteRef:
-        key: envoy-gateway-oidc/credentials/client_id
-    - secretKey: client-secret
-      remoteRef:
-        key: envoy-gateway-oidc/credentials/client_secret
+        key: hermes-dashboard/credentials/client_id
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

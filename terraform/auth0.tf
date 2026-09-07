@@ -670,6 +670,52 @@ resource "auth0_connection" "google" {
   is_domain_connection = true
 }
 
+# Public/native PKCE client for the Hermes dashboard's self-hosted OIDC
+# provider (WEP-0014). The dashboard's built-in OIDC auth requires a public
+# client (no secret) -- confidential clients are not supported. Same pattern
+# as ai_gateway_llm (native PKCE for browser-based flows).
+resource "auth0_client" "hermes_dashboard" {
+  name        = "willpxxr-live-hermes-dashboard"
+  description = "Native/public PKCE client for the Hermes dashboard's self-hosted OIDC provider (hermes.internal.willpxxr.com)."
+  app_type    = "native"
+
+  oidc_conformant = true
+  grant_types     = ["authorization_code", "refresh_token"]
+
+  callbacks = [
+    "https://hermes.internal.willpxxr.com/auth/callback",
+  ]
+
+  jwt_configuration {
+    alg = "RS256"
+  }
+
+  refresh_token {
+    rotation_type   = "rotating"
+    expiration_type = "expiring"
+    token_lifetime  = 2592000
+  }
+}
+
+# Not a secret (public/native clients have no client_secret -- PKCE), but
+# persisted here for easy discovery, same as ai_gateway_llm.
+resource "onepassword_item" "hermes_dashboard" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "hermes-dashboard"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        client_id = {
+          type  = "CONCEALED"
+          value = auth0_client.hermes_dashboard.client_id
+        }
+      }
+    }
+  }
+}
+
 # M2M client for the Hermes agent (apps/hermes/, WEP-0014) to access the
 # AI gateway (ai.internal.willpxxr.com). Hermes has no built-in M2M/OAuth
 # provider type, so a custom model-provider plugin (ConfigMap-mounted into
