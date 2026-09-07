@@ -16,6 +16,10 @@ data:
       default: willpxxr:auto
     terminal:
       backend: local
+    mcp_servers:
+      willpxxr-mcp:
+        url: "https://mcp.internal.willpxxr.com/mcp"
+        auth: oauth
   SOUL.md: |
     # Hermes
 

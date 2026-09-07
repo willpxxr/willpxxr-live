@@ -11,6 +11,10 @@
 # every request. This is the only way to get M2M OAuth into Hermes without
 # forking -- the built-in auth types (api_key, oauth_external,
 # external_process) don't handle client_credentials with auto-refresh.
+#
+# Also exposes get_mcp_token() for MCP server configuration -- the MCP
+# gateway uses a different Auth0 audience (/mcp path suffix) so a separate
+# token is minted and cached.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -25,22 +29,24 @@ data:
     from providers.base import ProviderProfile
 
     _GATEWAY_URL = "https://ai.internal.willpxxr.com/v1"
-    _AUTH0_TOKEN_URL = "https://auth.willpxxr.com/oauth/token"
-    _AUTH0_AUDIENCE = "https://ai.internal.willpxxr.com"
+    _AUTH0_TOKEN_URL = "https://auth.willpxr.com/oauth/token"
+    _LLM_AUDIENCE = "https://ai.internal.willpxxr.com"
+    _MCP_AUDIENCE = "https://mcp.internal.willpxxr.com/mcp"
 
-    _token_cache = {"token": None, "expires_at": 0.0}
+    _token_cache = {}
 
-    def _refresh_token():
+    def _refresh_token(audience):
         now = time.time()
-        if _token_cache["token"] and now < _token_cache["expires_at"] - 60:
-            return _token_cache["token"]
+        cached = _token_cache.get(audience)
+        if cached and now < cached["expires_at"] - 60:
+            return cached["token"]
 
         client_id = os.environ.get("HERMES_AUTH0_CLIENT_ID", "")
         client_secret = os.environ.get("HERMES_AUTH0_CLIENT_SECRET", "")
         if not client_id or not client_secret:
             raise RuntimeError(
                 "HERMES_AUTH0_CLIENT_ID / HERMES_AUTH0_CLIENT_SECRET not set; "
-                "cannot mint M2M token for the AI gateway"
+                "cannot mint M2M token"
             )
 
         resp = httpx.post(
@@ -49,22 +55,22 @@ data:
                 "grant_type": "client_credentials",
                 "client_id": client_id,
                 "client_secret": client_secret,
-                "audience": _AUTH0_AUDIENCE,
+                "audience": audience,
             },
             timeout=10,
         )
         resp.raise_for_status()
         data = resp.json()
-        _token_cache["token"] = data["access_token"]
-        _token_cache["expires_at"] = now + data.get("expires_in", 3600)
-        return _token_cache["token"]
+        token = data["access_token"]
+        _token_cache[audience] = {"token": token, "expires_at": now + data.get("expires_in", 3600)}
+        return token
 
     class _Auth0M2MTransport(httpx.BaseTransport):
         def __init__(self):
             self._inner = httpx.HTTPTransport()
 
         def handle_request(self, request):
-            request.headers["Authorization"] = f"Bearer {_refresh_token()}"
+            request.headers["Authorization"] = f"Bearer {_refresh_token(_LLM_AUDIENCE)}"
             return self._inner.handle_request(request)
 
     class WillpxxrGatewayProfile(ProviderProfile):
@@ -78,9 +84,6 @@ data:
             )
 
         def fetch_models(self, *, api_key=None, base_url=None, timeout=8.0):
-            # The gateway doesn't expose willpxxr:* aliases via /v1/models
-            # (they're custom AIGatewayRoute rules, not real upstream models).
-            # Return the curated list so /model picker and doctor work.
             return [
                 "willpxxr:auto",
                 "willpxxr:text:small",
@@ -103,6 +106,13 @@ data:
         ),
         default_aux_model="willpxxr:text:small",
     ))
+
+    # Exposed for MCP config: Hermes reads WILLPXR_MCP_TOKEN at gateway start
+    # to populate the mcp_servers bearer header. The token is refreshed
+    # lazily -- the env var is a placeholder, the actual header injection
+    # happens via a custom httpx transport on the MCP client.
+    def get_mcp_token():
+        return _refresh_token(_MCP_AUDIENCE)
   plugin.yaml: |
     name: willpxxr-gateway
     kind: model-provider

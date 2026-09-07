@@ -39,6 +39,7 @@ data:
         # Tailscale IP. TLS works because the cert matches the original
         # hostname (SNI is set by the client, not by DNS).
         rewrite name ai.internal.willpxxr.com envoy-envoy-gateway-system-gateway-4864c4ea.envoy-gateway-system.svc.cluster.local
+        rewrite name mcp.internal.willpxxr.com envoy-envoy-gateway-system-gateway-4864c4ea.envoy-gateway-system.svc.cluster.local
 
         kubernetes cluster.local in-addr.arpa ip6.arpa {
             pods insecure
