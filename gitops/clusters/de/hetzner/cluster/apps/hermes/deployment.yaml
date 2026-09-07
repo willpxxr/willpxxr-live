@@ -55,7 +55,7 @@ spec:
                   name: hermes-discord
                   key: DISCORD_BOT_TOKEN
             - name: DISCORD_ALLOWED_USERS
-              value: "291248097898528778"
+              value: "291248097898528778,1546643286947659869"
             - name: HERMES_DASHBOARD
               value: "1"
             - name: HERMES_DASHBOARD_HOST
