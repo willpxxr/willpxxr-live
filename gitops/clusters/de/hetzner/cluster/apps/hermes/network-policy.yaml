@@ -22,7 +22,7 @@ metadata:
   name: allow-dns-egress
   namespace: hermes
 spec:
-  description: "DNS resolution via CoreDNS for ai.internal.willpxxr.com, auth.willpxr.com, and Discord endpoints. Required for toFQDNs policies to resolve."
+  description: "DNS resolution via CoreDNS for ai.internal.willpxxr.com, auth.willpxxr.com, and Discord endpoints."
   endpointSelector: {}
   egress:
     - toEndpoints:
@@ -60,11 +60,11 @@ metadata:
   name: allow-auth0-egress
   namespace: hermes
 spec:
-  description: "Hermes mints and refreshes Auth0 M2M tokens (client_credentials grant) at auth.willpxxr.com for the AI gateway's JWT SecurityPolicy."
+  description: "Hermes mints and refreshes Auth0 M2M tokens (client_credentials grant) at auth.willpxr.com for the AI gateway's JWT SecurityPolicy. Auth0 is Cloudflare-fronted so IPs aren't enumerable."
   endpointSelector: {}
   egress:
-    - toFQDNs:
-        - matchName: "auth.willpxxr.com"
+    - toEntities:
+        - world
       toPorts:
         - ports:
             - port: "443"
@@ -76,14 +76,11 @@ metadata:
   name: allow-discord-egress
   namespace: hermes
 spec:
-  description: "Hermes messaging gateway connects to Discord via WebSocket (gateway.discord.gg) and REST (discord.com)."
+  description: "Hermes messaging gateway connects to Discord via WebSocket (gateway.discord.gg) and REST (discord.com). Discord's IPs aren't enumerable."
   endpointSelector: {}
   egress:
-    - toFQDNs:
-        - matchName: "discord.com"
-        - matchName: "gateway.discord.gg"
-        - matchName: "cdn.discordapp.com"
-        - matchPattern: "*.discord.com"
+    - toEntities:
+        - world
       toPorts:
         - ports:
             - port: "443"
