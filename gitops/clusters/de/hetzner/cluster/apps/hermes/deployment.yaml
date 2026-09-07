@@ -62,6 +62,8 @@ spec:
               value: "0.0.0.0"
             - name: HERMES_DASHBOARD_OIDC_ISSUER
               value: "https://auth.willpxr.com"
+            - name: HERMES_DASHBOARD_PUBLIC_URL
+              value: "https://hermes.internal.willpxxr.com"
             - name: HERMES_DASHBOARD_OIDC_CLIENT_ID
               valueFrom:
                 secretKeyRef:

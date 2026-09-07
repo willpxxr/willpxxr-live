@@ -29,7 +29,7 @@ resource "auth0_client" "envoy_gateway_oidc" {
     "https://hubble.internal.willpxxr.com/oauth2/callback",
     "https://argocd.internal.willpxxr.com/oauth2/callback",
     "https://tokens.internal.willpxxr.com/oauth2/callback",
-    "https://hermes.internal.willpxxr.com/oauth2/callback",
+    "https://hermes.internal.willpxxr.com/auth/callback",
   ]
   allowed_logout_urls = [
     "https://hubble.internal.willpxxr.com",
