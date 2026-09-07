@@ -199,3 +199,14 @@ spec:
               protocol: TCP
             - port: "10443"
               protocol: TCP
+    # In-cluster pods reaching the AI gateway via split-brain DNS
+    # (apps/kube-system/coredns-configmap.yaml) hit the Envoy data plane
+    # directly on 10443 (Service port 443 → targetPort 10443). Hermes
+    # (WEP-0014) is the first such workload.
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: hermes
+      toPorts:
+        - ports:
+            - port: "10443"
+              protocol: TCP
