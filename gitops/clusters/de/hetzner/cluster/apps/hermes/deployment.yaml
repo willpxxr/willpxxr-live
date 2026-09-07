@@ -54,6 +54,8 @@ spec:
                 secretKeyRef:
                   name: hermes-discord
                   key: DISCORD_BOT_TOKEN
+            - name: DISCORD_ALLOWED_USERS
+              value: "291248097898528778"
           ports:
             - name: gateway-api
               containerPort: 8642
