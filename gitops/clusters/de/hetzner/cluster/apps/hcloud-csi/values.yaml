@@ -1,0 +1,7 @@
+# Reuses the existing hcloud secret in kube-system (created by the
+# hcloud-talos module) -- the chart defaults to existingSecret.name: hcloud,
+# existingSecret.key: token, so no token value is set here.
+controller:
+  # Pin the controller to nbg1 so it can provision volumes even when not
+  # running on a hcloud node (the cluster is single-location, nbg1).
+  hcloudVolumeDefaultLocation: nbg1

@@ -1,0 +1,15 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# hcloud-csi provisions Hetzner Cloud Volumes as Kubernetes PersistentVolumes.
+# Runs in kube-system (conventional for CSI drivers) and reuses the existing
+# hcloud secret (token key) created by the hcloud-talos module. The chart's
+# default storageClass (hcloud-volumes, reclaimPolicy Delete) becomes the
+# cluster default -- the first StorageClass on this cluster, unblocking
+# PVC-dependent apps like Hermes (WEP-0014).
+name: hcloud-csi
+namespace: kube-system
+helm:
+  - repoURL: https://charts.hetzner.cloud
+    chart: hcloud-csi
+    version: 2.23.0
+    releaseName: hcloud-csi
+    values: values.yaml
