@@ -29,7 +29,7 @@ data:
     from providers.base import ProviderProfile
 
     _GATEWAY_URL = "https://ai.internal.willpxxr.com/v1"
-    _AUTH0_TOKEN_URL = "https://auth.willpxr.com/oauth/token"
+    _AUTH0_TOKEN_URL = "https://auth.willpxxr.com/oauth/token"
     _LLM_AUDIENCE = "https://ai.internal.willpxxr.com"
     _MCP_AUDIENCE = "https://mcp.internal.willpxxr.com/mcp"
 

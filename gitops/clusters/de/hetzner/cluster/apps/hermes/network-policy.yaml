@@ -80,7 +80,7 @@ metadata:
   name: allow-auth0-egress
   namespace: hermes
 spec:
-  description: "Hermes mints and refreshes Auth0 M2M tokens (client_credentials grant) at auth.willpxr.com for the AI gateway's JWT SecurityPolicy. Auth0 is Cloudflare-fronted so IPs aren't enumerable."
+  description: "Hermes mints and refreshes Auth0 M2M tokens (client_credentials grant) at auth.willpxxr.com for the AI gateway's JWT SecurityPolicy. Auth0 is Cloudflare-fronted so IPs aren't enumerable."
   endpointSelector: {}
   egress:
     - toEntities:
