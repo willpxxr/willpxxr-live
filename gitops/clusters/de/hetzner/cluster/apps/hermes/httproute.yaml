@@ -1,0 +1,113 @@
+---
+# Hermes dashboard exposure (WEP-0014): HTTPRoute + SecurityPolicy (OIDC +
+# JWT) + ExternalSecrets, same pattern as ArgoCD/Hubble. The dashboard's
+# own basic auth gate (HERMES_DASHBOARD_BASIC_AUTH_*) is a secondary check
+# required for non-loopback startup; Envoy's OIDC is the real auth.
+
+# ExternalSecret for the shared envoy-gateway-oidc Auth0 client creds
+# (same 1Password item as hubble/argocd/tokens -- auth0.tf:
+# onepassword_item.envoy_gateway_oidc).
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: envoy-gateway-oidc
+  namespace: hermes
+spec:
+  refreshInterval: 6h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: envoy-gateway-oidc
+    creationPolicy: Owner
+  data:
+    - secretKey: client-id
+      remoteRef:
+        key: envoy-gateway-oidc/credentials/client_id
+    - secretKey: client-secret
+      remoteRef:
+        key: envoy-gateway-oidc/credentials/client_secret
+---
+# ExternalSecret for the dashboard basic auth password (terraform/argocd.tf:
+# onepassword_item.hermes_dashboard).
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: hermes-dashboard
+  namespace: hermes
+spec:
+  refreshInterval: 6h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: hermes-dashboard
+    creationPolicy: Owner
+  data:
+    - secretKey: password
+      remoteRef:
+        key: hermes-dashboard/credentials/password
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hermes
+  namespace: hermes
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "hermes.internal.willpxxr.com"
+  rules:
+    - backendRefs:
+        - name: hermes
+          port: 9119
+---
+# Same Auth0-at-the-gateway model as argocd/security-policy.yaml (and hubble):
+# Envoy Gateway terminates the browser OIDC flow, validates the JWT, and only
+# forwards authorized requests. The dashboard's own basic auth is a secondary
+# gate (required for non-loopback startup).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: hermes-oidc
+  namespace: hermes
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: hermes
+  oidc:
+    provider:
+      issuer: "https://auth.willpxxr.com"
+    clientIDRef:
+      name: envoy-gateway-oidc
+    clientSecret:
+      name: envoy-gateway-oidc
+    redirectURL: "https://hermes.internal.willpxxr.com/oauth2/callback"
+    logoutPath: "/oauth2/logout"
+    cookieDomain: "internal.willpxxr.com"
+    forwardAccessToken: true
+    scopes:
+      - "hermes:use"
+    resources:
+      - "https://hermes.internal.willpxxr.com"
+  jwt:
+    providers:
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://hermes.internal.willpxxr.com"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "hermes:use"

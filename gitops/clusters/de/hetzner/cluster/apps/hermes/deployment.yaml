@@ -22,7 +22,7 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              cp -n /opt/hermes-staging/config.yaml /opt/data/config.yaml || true
+              cp /opt/hermes-staging/config.yaml /opt/data/config.yaml
               cp -n /opt/hermes-staging/SOUL.md /opt/data/SOUL.md || true
           volumeMounts:
             - name: data
@@ -56,6 +56,17 @@ spec:
                   key: DISCORD_BOT_TOKEN
             - name: DISCORD_ALLOWED_USERS
               value: "291248097898528778"
+            - name: HERMES_DASHBOARD
+              value: "1"
+            - name: HERMES_DASHBOARD_HOST
+              value: "0.0.0.0"
+            - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME
+              value: "hermes"
+            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-dashboard
+                  key: password
           ports:
             - name: gateway-api
               containerPort: 8642

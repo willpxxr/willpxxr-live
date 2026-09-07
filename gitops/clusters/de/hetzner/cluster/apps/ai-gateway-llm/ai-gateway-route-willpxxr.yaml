@@ -1,0 +1,174 @@
+---
+# Custom willpxxr:* model aliases (WEP-0014). Each alias maps to a real
+# Synthetic upstream model via modelNameOverride. Each gets its own
+# AIGatewayRoute (generating its own HTTPRoute) + SecurityPolicy requiring
+# a dedicated Auth0 scope, so M2M clients can be limited to specific
+# model tiers (llm:auto, llm:small, llm:large).
+#
+# The existing ai-gateway-llm route matches ^(syn|hf):.+$ and the
+# ai-gateway-llm-synthetic-anthropic route matches anthropic:*. Neither
+# matches willpxxr:* (starts with willpxxr:, not syn:/hf:/anthropic:),
+# so there's no routing ambiguity.
+#
+# Alias mapping (verified live via api.synthetic.new/v1/models):
+#   willpxxr:auto       → hf:zai-org/GLM-5.3-Flash (backs syn:large:text)
+#   willpxxr:text:small → hf:zai-org/GLM-4.7-Flash (backs syn:small:text)
+#   willpxxr:text:large → hf:zai-org/GLM-5.3-Flash (backs syn:large:text)
+
+# ── willpxxr:auto (llm:auto scope) ──────────────────────────
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm-willpxxr-auto
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "ai.internal.willpxxr.com"
+  rules:
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: willpxxr:auto
+      backendRefs:
+        - name: synthetic
+          modelNameOverride: hf:zai-org/GLM-5.3-Flash
+      timeouts:
+        request: 10m
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ai-gateway-llm-willpxxr-auto
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm-willpxxr-auto
+  jwt:
+    providers:
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://ai.internal.willpxxr.com"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "llm:auto"
+
+# ── willpxxr:text:small (llm:small scope) ───────────────────
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm-willpxxr-small
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "ai.internal.willpxxr.com"
+  rules:
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: willpxxr:text:small
+      backendRefs:
+        - name: synthetic
+          modelNameOverride: hf:zai-org/GLM-4.7-Flash
+      timeouts:
+        request: 10m
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ai-gateway-llm-willpxxr-small
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm-willpxxr-small
+  jwt:
+    providers:
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://ai.internal.willpxxr.com"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "llm:small"
+
+# ── willpxxr:text:large (llm:large scope) ───────────────────
+---
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: ai-gateway-llm-willpxxr-large
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: envoy-gateway-system
+      sectionName: tls
+  hostnames:
+    - "ai.internal.willpxxr.com"
+  rules:
+    - matches:
+        - headers:
+            - name: x-ai-eg-model
+              value: willpxxr:text:large
+      backendRefs:
+        - name: synthetic
+          modelNameOverride: hf:zai-org/GLM-5.3-Flash
+      timeouts:
+        request: 10m
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: ai-gateway-llm-willpxxr-large
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-gateway-llm-willpxxr-large
+  jwt:
+    providers:
+      - name: auth0
+        issuer: "https://auth.willpxxr.com/"
+        remoteJWKS:
+          uri: "https://auth.willpxxr.com/.well-known/jwks.json"
+        audiences:
+          - "https://ai.internal.willpxxr.com"
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          jwt:
+            provider: auth0
+            scopes:
+              - "llm:large"

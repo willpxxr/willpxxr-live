@@ -29,16 +29,19 @@ resource "auth0_client" "envoy_gateway_oidc" {
     "https://hubble.internal.willpxxr.com/oauth2/callback",
     "https://argocd.internal.willpxxr.com/oauth2/callback",
     "https://tokens.internal.willpxxr.com/oauth2/callback",
+    "https://hermes.internal.willpxxr.com/oauth2/callback",
   ]
   allowed_logout_urls = [
     "https://hubble.internal.willpxxr.com",
     "https://argocd.internal.willpxxr.com",
     "https://tokens.internal.willpxxr.com",
+    "https://hermes.internal.willpxxr.com",
   ]
   web_origins = [
     "https://hubble.internal.willpxxr.com",
     "https://argocd.internal.willpxxr.com",
     "https://tokens.internal.willpxxr.com",
+    "https://hermes.internal.willpxxr.com",
   ]
 
   jwt_configuration {
@@ -230,6 +233,11 @@ resource "auth0_role" "token_vault_use" {
   description = "Grants access to the MCP credential vault UI (tokens.internal.willpxxr.com), where third-party OAuth credentials for MCP backends are connected (WEP-0006)."
 }
 
+resource "auth0_role" "hermes_use" {
+  name        = "hermes:use"
+  description = "Grants access to the Hermes agent dashboard (hermes.internal.willpxxr.com)."
+}
+
 data "auth0_user" "will" {
   query = "email:\"williamparr96@gmail.com\""
 }
@@ -246,6 +254,7 @@ resource "auth0_user_roles" "will" {
     auth0_role.llm_use.id,
     auth0_role.mcp_use.id,
     auth0_role.token_vault_use.id,
+    auth0_role.hermes_use.id,
   ]
 }
 
@@ -377,7 +386,24 @@ resource "auth0_resource_server_scopes" "ai_llm" {
 
   scopes {
     name        = "llm:use"
-    description = "Use the self-hosted LLM gateway"
+    description = "Use the self-hosted LLM gateway (generic access, existing syn:/hf: routes)"
+  }
+
+  # Per-alias scopes for custom willpxxr:* model aliases (WEP-0014). Each
+  # AIGatewayRoute rule (willpxxr:auto, willpxxr:text:small, willpxxr:text:large)
+  # has its own SecurityPolicy requiring the matching scope, so M2M clients
+  # can be limited to specific model tiers.
+  scopes {
+    name        = "llm:auto"
+    description = "Access willpxxr:auto model alias (GLM-5.3-Flash)"
+  }
+  scopes {
+    name        = "llm:small"
+    description = "Access willpxxr:text:small model alias (GLM-4.7-Flash)"
+  }
+  scopes {
+    name        = "llm:large"
+    description = "Access willpxxr:text:large model alias (GLM-5.3-Flash)"
   }
 }
 
@@ -429,6 +455,27 @@ resource "auth0_resource_server_scopes" "token_vault" {
   scopes {
     name        = "token_vault:use"
     description = "Connect third-party credentials in the MCP credential vault"
+  }
+}
+
+# Hermes dashboard (hermes.internal.willpxxr.com, WEP-0014). Same pattern as
+# hubble/argo: Envoy Gateway SecurityPolicy does OIDC + JWT validation against
+# the shared envoy-gateway-oidc client, with the hermes:use scope gating access.
+resource "auth0_resource_server" "hermes" {
+  name       = "willpxxr-live hermes"
+  identifier = "https://hermes.internal.willpxxr.com"
+
+  enforce_policies                                = true
+  token_dialect                                   = "access_token_authz"
+  skip_consent_for_verifiable_first_party_clients = false
+}
+
+resource "auth0_resource_server_scopes" "hermes" {
+  resource_server_identifier = auth0_resource_server.hermes.identifier
+
+  scopes {
+    name        = "hermes:use"
+    description = "Access the Hermes agent dashboard"
   }
 }
 
@@ -511,6 +558,18 @@ resource "auth0_role_permissions" "llm_use" {
     name                       = "llm:use"
     resource_server_identifier = auth0_resource_server.ai_llm.identifier
   }
+  permissions {
+    name                       = "llm:auto"
+    resource_server_identifier = auth0_resource_server.ai_llm.identifier
+  }
+  permissions {
+    name                       = "llm:small"
+    resource_server_identifier = auth0_resource_server.ai_llm.identifier
+  }
+  permissions {
+    name                       = "llm:large"
+    resource_server_identifier = auth0_resource_server.ai_llm.identifier
+  }
 
   depends_on = [auth0_resource_server_scopes.ai_llm]
 }
@@ -535,6 +594,17 @@ resource "auth0_role_permissions" "token_vault_use" {
   }
 
   depends_on = [auth0_resource_server_scopes.token_vault]
+}
+
+resource "auth0_role_permissions" "hermes_use" {
+  role_id = auth0_role.hermes_use.id
+
+  permissions {
+    name                       = "hermes:use"
+    resource_server_identifier = auth0_resource_server.hermes.identifier
+  }
+
+  depends_on = [auth0_resource_server_scopes.hermes]
 }
 
 resource "onepassword_item" "envoy_gateway_oidc" {
@@ -628,7 +698,7 @@ resource "auth0_client_credentials" "hermes_m2m" {
 resource "auth0_client_grant" "hermes_m2m_llm" {
   client_id = auth0_client.hermes_m2m.client_id
   audience  = auth0_resource_server.ai_llm.identifier
-  scopes    = ["llm:use"]
+  scopes    = ["llm:use", "llm:auto", "llm:small", "llm:large"]
 }
 
 resource "onepassword_item" "hermes_m2m" {

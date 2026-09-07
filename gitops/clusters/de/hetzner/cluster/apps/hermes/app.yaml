@@ -13,3 +13,4 @@ manifests:
   - configmap-plugin.yaml
   - deployment.yaml
   - service.yaml
+  - httproute.yaml

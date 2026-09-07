@@ -77,6 +77,16 @@ data:
                 http_client=http_client,
             )
 
+        def fetch_models(self, *, api_key=None, base_url=None, timeout=8.0):
+            # The gateway doesn't expose willpxxr:* aliases via /v1/models
+            # (they're custom AIGatewayRoute rules, not real upstream models).
+            # Return the curated list so /model picker and doctor work.
+            return [
+                "willpxxr:auto",
+                "willpxxr:text:small",
+                "willpxxr:text:large",
+            ]
+
     register_provider(WillpxxrGatewayProfile(
         name="willpxxr-gateway",
         aliases=("willpxxr", "gateway"),
@@ -86,8 +96,12 @@ data:
         base_url=_GATEWAY_URL,
         auth_type="api_key",
         supports_health_check=False,
-        fallback_models=("hf:zai-org/GLM-5.3-Flash",),
-        default_aux_model="hf:zai-org/GLM-5.3-Flash",
+        fallback_models=(
+            "willpxxr:auto",
+            "willpxxr:text:small",
+            "willpxxr:text:large",
+        ),
+        default_aux_model="willpxxr:text:small",
     ))
   plugin.yaml: |
     name: willpxxr-gateway

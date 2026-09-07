@@ -70,7 +70,7 @@ metadata:
   name: allow-backend-egress
   namespace: envoy-gateway-system
 spec:
-  description: "Envoy proxies requests to the actual backends routed via HTTPRoute: Hubble UI (kube-system), the Flux Operator UI (flux-system), kagent-tools (kagent), the ArgoCD UI (argocd), mcp-token-vault (mcp-token-vault, WEP-0006) and the vLLM Semantic Router ext-proc (vllm-semantic-router-system, WEP-0013)."
+  description: "Envoy proxies requests to the actual backends routed via HTTPRoute: Hubble UI (kube-system), the Flux Operator UI (flux-system), kagent-tools (kagent), the ArgoCD UI (argocd), mcp-token-vault (mcp-token-vault, WEP-0006), the vLLM Semantic Router ext-proc (vllm-semantic-router-system, WEP-0013) and the Hermes dashboard (hermes, WEP-0014)."
   endpointSelector: {}
   egress:
     - toEndpoints:
@@ -124,6 +124,14 @@ spec:
             - port: "9091"
               protocol: TCP
             - port: "9092"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: hermes
+            io.kubernetes.pod.namespace: hermes
+      toPorts:
+        - ports:
+            - port: "9119"
               protocol: TCP
 ---
 apiVersion: "cilium.io/v2"

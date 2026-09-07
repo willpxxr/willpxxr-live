@@ -6,6 +6,7 @@ namespace: envoy-gateway-system
 manifests:
   - ai-gateway-route.yaml
   - ai-gateway-route-synthetic-anthropic.yaml
+  - ai-gateway-route-willpxxr.yaml
   - ai-service-backend-synthetic.yaml
   - ai-service-backend-synthetic-anthropic.yaml
   - backend-synthetic.yaml

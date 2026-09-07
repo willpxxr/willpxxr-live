@@ -13,7 +13,7 @@ data:
   config.yaml: |
     model:
       provider: willpxxr-gateway
-      default: hf:zai-org/GLM-5.3-Flash
+      default: willpxxr:auto
     terminal:
       backend: local
   SOUL.md: |
