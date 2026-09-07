@@ -49,6 +49,11 @@ spec:
                 secretKeyRef:
                   name: hermes-m2m
                   key: HERMES_AUTH0_CLIENT_SECRET
+            - name: DISCORD_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hermes-discord
+                  key: DISCORD_BOT_TOKEN
           ports:
             - name: gateway-api
               containerPort: 8642

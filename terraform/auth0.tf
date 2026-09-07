@@ -651,3 +651,30 @@ resource "onepassword_item" "hermes_m2m" {
     }
   }
 }
+
+# Discord bot token for Hermes messaging gateway (WEP-0014). Created
+# manually in the Discord Developer Portal (Bot → Reset Token) — there's
+# no Terraform provider for Discord. Terraform creates the 1Password item
+# with a placeholder; the real token is pasted by hand afterwards, same
+# pattern as synthetic.tf. ignore_changes prevents the next apply from
+# reverting the hand-pasted value.
+resource "onepassword_item" "hermes_discord" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "hermes-discord"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        bot_token = {
+          type  = "CONCEALED"
+          value = "REPLACE-ME-with-Discord-bot-token"
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [section_map]
+  }
+}

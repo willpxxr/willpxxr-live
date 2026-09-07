@@ -22,7 +22,7 @@ metadata:
   name: allow-dns-egress
   namespace: hermes
 spec:
-  description: "DNS resolution via CoreDNS for ai.internal.willpxxr.com, auth.willpxxr.com, and any messaging platform endpoints."
+  description: "DNS resolution via CoreDNS for ai.internal.willpxxr.com, auth.willpxr.com, and Discord endpoints. Required for toFQDNs policies to resolve."
   endpointSelector: {}
   egress:
     - toEndpoints:
@@ -42,7 +42,7 @@ metadata:
   name: allow-ai-gateway-egress
   namespace: hermes
 spec:
-  description: "Hermes calls the in-cluster AI gateway (ai.internal.willpxxr.com) for LLM inference. Split-brain DNS (apps/kube-system/coredns-configmap.yaml) rewrites the hostname to the Envoy data-plane Service in envoy-gateway-system, so this allows egress to those pods on 443 -- see WEP-0014."
+  description: "Hermes calls the in-cluster AI gateway (ai.internal.willpxxr.com) for LLM inference. Split-brain DNS (apps/kube-system/coredns-configmap.yaml) rewrites the hostname to the Envoy data-plane Service in envoy-gateway-system, so this allows egress to those pods on 10443 -- see WEP-0014."
   endpointSelector: {}
   egress:
     - toEndpoints:
@@ -60,11 +60,30 @@ metadata:
   name: allow-auth0-egress
   namespace: hermes
 spec:
-  description: "Hermes mints and refreshes Auth0 M2M tokens (client_credentials grant) at auth.willpxr.com for the AI gateway's JWT SecurityPolicy. Auth0's IPs aren't enumerable (Cloudflare-fronted), so world egress on 443."
+  description: "Hermes mints and refreshes Auth0 M2M tokens (client_credentials grant) at auth.willpxxr.com for the AI gateway's JWT SecurityPolicy."
   endpointSelector: {}
   egress:
-    - toEntities:
-        - world
+    - toFQDNs:
+        - matchName: "auth.willpxxr.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-discord-egress
+  namespace: hermes
+spec:
+  description: "Hermes messaging gateway connects to Discord via WebSocket (gateway.discord.gg) and REST (discord.com)."
+  endpointSelector: {}
+  egress:
+    - toFQDNs:
+        - matchName: "discord.com"
+        - matchName: "gateway.discord.gg"
+        - matchName: "cdn.discordapp.com"
+        - matchPattern: "*.discord.com"
       toPorts:
         - ports:
             - port: "443"
