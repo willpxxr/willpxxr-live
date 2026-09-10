@@ -1,0 +1,35 @@
+---
+# Public LoadBalancer Service for Valheim (WEP-0015). No loadBalancerClass --
+# the hcloud cloud-controller-manager reconciles this and provisions a Hetzner
+# Cloud Load Balancer (type lb11) with a public IP. externalTrafficPolicy: Local
+# preserves client source IPs (no SNAT) and restricts forwarding to nodes
+# running the pod. ExternalDNS picks up the hostname annotation and creates a
+# DNS-only A record for valheim.willpxxr.com pointing at the LB's public IP.
+apiVersion: v1
+kind: Service
+metadata:
+  name: valheim
+  namespace: valheim
+  annotations:
+    load-balancer.hetzner.cloud/type: lb11
+    load-balancer.hetzner.cloud/location: nbg1
+    load-balancer.hetzner.cloud/name: valheim
+    external-dns.alpha.kubernetes.io/hostname: valheim.willpxxr.com
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: valheim
+  ports:
+    - name: game
+      port: 2456
+      targetPort: game
+      protocol: UDP
+    - name: query
+      port: 2457
+      targetPort: query
+      protocol: UDP
+    - name: crossplay
+      port: 2458
+      targetPort: crossplay
+      protocol: UDP

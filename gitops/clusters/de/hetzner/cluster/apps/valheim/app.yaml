@@ -1,0 +1,8 @@
+name: valheim
+namespace: valheim
+manifests:
+  - namespace.yaml
+  - network-policy.yaml
+  - externalsecret.yaml
+  - statefulset.yaml
+  - service.yaml

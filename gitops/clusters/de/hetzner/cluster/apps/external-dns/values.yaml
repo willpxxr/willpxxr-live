@@ -17,6 +17,7 @@ env:
 
 sources:
   - gateway-httproute
+  - service
 
 # Zone-level filter: the Cloudflare zone is willpxxr.com, and external-dns's
 # zone filter does not match parent zones, so filtering on the subdomain

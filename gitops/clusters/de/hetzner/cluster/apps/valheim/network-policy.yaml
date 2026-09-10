@@ -1,0 +1,76 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: valheim
+spec:
+  description: "Valheim is a single-pod workload; same-namespace traffic is its own probes."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: valheim
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: valheim
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: valheim
+spec:
+  description: "DNS resolution via CoreDNS for Steam API endpoints."
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-valheim-ingress
+  namespace: valheim
+spec:
+  description: "Public UDP ingress for Valheim game (2456), Steam query (2457), and crossplay backend (2458) traffic via the hcloud LoadBalancer. First public ingress workload in the cluster (WEP-0015)."
+  endpointSelector: {}
+  ingress:
+    - fromEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "2456"
+              protocol: UDP
+            - port: "2457"
+              protocol: UDP
+            - port: "2458"
+              protocol: UDP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-steam-egress
+  namespace: valheim
+spec:
+  description: "Valheim server downloads updates and authenticates players via Steam. Steam IPs aren't enumerable (CDN + master servers), so egress to world on TCP 443 (Steam API/content) and UDP 27000-27031 (Steam backend) is required."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "27000"
+              endPort: 27031
+              protocol: UDP

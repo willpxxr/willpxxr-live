@@ -24,3 +24,4 @@ reasoning fits on a page, it's an ADR.
 | [0006](0006-rfc-token-vault-mcp-credentials.md) | RFC | Token vault for ai-gateway-mcp third-party credentials (Supabase-backed) | Implemented |
 | [0007](0007-adr-mcp-upstream-credential-injection.md) | ADR | MCP upstream credential injection: vault proxy fallback, defer Envoy-side injection | Accepted |
 | [0014](0014-adr-hermes-agent-via-ai-gateway.md) | ADR | Hermes agent via AI gateway with custom provider plugin (Auth0 M2M token refresh) | Accepted |
+| [0015](0015-rfc-valheim-public-udp-server.md) | RFC | Valheim dedicated server — first public UDP workload (hcloud LB, ExternalDNS service source) | Accepted |
