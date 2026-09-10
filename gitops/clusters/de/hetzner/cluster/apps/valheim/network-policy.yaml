@@ -62,7 +62,7 @@ metadata:
   name: allow-steam-egress
   namespace: valheim
 spec:
-  description: "Valheim server downloads updates and authenticates players via Steam. Steam IPs aren't enumerable (CDN + master servers), so egress to world on TCP 443 (Steam API/content) and UDP 27000-27031 (Steam backend) is required."
+  description: "Valheim server downloads updates and authenticates players via Steam (TCP 443, UDP 27000-27031) and PlayFab crossplay backend (UDP 3075). IPs aren't enumerable (CDN + Azure PlayFab relay servers)."
   endpointSelector: {}
   egress:
     - toEntities:
@@ -71,6 +71,8 @@ spec:
         - ports:
             - port: "443"
               protocol: TCP
+            - port: "3075"
+              protocol: UDP
             - port: "27000"
               endPort: 27031
               protocol: UDP
