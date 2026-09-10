@@ -67,17 +67,33 @@ module) but has never been used to provision a LoadBalancer.
    directory trees don't overlap on the same volume). StatefulSet with
    `volumeClaimTemplates`.
 
+8. **CEL MutatingAdmissionPolicy for topology spread**
+   (`apps/cel-admission-policies/mutating-policies.yaml`): a
+   `MutatingAdmissionPolicy` that injects `topologySpreadConstraints`
+   (`maxSkew: 1`, `topologyKey: kubernetes.io/hostname`,
+   `whenUnsatisfiable: ScheduleAnyway`) into pods at admission time, using
+   `app.kubernetes.io/name` as the `labelSelector`. This fixes the issue where
+   multi-replica workloads (e.g. the Tailscale ProxyGroup ingress pods) all
+   landed on the same node. `ScheduleAnyway` (not `DoNotSchedule`) is used
+   because with only 2 worker nodes, a hard constraint would block pod
+   rescheduling during single-node outages. Pods that already have hostname-
+   based TSC are left alone. kube-system is excluded (DaemonSets don't need it).
+
 ## Convergence
 
 Single push to `main` — no phased migration needed:
 
-- **Terraform apply** (TFC): replaces worker-2 with CPX42 (existing workloads on
+- **Terraform apply** (TFC): replaces worker-2 with CX33 (existing workloads on
   worker-2 reschedule to worker-1 during the replacement), creates the
-  `valheim` 1Password item.
-- **ArgoCD sync**: creates the valheim namespace, network policy, ExternalSecret,
-  StatefulSet, and LoadBalancer Service. The StatefulSet may initially be Pending
-  until the CPX42 node registers; ArgoCD's retry policy (5 retries, exponential
-  backoff) handles this.
+  `valheim` 1Password item. Note: the previous CPX42 → CX33 type change requires
+  a resource taint (destroy + recreate) since Hetzner can't shrink disks — do
+  this via TFC's "mark for replacement" UI.
+- **ArgoCD sync**: creates the valheim namespace, CEL MutatingAdmissionPolicy
+  (topology spread), network policy, ExternalSecret, StatefulSet, and
+  LoadBalancer Service. The StatefulSet may initially be Pending until the CX33
+  node registers; ArgoCD's retry policy (5 retries, exponential backoff) handles
+  this. Existing multi-replica pods (Tailscale ProxyGroup) will spread on next
+  recreation.
 - The hcloud CCM provisions the LoadBalancer and assigns a public IP.
   ExternalDNS sees the IP via the `service` source and creates the
   `valheim.willpxxr.com` A record.
@@ -91,14 +107,16 @@ on its next refresh (or force-sync).
 - **Node replacement**: bumping worker-2's type triggers a TFC replace — the
   old server is destroyed and a new one created. Workloads on worker-2 are
   rescheduled to worker-1 (CX23) during the gap. If worker-1 can't absorb them,
-  some pods stay Pending until the new CPX42 node joins. Rollback: revert the
+  some pods stay Pending until the new CX33 node joins. Rollback: revert the
   type change in `hetzner.tf`.
 - **hcloud LB cost**: type lb11 is ~€4.50/mo + traffic. Not prohibitive but the
   first recurring LB cost in the cluster.
-- **nodeSelector assumption**: if the hcloud CCM doesn't add
-  `node.kubernetes.io/instance-type: cpx42` to the new node (e.g. CCM
-  misconfiguration on Talos), the StatefulSet stays Pending. Verify with
-  `kubectl get nodes --show-labels` after the node replacement.
+- **MutatingAdmissionPolicy**: if the policy is misconfigured, pod creation in
+  non-kube-system namespaces fails (failurePolicy: Fail). The `has-app-name-label`
+  matchCondition ensures pods without `app.kubernetes.io/name` are skipped. The
+  `no-existing-tsc` matchCondition ensures workloads with their own TSC are
+  left alone. Verify with `kubectl get pods -A -o wide` after sync to confirm
+  spreading.
 - **ExternalDNS scope expansion**: adding `service` to ExternalDNS sources
   broadens what it watches. The hostname-annotation gate prevents unintended
   records, but if a future LoadBalancer Service gets the annotation by

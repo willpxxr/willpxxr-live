@@ -6,3 +6,5 @@ manifests:
   - crd-control-configuration.yaml
   - policies.yaml
   - bindings.yaml
+  - mutating-policies.yaml
+  - mutating-bindings.yaml

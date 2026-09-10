@@ -1,0 +1,49 @@
+---
+# MutatingAdmissionPolicy: injects topologySpreadConstraints into pods that
+# have an app.kubernetes.io/name label and don't already specify TSC. This
+# forces multi-replica workloads (e.g. the Tailscale ProxyGroup) to spread
+# across nodes via maxSkew: 1 on kubernetes.io/hostname. Uses ScheduleAnyway
+# (not DoNotSchedule) so pods can still schedule during single-node outages
+# — with only 2 workers, DoNotSchedule would block rescheduling if one dies.
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: enforce-topology-spread
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: "has-app-name-label"
+      expression: >-
+        has(object.metadata.labels) &&
+        'app.kubernetes.io/name' in object.metadata.labels
+    - name: "no-existing-tsc"
+      expression: >-
+        !has(object.spec.topologySpreadConstraints) ||
+        object.spec.topologySpreadConstraints.all(t, t.topologyKey != 'kubernetes.io/hostname')
+  mutations:
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: >-
+          Object{
+            spec: Object{
+              topologySpreadConstraints: [
+                {
+                  maxSkew: 1,
+                  topologyKey: 'kubernetes.io/hostname',
+                  whenUnsatisfiable: 'ScheduleAnyway',
+                  labelSelector: {
+                    matchLabels: {
+                      'app.kubernetes.io/name': object.metadata.labels['app.kubernetes.io/name']
+                    }
+                  }
+                }
+              ]
+            }
+          }
