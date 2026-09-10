@@ -36,7 +36,7 @@ spec:
                   name: valheim
                   key: SERVER_PASS
             - name: SERVER_PUBLIC
-              value: "false"
+              value: "true"
             - name: CROSSPLAY
               value: "true"
             - name: SERVER_PORT
