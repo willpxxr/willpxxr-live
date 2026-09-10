@@ -4,7 +4,7 @@
 # apps/valheim/externalsecret.yaml syncs the field into the cluster.
 
 resource "random_password" "valheim_server_pass" {
-  length  = 24
+  length  = 8
   special = false
 }
 
