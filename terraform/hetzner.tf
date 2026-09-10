@@ -58,13 +58,13 @@ module "talos" {
   # stale providerIDs (dead pre-recreation servers) and were deleted by the
   # hcloud-CCM lifecycle controller -- both worker servers tainted + replaced
   # via TFC for a coherent registration state.
-  # Worker-2 bumped to CPX42 (8 vCPU / 16GB) for the Valheim dedicated server
+  # Worker-2 bumped to CX33 (4 vCPU / 8GB) for the Valheim dedicated server
   # (WEP-0015) -- the CX23 (2 vCPU / 4GB) was too small for the ~2.8GB RSS +
-  # 4-core request. Worker-1 stays CX23 for the lightweight control-plane
+  # multi-core load. Worker-1 stays CX23 for the lightweight control-plane
   # co-located workloads.
   worker_nodes = [
     { id = 1, type = "cx23" },
-    { id = 2, type = "cpx42" },
+    { id = 2, type = "cx33" },
   ]
 
   # Public IPs so Terraform Cloud's remote runners can reach the cluster

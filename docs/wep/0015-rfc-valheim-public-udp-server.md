@@ -24,10 +24,10 @@ module) but has never been used to provision a LoadBalancer.
 ## Decision
 
 1. **Node bump** (`terraform/hetzner.tf`): worker-2 upgraded from CX23 (2 vCPU /
-   4 GB) to CPX42 (8 vCPU / 16 GB). The Valheim StatefulSet pins to this node via
-   `nodeSelector: node.kubernetes.io/instance-type: cpx42` (label added by hcloud
-   CCM). Worker-1 stays CX23 — the lightweight co-located workloads (hermes,
-   mcp-token-vault, etc.) fit comfortably there.
+   4 GB) to CX33 (4 vCPU / 8 GB, ~€11/mo). The Valheim StatefulSet pins to this
+   node via `nodeSelector: node.kubernetes.io/instance-type: cx33` (label added
+   by hcloud CCM). Worker-1 stays CX23 — the lightweight co-located workloads
+   (hermes, mcp-token-vault, etc.) fit comfortably there.
 
 2. **hcloud LoadBalancer** (`apps/valheim/service.yaml`): a `type: LoadBalancer`
    Service with no `loadBalancerClass` — the hcloud CCM reconciles it and

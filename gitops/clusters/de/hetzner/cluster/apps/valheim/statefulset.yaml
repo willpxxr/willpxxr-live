@@ -16,7 +16,7 @@ spec:
         app.kubernetes.io/name: valheim
     spec:
       nodeSelector:
-        node.kubernetes.io/instance-type: cpx42
+        node.kubernetes.io/instance-type: cx33
       terminationGracePeriodSeconds: 120
       securityContext:
         runAsUser: 0
@@ -57,11 +57,11 @@ spec:
               protocol: UDP
           resources:
             requests:
-              cpu: "4"
-              memory: 6Gi
+              cpu: "3"
+              memory: 5Gi
             limits:
               cpu: "4"
-              memory: 8Gi
+              memory: 6Gi
           securityContext:
             capabilities:
               add:
