@@ -39,6 +39,8 @@ spec:
               value: "false"
             - name: CROSSPLAY
               value: "true"
+            - name: SERVER_PORT
+              value: "32456"
             - name: TZ
               value: "Europe/London"
             - name: STATUS_HTTP
@@ -47,13 +49,13 @@ spec:
               value: "80"
           ports:
             - name: game
-              containerPort: 2456
+              containerPort: 32456
               protocol: UDP
             - name: query
-              containerPort: 2457
+              containerPort: 32457
               protocol: UDP
             - name: crossplay
-              containerPort: 2458
+              containerPort: 32458
               protocol: UDP
           resources:
             requests:

@@ -101,6 +101,20 @@ module "talos" {
   # `terraform state rm` (no destroy -- the live objects stay and are adopted
   # by ArgoCD's ServerSideApply). Do not re-enable deploy_cilium.
   deploy_cilium = false
+
+  # Open Valheim game server UDP ports on all nodes (WEP-0015). The Service
+  # is type: NodePort with explicit nodePorts 32456-32458; SERVER_PORT=32456
+  # in the container so the advertised port matches the reachable port
+  # (important for crossplay -- PlayFab advertises the server's reported port).
+  extra_firewall_rules = [
+    {
+      description = "Valheim game server (NodePort 32456-32458 UDP)"
+      direction   = "in"
+      protocol    = "udp"
+      port        = "32456-32458"
+      source_ips  = ["0.0.0.0/0", "::/0"]
+    }
+  ]
 }
 
 # Resolve the Talos snapshot built by Packer (packer/talos/talos.pkr.hcl).

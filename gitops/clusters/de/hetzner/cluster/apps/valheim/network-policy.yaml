@@ -42,18 +42,18 @@ metadata:
   name: allow-valheim-ingress
   namespace: valheim
 spec:
-  description: "Public UDP ingress for Valheim game (2456), Steam query (2457), and crossplay backend (2458) traffic via the hcloud LoadBalancer. First public ingress workload in the cluster (WEP-0015)."
+  description: "Public UDP ingress for Valheim game (32456), Steam query (32457), and crossplay backend (32458) via NodePort. First public ingress workload in the cluster (WEP-0015)."
   endpointSelector: {}
   ingress:
     - fromEntities:
         - world
       toPorts:
         - ports:
-            - port: "2456"
+            - port: "32456"
               protocol: UDP
-            - port: "2457"
+            - port: "32457"
               protocol: UDP
-            - port: "2458"
+            - port: "32458"
               protocol: UDP
 ---
 apiVersion: "cilium.io/v2"

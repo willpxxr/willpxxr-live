@@ -1,35 +1,38 @@
 ---
-# Public LoadBalancer Service for Valheim (WEP-0015). No loadBalancerClass --
-# the hcloud cloud-controller-manager reconciles this and provisions a Hetzner
-# Cloud Load Balancer (type lb11) with a public IP. externalTrafficPolicy: Local
-# preserves client source IPs (no SNAT) and restricts forwarding to nodes
-# running the pod. ExternalDNS picks up the hostname annotation and creates a
-# DNS-only A record for valheim.willpxxr.com pointing at the LB's public IP.
+# Public NodePort Service for Valheim (WEP-0015). type: NodePort avoids the
+# hcloud LoadBalancer cost (~€9/mo). externalTrafficPolicy: Local preserves
+# client source IPs (no SNAT) and ensures ExternalDNS only publishes the IP of
+# the node running the pod (not all nodes). SERVER_PORT=32456 in the StatefulSet
+# means the container and node ports match -- important for crossplay, since
+# PlayFab advertises the port the server reports and players must reach it
+# directly. The hcloud firewall (managed via the module's extra_firewall_rules
+# in terraform/hetzner.tf) opens UDP 32456-32458 on all nodes.
+# ExternalDNS creates valheim.willpxxr.com from the hostname annotation.
 apiVersion: v1
 kind: Service
 metadata:
   name: valheim
   namespace: valheim
   annotations:
-    load-balancer.hetzner.cloud/type: lb11
-    load-balancer.hetzner.cloud/location: nbg1
-    load-balancer.hetzner.cloud/name: valheim
     external-dns.alpha.kubernetes.io/hostname: valheim.willpxxr.com
 spec:
-  type: LoadBalancer
+  type: NodePort
   externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: valheim
   ports:
     - name: game
-      port: 2456
+      port: 32456
       targetPort: game
+      nodePort: 32456
       protocol: UDP
     - name: query
-      port: 2457
+      port: 32457
       targetPort: query
+      nodePort: 32457
       protocol: UDP
     - name: crossplay
-      port: 2458
+      port: 32458
       targetPort: crossplay
+      nodePort: 32458
       protocol: UDP

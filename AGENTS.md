@@ -58,15 +58,17 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   external-dns (`apps/external-dns/`, syncs `*.internal.willpxxr.com` records to
   Cloudflare from Gateway HTTPRoutes + Services with the
   `external-dns.alpha.kubernetes.io/hostname` annotation — the `service` source
-  was added for the Valheim server's public LB, WEP-0015), external-secrets (1Password backend), the
+  was added for the Valheim server's NodePort, WEP-0015), external-secrets (1Password backend), the
   Tailscale operator. Tailnet exposure is L3-only: one `loadBalancerClass:
   tailscale` LoadBalancer Service (the Envoy data plane); the per-hostname
   Tailscale L7 Ingresses were removed (WEP-0003) — their hostname machinery is
   what caused the 2026-07/08 `svc:gateway` outage, so prefer not to bring them back.
   The Valheim dedicated server (`apps/valheim/`, WEP-0015) is the cluster's only
-  public non-HTTP workload: a `type: LoadBalancer` Service without `loadBalancerClass`
-  (hcloud CCM provisions a Hetzner Cloud LB with a public IP) for UDP 2456-2458,
-  with `externalTrafficPolicy: Local` for client IP preservation.
+  public non-HTTP workload: a `type: NodePort` Service (ports 32456-32458 UDP,
+  `externalTrafficPolicy: Local`) with the hcloud firewall opened via the
+  hcloud-talos module's `extra_firewall_rules`. DNS (`valheim.willpxxr.com`)
+  is ExternalDNS-managed via the `service` source + hostname annotation —
+  `externalTrafficPolicy: Local` ensures only the node running the pod is published.
   The MCP gateway fronts third-party MCP servers; its credential vault
   (`apps/mcp-token-vault`, WEP-0006) stores per-provider OAuth tokens
   (envelope-encrypted in Supabase Postgres) and injects them upstream —
