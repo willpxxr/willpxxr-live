@@ -24,7 +24,7 @@ spec:
         fsGroup: 0
       containers:
         - name: valheim
-          image: ghcr.io/community-valheim-tools/valheim-server:v1.2.0
+          image: ghcr.io/community-valheim-tools/valheim-server:1.2.0
           env:
             - name: SERVER_NAME
               value: "willpxxr"
