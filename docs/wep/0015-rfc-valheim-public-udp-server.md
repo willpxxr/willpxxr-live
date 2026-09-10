@@ -57,9 +57,9 @@ module) but has never been used to provision a LoadBalancer.
    third UDP port (2458) for the crossplay backend.
 
 6. **Password via 1Password** (`terraform/valheim.tf` + `apps/valheim/externalsecret.yaml`):
-   same placeholder pattern as the Synthetic API key — Terraform creates the
-   `onepassword_item` with a placeholder, the real password is pasted into
-   1Password by hand, `ignore_changes = [section_map]` prevents reverts.
+   `random_password` generates a 24-char password, written to 1Password by
+   Terraform — same pattern as the ArgoCD redis auth (`terraform/argocd.tf`). No
+   manual paste needed; the ExternalSecret syncs it into the cluster.
 
 7. **Persistent storage**: 10 Gi PVC (`hcloud-volumes` StorageClass) mounted at
    `/config` (world saves, backups, server config) and `/opt/valheim` (the
@@ -82,9 +82,9 @@ Single push to `main` — no phased migration needed:
   ExternalDNS sees the IP via the `service` source and creates the
   `valheim.willpxxr.com` A record.
 
-The 1Password item must be populated (password pasted) before the ExternalSecret
-can sync — until then the StatefulSet pod starts but the Valheim server binary
-refuses to start (password < 5 chars).
+The 1Password item is populated by Terraform (`random_password` resource) on the
+first apply — no manual paste needed. The ExternalSecret syncs it into the cluster
+on its next refresh (or force-sync).
 
 ## Risks / rollback
 
