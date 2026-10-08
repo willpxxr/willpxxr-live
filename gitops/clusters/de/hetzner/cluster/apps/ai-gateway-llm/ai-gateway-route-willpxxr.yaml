@@ -35,7 +35,7 @@ spec:
               value: willpxxr:auto
       backendRefs:
         - name: synthetic
-          modelNameOverride: hf:zai-org/GLM-5.3-Flash
+          modelNameOverride: hf:zai-org/GLM-5.3
       timeouts:
         request: 10m
 ---
@@ -88,7 +88,7 @@ spec:
               value: willpxxr:text:small
       backendRefs:
         - name: synthetic
-          modelNameOverride: hf:zai-org/GLM-4.7-Flash
+          modelNameOverride: hf:zai-org/GLM-5.3
       timeouts:
         request: 10m
 ---
@@ -141,7 +141,7 @@ spec:
               value: willpxxr:text:large
       backendRefs:
         - name: synthetic
-          modelNameOverride: hf:zai-org/GLM-5.3-Flash
+          modelNameOverride: hf:moonshotai/Kimi-K3
       timeouts:
         request: 10m
 ---
