@@ -117,7 +117,7 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 ├── packer/talos/                            # Talos node snapshot image build
 ├── scripts/                                 # Helper scripts (gateway login, model sync, etc.)
 ├── services/                                # In-cluster services with source in this repo (mcp-token-vault, WEP-0006; CI builds/pushes the image)
-├── .opencode/                               # opencode global config + ai-gateway-auth plugin (see "opencode config" below)
+├── .opencode/                               # opencode global config + ai-gateway plugin (see "opencode config" below)
 ├── docs/wep/                                 # Willpxxr enhancement proposals (RFC + ADR subtypes) -- see docs/wep/README.md
 ├── docs/runbooks/                            # Operational runbooks (e.g. docs/runbooks/k8s-upgrade.md for Kubernetes version bumps)
 └── gitops/clusters/de/hetzner/cluster/
@@ -155,13 +155,28 @@ must do*. They apply to any agent (human or LLM) working in this repo.
 
 ## opencode config
 
-`.opencode/` holds the canonical opencode global config: `opencode.jsonc`
-repoints the built-in `synthetic` provider at the AI gateway
-(`https://ai.tailb40090.ts.net/v1`), and `plugin/ai-gateway-auth.ts` registers
-the Auth0 PKCE OAuth flow on it (`opencode auth login synthetic`, silent
-refresh afterwards). `~/.config/opencode/` symlinks to these files, so edit
-them here, not there. The Auth0 `client_id` in the plugin is a public PKCE
-native client (no secret exists), so committing it is fine.
+`.opencode/` holds the canonical opencode global config. The AI gateway
+(`https://ai.internal.willpxxr.com/v1`) is a **separate** provider `gateway`,
+NOT a repoint of the built-in `synthetic` provider: raw synthetic (direct to
+api.synthetic.new, API-key login via `/connect`) and the gateway are both
+selectable in `/models` (`synthetic/<model>` vs `gateway/<model>`).
+
+Everything about `gateway` lives in `plugins/ai-gateway.ts` (opencode v2
+plugin API): the provider registration (openai-compatible package + gateway
+baseURL, model list cloned live from the synthetic catalog on every registry
+rebuild so it tracks models.dev) and the Auth0 PKCE OAuth method with silent
+refresh (`opencode auth login gateway` → "willpxxr SSO (Auth0)"; the gateway
+gates access with Auth0 JWTs (llm:use), NOT Synthetic's own key). Plugin deps
+are a runtime requirement (v2 plugins import `@opencode/plugin` as a value,
+unlike V1's type-only imports), so package.json/package-lock.json are
+tracked — run `npm install` inside `.opencode/` after changing them.
+`opencode.jsonc` is a pointer comment; config-shaped concerns belong in the
+plugin.
+
+`~/.config/opencode/` symlinks `opencode.jsonc` and `plugins/` into this repo
+(`cli.json` there is machine-local), so edit these files here, not there.
+The Auth0 `client_id` in the plugin is a public PKCE native client (no
+secret exists), so committing it is fine.
 
 ## GitOps app conventions (de/hetzner cluster)
 

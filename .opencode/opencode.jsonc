@@ -1,19 +1,18 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  // Route the built-in "synthetic" provider (models.dev, @ai-sdk/openai-compatible)
-  // through the self-hosted gateway instead of api.synthetic.new directly. Auth
-  // is OAuth via the plugin/ai-gateway-auth.ts plugin alongside this file
-  // (`opencode auth login synthetic`), not an API key -- the gateway gates
-  // access with Auth0 JWTs (llm:use), NOT Synthetic's own key.
+  // The self-hosted LLM gateway is a SEPARATE provider "gateway" here, not
+  // a repoint of the built-in "synthetic" provider: built-in synthetic keeps
+  // working directly (api.synthetic.new, /connect), while the gateway is
+  // selectable as gateway/<model> -- switch between raw and gateway in /models.
   //
-  // This file and plugin/ are the canonical copies; ~/.config/opencode
+  // Everything about "gateway" is defined by plugins/ai-gateway.ts next to
+  // this file: the provider (openai-compatible, https://ai.internal.willpxxr.com/v1,
+  // model list cloned live from the synthetic catalog) and the Auth0 PKCE
+  // OAuth method with silent refresh (`opencode auth login gateway` ->
+  // "willpxxr SSO (Auth0)") -- the gateway gates access with Auth0 JWTs
+  // (llm:use), NOT Synthetic's own key.
+  //
+  // This file and plugins/ are the canonical copies; ~/.config/opencode
   // symlinks to them so this repo is the single source of truth for the
   // global opencode config.
-  "provider": {
-    "synthetic": {
-      "options": {
-        "baseURL": "https://ai.internal.willpxxr.com/v1"
-      }
-    }
-  }
 }
