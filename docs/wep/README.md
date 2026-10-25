@@ -25,3 +25,4 @@ reasoning fits on a page, it's an ADR.
 | [0007](0007-adr-mcp-upstream-credential-injection.md) | ADR | MCP upstream credential injection: vault proxy fallback, defer Envoy-side injection | Accepted |
 | [0014](0014-adr-hermes-agent-via-ai-gateway.md) | ADR | Hermes agent via AI gateway with custom provider plugin (Auth0 M2M token refresh) | Accepted |
 | [0015](0015-rfc-valheim-public-udp-server.md) | RFC | Valheim dedicated server — first public UDP workload (hcloud LB, ExternalDNS service source) | Accepted |
+| [0016](0016-rfc-hermes-profiles-via-agent-substrate.md) | RFC | Hermes agent profiles via Agent Substrate (GitHub Apps, egress credential injection; hcloud in-place, netcup/self-host deferred with math) | Accepted |
