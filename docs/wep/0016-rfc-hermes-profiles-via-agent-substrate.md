@@ -1,7 +1,8 @@
 # WEP-0016: Hermes agent profiles via Agent Substrate
 
-**Type:** RFC · **Status:** Accepted (2026-10-25; drafted 2026-10-24, fleet
-direction revised to stay-hcloud 2026-10-25) · **Date:** 2026-10-24
+**Type:** RFC · **Status:** Accepted (2026-10-25; drafted 2026-10-24; fleet
+direction revised to stay-hcloud 2026-10-25, snapshot backend to Hetzner
+Object Storage 2026-10-25) · **Date:** 2026-10-24
 
 ## Context
 
@@ -58,9 +59,10 @@ out when contention or demand justifies it.
 | --- | --- | --- | --- | --- |
 | control-plane-1 (existing) | CX23 | 2c / 4 GB | CP (single, for now — see below); hosts no actor workloads | 5.99 |
 | worker-1 (existing) | CX23 | 2c / 4 GB | hermes orchestrator, mcp-token-vault + ate control plane (gVisor image) | 5.99 |
-| worker-2 (existing) | CX33 | 4c / 8 GB | Valheim + rustfs/actor pool (gVisor image) | 8.99 |
-| Substrate state (~50–100 GB) | hcloud Volumes | — | rustfs snapshots, actor workspaces (Postgres → Supabase, §2) | ~3–6 |
-| **Total** | | | | **~€24–28** (~€29–33 incl. VAT) |
+| worker-2 (existing) | CX33 | 4c / 8 GB | Valheim + actor pool (gVisor image) | 8.99 |
+| Actor workspace PVCs (if any — §2) | hcloud Volumes | — | actor workspaces only | ~1–3 |
+| Substrate snapshots | Hetzner Object Storage | — | S3 blobs, provider-durable (§2) | ~5.99 |
+| **Total** | | | | **~€27–31** (~€32–37 incl. VAT) |
 
 Recorded structure of the squeeze (the zero-spend path is the plan of
 record *because* the cost-optimized line is showing "currently unavailable"
@@ -68,10 +70,10 @@ across SKUs at check time (2026-10-24) — a CX43 bump or 4th node cannot
 currently be ordered regardless of preference):
 
 - **Placement**: ate control plane (api server, controller, atenet,
-  credential provider, atelet) on worker-1's ~1.5–2 GB margin; rustfs +
-  actor scheduling on worker-2's larger margin (substrate's Postgres is
-  off-cluster — Decision §2), with worker-1 as overflow for at most one
-  light actor.
+  credential provider, atelet) on worker-1's ~1.5–2 GB margin; actor
+  scheduling on worker-2's larger margin (substrate's Postgres and
+  snapshot blobs are both off-cluster — Decision §2), with worker-1 as
+  overflow for at most one light actor.
 - **Contention rules**: actor Pods sit at a PriorityClass below substrate
   infra and below Valheim — memory pressure evicts/suspends actors first
   (substrate suspends idle actors rather than letting the node OOM-kill
@@ -118,7 +120,8 @@ loss, 12-month floor. Term-ladder variant: order at 1-month rates
 (€42.83/mo ex, ~+15%), extend to 12M at a convergence gate — flex premium
 ≈ €11 ex for the trial window, worst-case sunk ~€86 vs €447; 24M option
 €31.69/mo ex with a two-year G12.5 generation lock.
-**Re-open if**: substrate-driven volume spend passes ~€15/mo with the
+**Re-open if**: substrate-driven storage spend (volumes + object store)
+passes ~€15/mo with the
 fleet bill trajectory heading past ~€60/mo, or cost-optimized stock is
 still unavailable when contention makes the worker bump unavoidable
 (paying regular-performance prices for it instead — at which point netcup
@@ -155,19 +158,32 @@ metal is the only option able to run substrate's microVM sandbox class
    the PriorityClass rules in the fleet section — ate control plane on
    worker-1, rustfs + actors on worker-2.
 
-2. **Storage**: substrate's Postgres backend runs **off-cluster in the
-   existing Supabase project** (WEP-0006's project; the mcp-token-vault
-   DB-auth pattern from 0008-adr-vault-db-auth-federation supplies the
-   app→DB credential convention to reuse — dedicated database + role,
-   secret via 1Password → ExternalSecret). Upstream supports this
-   external-Postgres shape (its Cloud SQL path); on the squeezed fleet it
-   hands ~300–500 MB back and makes the substrate registry survive the
-   loss of any node — or the whole single-CP cluster. `hcloud-volumes`
-   carries the in-cluster remainder (rustfs snapshots, actor workspaces);
-   Phase 0 checks whether substrate can target Hetzner Object Storage
-   (~€6/TB/mo) directly for the snapshot store, fully decoupled from node
-   disks; in-cluster rustfs otherwise. Longhorn/Rook/MinIO-distributed
-   stay deferred with the netcup direction (recorded above).
+2. **Storage**: substrate's entire state lives off-cluster. Postgres
+   backend: the **existing Supabase project** (WEP-0006's project; the
+   mcp-token-vault DB-auth pattern from 0008-adr-vault-db-auth-federation
+   supplies the app→DB credential convention — dedicated database + role,
+   secret via 1Password → ExternalSecret; upstream supports the
+   external-Postgres shape via its Cloud SQL path). Snapshots: **Hetzner
+   Object Storage** (S3 API, provider-durable; ~€6/mo base incl 1 TB —
+   ~10–20× our blob needs) as the primary store — upstream's own posture,
+   since the bundled rustfs is documented as a *non-durable dev default*
+   ("move a production installation to your own bucket before it carries
+   real traffic"). Config surface is upstream-documented:
+   `rustfs.enabled: false` + `atelet.storageBackend: s3` (the
+   `ATE_STORAGE_BACKEND` env on the objectstore-plugin sidecars of atelet
+   and ate-api-server) with `AWS_ENDPOINT_URL`, `AWS_S3_USE_PATH_STYLE:
+   "true"`, and static R/W keys — bucket + credentials TF-managed (hcloud
+   provider's object-storage resources; verify the provider version
+   surface in Phase 0), keys into 1Password → ExternalSecret, held
+   control-plane-side only, never inside actors, consistent with the
+   zero-credential model. This also sheds rustfs's 1Gi PVC + sidecar
+   memory from the squeezed fleet, and with the registry in Supabase
+   makes substrate survivable against any node or the whole single-CP
+   cluster (rebuild = reinstall + re-point). Rustfs remains the recorded
+   fallback if a pinned substrate version regresses the S3-client config.
+   `hcloud-volumes` carries only actor workspace PVCs that Phase 0
+   proves necessary. Longhorn/Rook/MinIO-distributed stay deferred with
+   the netcup direction (recorded above).
 
 3. **Hermes becomes two classes of thing**:
    - **Orchestrator** (existing `apps/hermes` Deployment, unchanged in kind):
@@ -253,7 +269,12 @@ metal is the only option able to run substrate's microVM sandbox class
 
 1. **Substrate on kind**: quickstart install, `k8s.io` provider, httpbin
    header-injection smoke, sandbox demo actor, suspend/resume, version
-   requirements vs 1.36; confirm external-S3 support for the snapshot store;
+   requirements vs 1.36; wire external S3 (`ATE_STORAGE_BACKEND=s3`,
+   `AWS_ENDPOINT_URL` + path-style on the objectstore-plugin sidecar)
+   against a Hetzner Object Storage test bucket and exercise
+   suspend/resume through it — upstream documents the path, so this is an
+   integration test, not a feasibility question (mind the `AWS_REGION`
+   quirk);
    confirm how atelet expects to find runsc on nodes vs Talos's RuntimeClass
    wiring; determine an ArgoCD-adoptable install shape (rendered
    manifests); record hermes-actor RSS under a coding workload to calibrate
@@ -288,10 +309,17 @@ for stock with the alternatives' math recorded.
   section).
 - `apps/substrate` scaffolded via `new-gitops-app` (manifests source;
   controller-mutated CRDs get `ignoreDifferences` entries per convention);
-  Postgres (cloudnative-pg or substrate-bundled per Phase 0 shape) and
-  rustfs (or external S3 per Phase 0 finding) on `hcloud-volumes`;
+  substrate's Postgres backend points at the existing Supabase project
+  (dedicated database + role per Decision §2, connection secret via
+  ExternalSecret); snapshots go to the Hetzner Object Storage bucket
+  per Decision §2 (`ATE_STORAGE_BACKEND=s3`, endpoint + path-style +
+  static keys via ExternalSecret into the objectstore-plugin sidecars);
+  `hcloud-volumes` only for workspace PVCs Phase 0 proves necessary;
   `k8s.io` credential provider; ate-system namespace Cilium policies per
-  convention; **the socket-LB probe runs first** — substrate's
+  convention, with egress for the bucket endpoint AND the SandboxConfig
+  asset URL (nodes fetch sandbox binaries from an upstream public
+  bucket — restricted egress needs that path or a self-hosted copy);
+  **the socket-LB probe runs first** — substrate's
   router/gateway are ClusterIP-proxying components, the exact precedent
   class of the 2026-07/08 Tailscale blackholing. Worker-path probes (DNS
   via ClusterIP 10.0.8.10, cross-node) per the k8s-upgrade runbook.
@@ -325,9 +353,10 @@ record.
 ## Consequences
 
 - No migration and no new nodes: today's de/hetzner cluster hosts
-  substrate; node lifecycle stays TF-managed; new spend is ~€3–6/mo of
-  volumes (substrate's Postgres rides the existing Supabase project — no
-  in-cluster DB to lose to node death). The worker-1 → CX43 bump
+  substrate; node lifecycle stays TF-managed; new spend is €6/mo of
+  object storage plus €1–3/mo of workspace PVCs (registry in Supabase,
+  snapshot blobs in the bucket — substrate's entire state is off-cluster;
+  a cluster rebuild is reinstall + re-point). The worker-1 → CX43 bump
   (+€10.50/mo) is the recorded upsize-on-restock exit when contention or
   demand justifies it.
 - The netcup re-provision and self-hosted options remain live alternatives
@@ -363,12 +392,17 @@ record.
 - **git-HTTPS placeholder flow** is the most fragile client-side piece
   (http.extraHeader/credential-helper quirks); validated in Phase 3 coder
   before the reviewer depends on any of it.
-- **rustfs on network volumes**: snapshot I/O rides hcloud volume
-  throughput, not local NVMe — fine at our scale if Phase 0's resume-latency
-  smoke holds; Hetzner Object Storage is the escape hatch.
+- **Snapshot I/O rides the object store**: resume fetches blobs across
+  hcloud's internal network — the same latency class the rustfs-on-volume
+  path would have had, so no regression; Phase 0's resume-latency smoke
+  is the watch-item. For any future backup/lifecycle policy: cover both
+  `actors/` and `tags/` prefixes — checkpoints live under `tags/`, and
+  an `actors/`-scoped policy silently misses them (upstream-documented
+  layout).
 - **Supabase is substrate's system-of-record**: the project's uptime now
-  bounds two tenants (mcp-token-vault + substrate registry; snapshot blobs
-  remain in rustfs either way). DB RTT adds ~tens of ms to actor
+  bounds two tenants (mcp-token-vault + substrate registry; snapshot
+  blobs live in the Hetzner Object Storage bucket). DB RTT adds ~tens of
+  ms to actor
   create/resume/suspend — immaterial next to snapshot I/O, but connections
   stay on session-mode pooling (Phase 0 verifies prepared statements), and
   a cluster rebuild restores substrate from the surviving DB — a real DR
