@@ -61,6 +61,19 @@ Two gotchas learned the hard way:
   hostname validators count kernel args), so even "temp" patches are risky.
   Any out-of-band emergency change is temporary by definition: reconcile it
   into `hetzner.tf` immediately and expect to replace the node anyway.
+  The one sanctioned exception (runbook'd 2026-10-25, WEP-0016 Phase 0):
+  the in-place-upgrade preflight strip of `machine.install.extraKernelArgs`
+  via scripted `talosctl edit machineconfig` — a full-config round-trip
+  through the node's own validation, NOT JSON6902/null-merge patches (both
+  silently no-op on multi-doc configs, verified again 2026-10-25). Scope it
+  to that single field, verify by occurrence-grep of `talosctl get
+  machineconfig` dumps (never print them raw — they carry the join token
+  and the Tailscale extension auth key), reconcile into the module render
+  the same day (the `*_extra_config_patches` strategic-merge pin; render
+  patches cannot delete fields, so the strip stays runbook-per-node), and
+  re-verify node identity after (`talosctl get hostname`, /proc/cmdline).
+  Nothing else gets an out-of-band pass — September's corruption class was
+  ad-hoc patching without exactly this discipline.
 - **Handing a module-internal resource to another manager (e.g. GitOps)**
   (2026-09-04, WEP-0011): `removed` blocks are rejected while the resource
   block still exists in the module source — even with its `count`/`for_each`
