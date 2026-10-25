@@ -16,7 +16,8 @@ nodes (see `verify-infra-change` skill).
 | 1.37.x | **Talos 1.14 first** (`hetzner.tf` talos_version + packer default + CI snapshot build), then Cilium ≥ 1.21 (verify matrix) | talos support matrix, cilium compatibility |
 
 Talos bumps: control plane in-place via the schematic installer image
-(`factory.talos.dev/installer/7d4c31cb…:v1.14.x`) — **verify kernel args and
+(`factory.talos.dev/installer/ad2bf8c2…:v1.14.x`, the gVisor-bearing
+schematic per WEP-0016) — **verify kernel args and
 machine config doc count after every node upgrade** (`talosctl read
 /proc/cmdline`); workers via drain + `terraform taint` + any `.tf` push
 (one at a time; contiguous ids).

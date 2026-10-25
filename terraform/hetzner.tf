@@ -42,9 +42,11 @@ module "talos" {
   firewall_talos_api_source = ["0.0.0.0/0", "::/0"]
 
   # Talos image — built by Packer (packer/talos/talos.pkr.hcl) from the schematic in
-  # packer/talos/schematic.yaml, which includes siderolabs/qemu-guest-agent and
-  # siderolabs/tailscale. Run `packer build packer/talos/talos.pkr.hcl` once per Talos
-  # version upgrade; the data source below resolves the most-recently pushed snapshot.
+  # packer/talos/schematic.yaml, which includes siderolabs/gvisor (WEP-0016,
+  # 2026-10-25 -- Agent Substrate actor sandboxing), siderolabs/qemu-guest-agent
+  # and siderolabs/tailscale. Run `packer build packer/talos/talos.pkr.hcl` once per
+  # Talos version upgrade; the data source below resolves the most-recently pushed
+  # snapshot.
   talos_image_id_x86 = data.hcloud_image.talos.id
 
   # Single CX23 control plane -- no etcd quorum/HA, so losing this node takes the
@@ -122,9 +124,12 @@ module "talos" {
 # siderolabs/qemu-guest-agent and siderolabs/tailscale.
 # Schematic is content-addressed: re-POSTing packer/talos/schematic.yaml to
 # factory.talos.dev/schematics deterministically returns
-# 7d4c31cbd96db9f90c874990697c523482b2bae27fb4631d5583dcd9c281b1ff -- the
-# installer-image reference for in-place upgrades (WEP-0009):
-#   factory.talos.dev/installer/7d4c31cbd96d…:v<version>
+# ad2bf8c2de4df397709bd8782b85e6ab200a18da9258dfc323b1911f583a09da
+# -- the installer-image reference for in-place upgrades (WEP-0009):
+#   factory.talos.dev/installer/ad2bf8c2…:v<version>
+# (verified 2026-10-25; adds siderolabs/gvisor per WEP-0016 Phase 0 — nodes
+# not yet rolled forward still run the pre-gVisor image 7d4c31cbd96d…, and
+# the extension is inert on nodes that host no actor Workers.)
 data "hcloud_image" "talos" {
   with_selector     = "os=talos,tailscale=true"
   with_architecture = "x86"
