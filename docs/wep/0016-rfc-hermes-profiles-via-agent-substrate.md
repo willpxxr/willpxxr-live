@@ -220,13 +220,28 @@ metal is the only option able to run substrate's microVM sandbox class
    orchestrator uses hermes-reviewer's token (held in the trusted class) to
    poll for open PRs.
 
-5. **Token minting, two stages**: v1 is `services/github-app-token-minter`
-   (CI-built image, same pattern as mcp-token-vault): a CronJob minting
-   installation tokens every ~50 min into Secrets the bundled `k8s.io`
-   credential provider injects. v2, if v1 friction justifies it, is a custom
-   `FetchSecret` provider that mints per-request with per-actor authorization
-   (Rust; credprovider.proto; gateway-mTLS-pinned). Giant Swarm's
-   agent-platform is prior art for exactly this contract.
+5. **Token minting is External Secrets’ `GithubAccessToken` generator**
+   (`generators.external-secrets.io/v1alpha1`, per
+   https://external-secrets.io/latest/api/generator/github/) — no custom
+   minter service. Per profile, a generator + ExternalSecret pair in the
+   profile’s own namespace (ESO requires generator-referenced Secrets to
+   be co-namespace): `appID`/`installID` as literal manifest fields — they
+   are public identifiers, not secrets, same reasoning as the committed
+   PKCE client_id in `.opencode`’s gateway plugin — the PEM from the
+   existing 1Password → ExternalSecret Secret, `refreshInterval: 15m`
+   (GitHub’s 60m token expiry is non-configurable), and the token Secret
+   named for the §6 `credentialUri` for the bundled `k8s.io` credential
+   provider to inject. The generator’s optional `permissions:`/
+   `repositories:` fields down-scope each minted token below the app’s
+   installation grants — the reviewer mints `contents: read` — a second
+   least-privilege layer matching each EgressPolicy. Verify the generator
+   CRD is served by the pinned chart (2.10.0) at implementation per
+   AGENTS.md rule 7; the `appIDRef`/`installIDRef` secretRef variant is
+   newer — literals are the version-safe default. Successor if ever
+   outgrown: a custom `FetchSecret` provider with per-actor authorization
+   (Rust; credprovider.proto; gateway-mTLS-pinned; Giant Swarm’s
+   agent-platform as prior art) — much less likely to be needed now that
+   minting lives inside ESO.
 
 6. **Egress is the credential boundary**: per-profile EgressPolicy `https`
    rules for `api.github.com` + `github.com` with a `replaceHeaders` effect —
@@ -331,7 +346,7 @@ for stock with the alternatives' math recorded.
 ### Phase 2 — credential chain
 
 - GitHub Apps bootstrapped (UI, once); 1Password items; ExternalSecrets;
-  minter CronJob (v1); per-profile Auth0 M2M clients in `terraform/auth0.tf`
+  ESO `GithubAccessToken` generator + ExternalSecret per profile (§5); per-profile Auth0 M2M clients in `terraform/auth0.tf`
   following the existing scope naming and alias conventions; end-to-end
   injection smoke against an echo service before any real repo access.
 
@@ -346,7 +361,7 @@ precedent — plus injected Better Stack key for telemetry queries; write
 capabilities explicitly out of scope for v1).
 
 Each profile ships: ActorTemplate, atespace, EgressPolicy, GitHub App +
-1Password item + minter target, per-profile M2M client, skills/persona home,
+1Password item + token generator, per-profile M2M client, skills/persona home,
 dispatch smoke, and one real exercised PR recorded in this WEP's execution
 record.
 
