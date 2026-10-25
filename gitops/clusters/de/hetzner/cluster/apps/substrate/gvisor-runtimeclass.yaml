@@ -1,0 +1,10 @@
+---
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: gvisor
+# Fleet-wide since the 2026-10-25 schematic roll (ad2bf8c2): every node's
+# containerd registers runsc via the gVisor extension's CRI drop-ins.
+# Actor placement is bounded by the substrate WorkerPool's nodeSelector +
+# PriorityClass (WEP-0016 fleet section), not by RuntimeClass scheduling.
+handler: runsc
