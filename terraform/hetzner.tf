@@ -131,6 +131,17 @@ module "talos" {
   # live node configs are maintained by the runbook preflight, not TFC).
   talos_control_plane_extra_config_patches = [yamlencode(local.machine_install_pin)]
 
+  # gVisor (WEP-0016): the hardened Talos default sets
+  # user.max_user_namespaces=0, which makes every runsc sandbox fail
+  # ("gofer: fork/exec ... no space left on device" -- found by the
+  # Phase-0 smoke, 2026-10-25; the disk was fine). Deliberate bounded CIS
+  # deviation; the live nodes got the same value via a same-day
+  # machine-config patch, per the reconcile rule in the
+  # verify-infra-change skill.
+  sysctls_extra_args = {
+    "user.max_user_namespaces" = "32768"
+  }
+
   # Cilium moved to ArgoCD (gitops apps/cilium, WEP-0011, 2026-09-04).
   # deploy_cilium=false closes the module's for_each gate; the corresponding
   # kubectl_manifest.apply_cilium instances were removed from state via

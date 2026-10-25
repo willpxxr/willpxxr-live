@@ -1,11 +1,10 @@
-# WEP-0016: currently the Phase-0 gate artifacts (gVisor RuntimeClass +
-# smoke Job proving pods execute under runsc on the rolled fleet). Grows
-# into the Phase-1 substrate install app; the smoke Job is removed once
-# green (prune on push cleans it up).
+# WEP-0016: the Phase-0 gate artifacts landed 2026-10-25 and the smoke
+# went green (one-shot Job pruned after verification) -- this directory
+# now carries the fleet-wide gvisor RuntimeClass and grows into the
+# Phase-1 substrate install app.
 name: substrate
 namespace: substrate
 manifests:
   - namespace.yaml
   - network-policy.yaml
   - gvisor-runtimeclass.yaml
-  - smoke-job.yaml

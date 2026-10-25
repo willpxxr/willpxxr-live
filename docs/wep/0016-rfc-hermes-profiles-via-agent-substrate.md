@@ -357,9 +357,18 @@ capacity) on the CP, so gVisor is not inert there; all three nodes now
 boot the identical schematic, and Phase-1's WorkerPool placement grows to
 include the CP (control-plane-taint toleration + nodeSelector, with the
 WEP's PriorityClass/margin rules honored — the CX23 shares etcd, so actor
-envelopes respect the margin discipline). The RuntimeClass smoke pod is
-the remaining gate item — it lands via GitOps as the first
-`apps/substrate/` manifest (Phase 1).
+envelopes respect the margin discipline). The RuntimeClass smoke pod went
+green the same evening: apps/substrate landed via new-gitops-app — the
+fleet-wide `gvisor` RuntimeClass (handler: runsc) plus a one-shot Job
+whose logs printed the gVisor kernel (`4.19.0-gvisor` — the Job manifest
+was pruned after verification). The smoke exposed and closed the last
+fleet landmine: the hardened Talos default `user.max_user_namespaces=0`
+blocks every runsc sandbox — gVisor's gofer fails with a misleading
+ENOSPC ("no space left on device" with the disk 11/77 GB used). All three
+nodes now run `user.max_user_namespaces=32768` via machine.sysctls — a
+deliberate, bounded deviation from the hardened/CIS default, persisted in
+the module's sysctls_extra_args and recorded here as part of substrate's
+security posture. Phase-0 gate: satisfied.
 
 ### Phase 1 — substrate install on the squeezed fleet
 
