@@ -309,6 +309,19 @@ metal is the only option able to run substrate's microVM sandbox class
    back, gVisor RuntimeClass smoke pod executes under runsc, 30 min clean;
    `talosctl rollback` is the standing escape. Worker-2 takes the same
    image only after worker-1 converges — never both at once.
+   Decision (2026-10-25): the gVisor roll runs at the fleet's current
+   versions — Talos v1.13.9 / k8s 1.36.4. The OS/k8s bump is *not* folded
+   into this window: a failed window must attribute to exactly one change
+   (WEP-0009's one-at-a-time discipline), and the bump is
+   prerequisite-chained regardless — per the runbook matrix, Talos 1.14
+   first, then Cilium ≥ 1.21 (matrix re-verify) before k8s 1.37. That
+   campaign runs later as its own effort; gVisor rides the schematic
+   forward at its Talos step with no special handling — the snapshot
+   rebuild doubles as its per-version extension check (catalogue cuts
+   gvisor for v1.14.4, checked 2026-10-25; v1.13.12 exists on the current
+   line — point releases are not free riders either). The CP node, hosting
+   no actor Workers, takes gVisor as a passenger at its 1.14 in-place
+   bump — no separate v1.13.9 roll.
 3. **SKU stock watch** for CX43 (the upsize-on-restock exit) — nothing
    blocks while it's out; the squeeze is the standing plan.
 
