@@ -329,6 +329,22 @@ Gate: all green → substrate lands as placed in the fleet section. A failed
 worker-1 upgrade that survives rollback → hold the fleet; substrate waits
 for stock with the alternatives' math recorded.
 
+Execution record (2026-10-25): the kind spike was dropped by owner decision —
+the fleet is the test bed. Both workers rolled in place to the gVisor-bearing
+schematic `ad2bf8c2…` (v1.13.9, hcloud platform) via the platform-pinned
+`factory.talos.dev/hcloud-installer/…` ref; verified per node: hcloud cmdline
+(`talos.platform=hcloud console=tty1 console=ttyS0 net.ifnames=0`), Hetzner
+metadata hostname, and the gVisor CRI drop-ins (`runsc.toml`) present.
+Mid-roll, worker-1 taught the fleet three things, folded into
+docs/runbooks/k8s-upgrade.md: the generic `installer/` ref bakes metal
+cmdline (platform flip → random `talos-*` hostname — recovered in place,
+no replacement), the v1.13 streaming upgrade API neither passes
+`machine.install.extraKernelArgs` nor fires the final reboot, and
+`extraKernelArgs` must be stripped before the current installer build will
+validate. The RuntimeClass smoke pod is the remaining gate item — it lands
+via GitOps as the first `apps/substrate/` manifest (Phase 1). CP takes
+gVisor as a passenger at its 1.14 in-place bump (decision above).
+
 ### Phase 1 — substrate install on the squeezed fleet
 
 - Workers 1+2 already carry the gVisor schematic from Phase 0; label them

@@ -15,12 +15,26 @@ nodes (see `verify-infra-change` skill).
 | 1.36.x | Talos 1.13.x, Cilium ≥ 1.20 (1.19 tops out at 1.35) | cilium docs compatibility page |
 | 1.37.x | **Talos 1.14 first** (`hetzner.tf` talos_version + packer default + CI snapshot build), then Cilium ≥ 1.21 (verify matrix) | talos support matrix, cilium compatibility |
 
-Talos bumps: control plane in-place via the schematic installer image
-(`factory.talos.dev/installer/ad2bf8c2…:v1.14.x`, the gVisor-bearing
-schematic per WEP-0016) — **verify kernel args and
-machine config doc count after every node upgrade** (`talosctl read
-/proc/cmdline`); workers via drain + `terraform taint` + any `.tf` push
-(one at a time; contiguous ids).
+Talos bumps — any node, in place: always the **platform-pinned** schematic
+installer, `factory.talos.dev/hcloud-installer/<schematic>:<version>` (e.g.
+`hcloud-installer/ad2bf8c2…:v1.14.x`, the gVisor-bearing schematic per
+WEP-0016). **Never the generic `installer/` ref** — its boot assets carry
+metal-default cmdline (`talos.platform=metal`), silently flipping the node
+off the hcloud platform; hostname + metadata identity die with it (worker-1
+lost its name to a random `talos-*` boot mid-roll, 2026-10-25; recovered in
+place via the hcloud-installer re-roll — no node replacement). Preflight per
+node: strip `machine.install.extraKernelArgs` (the module's
+`talos.hostname` vestige) — the v1.13 streaming upgrade API drops it anyway,
+and the current installer build rejects it alongside `grubUseUKICmdline`;
+removal needs a scripted `talosctl edit machineconfig` (JSON6902 is rejected
+on multi-document configs; strategic-merge `null` is a no-op). The streaming
+API also never fires the final reboot — after "installation complete",
+reboot explicitly (`talosctl reboot`). Ritual after every node: `talosctl
+read /proc/cmdline` must show `talos.platform=hcloud console=tty1
+console=ttyS0 net.ifnames=0 …`, hostname right (`talosctl get hostname`),
+machine-config doc count unchanged. Workers one at a time — never both at
+once. (Snapshot-replace via drain + `terraform taint` + any `.tf` push
+remains a working alternative.)
 
 ## 1. Preconditions (B0)
 

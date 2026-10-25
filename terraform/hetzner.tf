@@ -125,11 +125,15 @@ module "talos" {
 # Schematic is content-addressed: re-POSTing packer/talos/schematic.yaml to
 # factory.talos.dev/schematics deterministically returns
 # ad2bf8c2de4df397709bd8782b85e6ab200a18da9258dfc323b1911f583a09da
-# -- the installer-image reference for in-place upgrades (WEP-0009):
-#   factory.talos.dev/installer/ad2bf8c2…:v<version>
-# (verified 2026-10-25; adds siderolabs/gvisor per WEP-0016 Phase 0 — nodes
-# not yet rolled forward still run the pre-gVisor image 7d4c31cbd96d…, and
-# the extension is inert on nodes that host no actor Workers.)
+# -- the platform-pinned installer reference for in-place upgrades of these
+#   hcloud nodes (the generic installer/ ref bakes metal cmdline — see
+#   docs/runbooks/k8s-upgrade.md, worker-1 incident 2026-10-25):
+#   factory.talos.dev/hcloud-installer/ad2bf8c2…:v<version>
+# (verified 2026-10-25; adds siderolabs/gvisor per WEP-0016 Phase 0 —
+# workers 1+2 rolled to this schematic 2026-10-25; the CP still runs the
+# pre-gVisor 7d4c31cbd96d… and takes gVisor as a passenger at its 1.14
+# in-place bump; the extension is inert on nodes that host no actor
+# Workers.)
 data "hcloud_image" "talos" {
   with_selector     = "os=talos,tailscale=true"
   with_architecture = "x86"
