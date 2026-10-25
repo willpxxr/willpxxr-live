@@ -41,7 +41,13 @@ source "hcloud" "talos" {
   location    = var.location
   server_type = "cx23"
 
-  snapshot_name = "talos-${var.talos_version}"
+  # Snapshot names must be unique: the hcloud Packer plugin fails the build
+  # if a snapshot with this name already exists (found the hard way --
+  # every monthly refresh since the first v1.13.9 build errored on the name
+  # collision, 2026-10-01 and 2026-10-25). The data source in hetzner.tf
+  # resolves by label selector + most_recent, so uniqueness per build is
+  # all that matters; the timestamp self-documents the build date.
+  snapshot_name = "talos-${var.talos_version}-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
   snapshot_labels = {
     os        = "talos"
     version   = var.talos_version
