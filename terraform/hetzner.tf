@@ -8,6 +8,31 @@ resource "tailscale_tailnet_key" "cluster_nodes" {
   depends_on = [tailscale_acl.main]
 }
 
+locals {
+  # All nodes boot the gVisor-bearing schematic (WEP-0016). The module's
+  # render still emits install.image = ghcr.io/siderolabs/installer (the
+  # metal-flavored generic -- the worker-1 platform-flip incident,
+  # 2026-10-25) plus a talos.hostname extraKernelArgs vestige that current
+  # installer builds reject alongside grubUseUKICmdline. Render-time patches
+  # cannot delete fields (JSON6902 unsupported on multi-document configs;
+  # strategic-merge null/[] are no-ops -- tested 2026-10-25), so the vestige
+  # remains a runbook preflight item (docs/runbooks/k8s-upgrade.md); the
+  # patches below pin what they can: the platform installer image (making a
+  # bare `talosctl upgrade` safe) and an explicit grubUseUKICmdline so no
+  # future default flip silently recreates the rejected pairing. Keep the
+  # tag in sync with talos_version below and the schematic ID with
+  # packer/talos/schematic.yaml (content-addressed: re-POST returns
+  # ad2bf8c2…).
+  machine_install_pin = {
+    machine = {
+      install = {
+        image             = "factory.talos.dev/hcloud-installer/ad2bf8c2de4df397709bd8782b85e6ab200a18da9258dfc323b1911f583a09da:v1.13.9"
+        grubUseUKICmdline = true
+      }
+    }
+  }
+}
+
 module "talos" {
   source  = "hcloud-talos/talos/hcloud"
   version = "~> 3.1"
@@ -90,12 +115,21 @@ module "talos" {
   # incident). user_data is lifecycle-ignored, so this only reaches future
   # re-provisions; the live workers were fixed by the one-time `talosctl patch mc`
   # runbook in docs/wep (WEP-0005 precedent).
-  talos_worker_extra_config_patches = [yamlencode({
-    apiVersion  = "v1alpha1"
-    kind        = "ExtensionServiceConfig"
-    name        = "tailscale"
-    environment = ["TS_AUTHKEY=${tailscale_tailnet_key.cluster_nodes.key}"]
-  })]
+  talos_worker_extra_config_patches = [
+    yamlencode({
+      apiVersion  = "v1alpha1"
+      kind        = "ExtensionServiceConfig"
+      name        = "tailscale"
+      environment = ["TS_AUTHKEY=${tailscale_tailnet_key.cluster_nodes.key}"]
+    }),
+    yamlencode(local.machine_install_pin),
+  ]
+
+  # Same install pin for future CP re-provisions (the module wires this
+  # input after its own control-plane yaml, like the worker one above; the
+  # module has no config-apply resource, so these inputs are render-only --
+  # live node configs are maintained by the runbook preflight, not TFC).
+  talos_control_plane_extra_config_patches = [yamlencode(local.machine_install_pin)]
 
   # Cilium moved to ArgoCD (gitops apps/cilium, WEP-0011, 2026-09-04).
   # deploy_cilium=false closes the module's for_each gate; the corresponding
@@ -129,11 +163,10 @@ module "talos" {
 #   hcloud nodes (the generic installer/ ref bakes metal cmdline — see
 #   docs/runbooks/k8s-upgrade.md, worker-1 incident 2026-10-25):
 #   factory.talos.dev/hcloud-installer/ad2bf8c2…:v<version>
-# (verified 2026-10-25; adds siderolabs/gvisor per WEP-0016 Phase 0 —
-# workers 1+2 rolled to this schematic 2026-10-25; the CP still runs the
-# pre-gVisor 7d4c31cbd96d… and takes gVisor as a passenger at its 1.14
-# in-place bump; the extension is inert on nodes that host no actor
-# Workers.)
+# (verified 2026-10-25; adds siderolabs/gvisor per WEP-0016 Phase 0 — all
+# three nodes rolled to this schematic 2026-10-25, fleet-uniform: the CP
+# included ahead of its 1.14 bump because owner direction places atelet
+# (actor capacity) on the CP; see the WEP-0016 execution record.)
 data "hcloud_image" "talos" {
   with_selector     = "os=talos,tailscale=true"
   with_architecture = "x86"

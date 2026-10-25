@@ -319,9 +319,11 @@ metal is the only option able to run substrate's microVM sandbox class
    forward at its Talos step with no special handling — the snapshot
    rebuild doubles as its per-version extension check (catalogue cuts
    gvisor for v1.14.4, checked 2026-10-25; v1.13.12 exists on the current
-   line — point releases are not free riders either). The CP node, hosting
-   no actor Workers, takes gVisor as a passenger at its 1.14 in-place
-   bump — no separate v1.13.9 roll.
+   line — point releases are not free riders either). The CP node was to
+   take gVisor as a passenger at its 1.14 in-place bump — no separate
+   v1.13.9 roll; superseded the same day (execution record below) when
+   owner direction placed atelet on the CP, making the extension
+   non-inert there — the CP rolled with the same recipe.
 3. **SKU stock watch** for CX43 (the upsize-on-restock exit) — nothing
    blocks while it's out; the squeeze is the standing plan.
 
@@ -341,9 +343,23 @@ cmdline (platform flip → random `talos-*` hostname — recovered in place,
 no replacement), the v1.13 streaming upgrade API neither passes
 `machine.install.extraKernelArgs` nor fires the final reboot, and
 `extraKernelArgs` must be stripped before the current installer build will
-validate. The RuntimeClass smoke pod is the remaining gate item — it lands
-via GitOps as the first `apps/substrate/` manifest (Phase 1). CP takes
-gVisor as a passenger at its 1.14 in-place bump (decision above).
+validate. Config alignment followed the same evening: every node's live
+machine config now carries install.image = the platform-pinned installer
+and no machine.install.extraKernelArgs (the hcloud-talos module still
+renders the talos.hostname vestige — upstream 3.4.17 and 4.1.3 checked —
+and render-time patches cannot delete it: JSON6902 is rejected on
+multi-document configs and strategic-merge null/[] are no-ops, tested; so
+the runbook strip stays load-bearing and an upstream issue is pending;
+hetzner.tf render-patches pin install.image + grubUseUKICmdline for
+future provisions). The CP then rolled with the same recipe — superseding
+the passenger decision above: owner direction places atelet (actor
+capacity) on the CP, so gVisor is not inert there; all three nodes now
+boot the identical schematic, and Phase-1's WorkerPool placement grows to
+include the CP (control-plane-taint toleration + nodeSelector, with the
+WEP's PriorityClass/margin rules honored — the CX23 shares etcd, so actor
+envelopes respect the margin discipline). The RuntimeClass smoke pod is
+the remaining gate item — it lands via GitOps as the first
+`apps/substrate/` manifest (Phase 1).
 
 ### Phase 1 — substrate install on the squeezed fleet
 
