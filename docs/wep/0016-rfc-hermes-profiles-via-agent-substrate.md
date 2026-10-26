@@ -420,6 +420,19 @@ Persisted same-day in terraform/hetzner.tf as `kube_api_extra_args` +
 wholesale, kubelet args merge over the cloud-provider base). Revisit both
 at the k8s 1.37 bump — the two kinds are served as stable v1 there.
 
+Execution record (2026-10-26, slice 2 — Supabase ate store): dedicated
+least-privilege `substrate` role + password TF-managed in
+terraform/supabase.tf (random_password + `substrate_db_url` local +
+onepassword_item "substrate" for the apps/substrate ExternalSecret). One
+recorded deviation from Decision §2's wording: Supavisor session-pooler
+usernames are "<role>.<project-ref>" against the platform-enrolled
+`postgres` database only — SQL-created databases are not Supavisor tenants,
+and the pooler is the only IPv4 path — so "dedicated database" lands as a
+dedicated schema owned by the role inside `postgres`, with the role's
+search_path pinned to it (the mcp-token-vault precedent). The one-time
+role/schema bootstrap SQL runs in the install slice (gated bootstrap using
+the vault's admin credentials, or hand-SQL fallback) and is recorded there.
+
 ### Phase 2 — credential chain
 
 - GitHub Apps bootstrapped (UI, once); 1Password items; ExternalSecrets;

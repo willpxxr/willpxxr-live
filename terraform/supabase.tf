@@ -23,6 +23,17 @@ resource "random_password" "token_vault_role" {
   special = false
 }
 
+# Substrate (ate) registry store, WEP-0016 Phase 1: dedicated least-privilege
+# role in this same project, mirroring the token_vault pattern above. The role
+# and its dedicated schema are created by a one-time bootstrap at install time
+# (gated Job or hand-SQL, recorded in the WEP-0016 execution record) -- unlike
+# the vault, substrate expects its store to already exist, so the password
+# below is the writer-of-record for it.
+resource "random_password" "substrate_role" {
+  length  = 32
+  special = false
+}
+
 resource "supabase_project" "token_vault" {
   organization_id   = var.supabase_organization_id
   name              = "mcp-token-vault"
@@ -90,6 +101,20 @@ locals {
     local.supabase_pooler_host
   )
 
+  # Substrate (ate) store connection, WEP-0016 Phase 1. Same session-pooler
+  # path and <role>.<project-ref> username convention as db_url above.
+  # Deviation from the WEP's "dedicated database" wording, recorded in the
+  # 2026-10-26 execution record: Supavisor tenants are platform-enrolled
+  # databases only (and the pooler is the only IPv4 path), so the isolation
+  # lands as a dedicated schema owned by the `substrate` role inside
+  # `postgres`, with the role's search_path pinned to it (vault precedent).
+  substrate_db_url = format(
+    "postgresql://substrate.%s:%s@%s:5432/postgres",
+    supabase_project.token_vault.id,
+    random_password.substrate_role.result,
+    local.supabase_pooler_host
+  )
+
   # 32 random bytes, base64 -- exactly what the vault's VAULT_ENCRYPTION_KEY
   # expects (XChaCha20-Poly1305 master key).
   # random_bytes exposes the value base64-encoded directly.
@@ -128,6 +153,32 @@ resource "onepassword_item" "mcp_token_vault" {
         admin_url = {
           type  = "CONCEALED"
           value = local.token_vault_admin_url
+        }
+      }
+    }
+  }
+}
+
+# Substrate store credentials for the apps/substrate ExternalSecret (WEP-0016
+# Phase 1; remoteRef keys substrate/credentials/db_url and
+# .../role_password). Writer-of-record like mcp_token_vault above; the one-time
+# role/schema bootstrap consumes the stored password before substrate's
+# first connection.
+resource "onepassword_item" "substrate" {
+  vault    = data.onepassword_vault.kubernetes.uuid
+  title    = "substrate"
+  category = "login"
+
+  section_map = {
+    credentials = {
+      field_map = {
+        db_url = {
+          type  = "CONCEALED"
+          value = local.substrate_db_url
+        }
+        role_password = {
+          type  = "CONCEALED"
+          value = random_password.substrate_role.result
         }
       }
     }
