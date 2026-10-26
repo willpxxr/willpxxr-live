@@ -73,7 +73,13 @@ jobs:
         env:
           KO_DOCKER_REPO: ghcr.io/willpxxr
         run: |
+          # --base-import-paths: image names = ghcr.io/willpxxr/<cmd> (ko's
+          # default naming is <cmd>-<md5 of the import path>, --bare is not
+          # usable with seven targets). ko's help hedges "may not work
+          # properly with --tags" for non-default namers -- the first
+          # dispatch verified the combination and kept both (2026-10-26).
           ko build \
+            --base-import-paths \
             --platform=linux/amd64 \
             --tags="${{ inputs.upstream_ref }}" \
             ./cmd/ateapi \
