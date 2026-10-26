@@ -91,6 +91,24 @@ jobs:
             ./cmd/podcertcontroller \
             | tee "${RUNNER_TEMP}/published.txt"
 
+      - name: "Setup Buildx"
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: "Build + push envoy-dataplane (docker buildx)"
+        # The router + egress dataplanes are NOT stock envoy: upstream bakes
+        # a Rust-built dynamic module into a pinned envoyproxy/envoy base
+        # (cmd/dataplane/envoy; ate-setup tags it envoy-dataplane under
+        # KO_DOCKER_REPO like the ko images -- internal/images/prebuilt.go).
+        # The recipe is Docker-native (rust builder stage -> envoy runtime),
+        # so this one is buildx, not ko.
+        id: envoy
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: substrate/cmd/dataplane/envoy
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/willpxxr/envoy-dataplane:${{ inputs.upstream_ref }}
+
       - name: "Published digests (render-slice input)"
         run: |
           {
@@ -98,5 +116,6 @@ jobs:
             echo
             echo '```'
             cat "${RUNNER_TEMP}/published.txt"
+            echo "Published ghcr.io/willpxxr/envoy-dataplane@${{ steps.envoy.outputs.digest }}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
