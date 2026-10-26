@@ -115,8 +115,8 @@ provider "supabase" {
 # skip_bucket_tagging: Hetzner's S3 surface does not document tagging.
 provider "minio" {
   minio_server        = "nbg1.your-objectstorage.com"
-  minio_user          = var.hetzner_s3_access_key
-  minio_password      = var.hetzner_s3_secret_key
+  minio_user          = var.s3_access_key
+  minio_password      = var.s3_secret_key
   minio_region        = "nbg1"
   minio_ssl           = true
   s3_compat_mode      = true

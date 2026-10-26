@@ -57,16 +57,16 @@ variable "supabase_region" {
 
 # Hetzner Object Storage S3 keys (WEP-0016 Phase 1). Console-generated --
 # Object Storage has no Cloud API -- and used only by the MinIO provider
-# to manage the substrate snapshot bucket. Empty until the Console keys
-# are generated and set as TFC workspace variables; the bucket is
-# count-gated off until then (terraform/objectstorage.tf).
-variable "hetzner_s3_access_key" {
+# to manage the substrate snapshot bucket. Empty until the keys are set
+# as TFC workspace variables (s3_access_key / s3_secret_key, write-only);
+# the bucket is count-gated off until then (terraform/objectstorage.tf).
+variable "s3_access_key" {
   sensitive   = true
   default     = ""
   description = "Hetzner Object Storage access key (Console-generated; empty = snapshot bucket not yet managed)"
 }
 
-variable "hetzner_s3_secret_key" {
+variable "s3_secret_key" {
   sensitive   = true
   default     = ""
   description = "Hetzner Object Storage secret key (Console-generated; empty = snapshot bucket not yet managed)"

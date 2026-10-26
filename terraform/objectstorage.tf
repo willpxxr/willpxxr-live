@@ -12,9 +12,9 @@
 # verified version). Buckets created this way appear in Hetzner Console.
 # Keys are Console-generated; the checklist:
 #
-#   1. Hetzner Console -> Object Storage: generate S3 keys (the
-#      management pair), set TFC workspace vars hetzner_s3_access_key +
-#      hetzner_s3_secret_key;
+#   1. Hetzner Console -> project -> Security -> S3 Credentials: generate
+#      the key pair, set TFC workspace vars s3_access_key + s3_secret_key
+#      (write-only);
 #   2. the next apply un-gates the bucket below and creates it;
 #   3. paste the same pair into the `substrate-s3` 1Password item below
 #      (one pair serves both consumers -- Hetzner default: each pair is
@@ -41,7 +41,7 @@ resource "minio_s3_bucket" "substrate_snapshots" {
   # Count-gated until the TFC workspace vars carry the Console-generated
   # management keys -- applies stay green before they exist (providers.tf
   # records why configure is offline pre-keys).
-  count = var.hetzner_s3_access_key == "" || var.hetzner_s3_secret_key == "" ? 0 : 1
+  count = var.s3_access_key == "" || var.s3_secret_key == "" ? 0 : 1
 
   bucket         = local.substrate_s3_bucket
   acl            = "private"

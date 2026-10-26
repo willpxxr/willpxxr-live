@@ -300,6 +300,8 @@ never hard-coded:
 - `var.auth0_domain`, `var.auth0_mgmt_client_id`, `var.auth0_mgmt_client_secret`
 - `var.betterstack_api_token`
 - `var.supabase_token`
+- `var.s3_access_key`
+- `var.s3_secret_key`
 
 ## Keeping this file current
 
