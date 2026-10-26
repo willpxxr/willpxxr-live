@@ -57,17 +57,34 @@ variable "supabase_region" {
 
 # Hetzner Object Storage S3 keys (WEP-0016 Phase 1). Console-generated --
 # Object Storage has no Cloud API -- and used only by the MinIO provider
-# to manage the substrate snapshot bucket. Empty until the keys are set
-# as TFC workspace variables (s3_access_key / s3_secret_key, write-only);
-# the bucket is count-gated off until then (terraform/objectstorage.tf).
+# to manage the substrate snapshot bucket. Entered as TFC write-only
+# workspace variables, hence `ephemeral` here -- the hard pairing for
+# write-only vars (TFC refuses writes otherwise); provider configuration
+# is the one sanctioned context for ephemeral values, so the bucket
+# resource carries no gate: missing keys fail the apply loudly.
 variable "s3_access_key" {
   sensitive   = true
-  default     = ""
-  description = "Hetzner Object Storage access key (Console-generated; empty = snapshot bucket not yet managed)"
+  ephemeral   = true
+  description = "Hetzner Object Storage access key (Console-generated S3 key; carried as a TFC write-only variable)"
 }
 
 variable "s3_secret_key" {
   sensitive   = true
-  default     = ""
-  description = "Hetzner Object Storage secret key (Console-generated; empty = snapshot bucket not yet managed)"
+  ephemeral   = true
+  description = "Hetzner Object Storage secret key (Console-generated S3 key; carried as a TFC write-only variable)"
+}
+
+# Substrate runtime S3 pair (WEP-0016 Phase 1): dedicated credentials for
+# the objectstore-plugin sidecars, written into the `substrate-s3`
+# 1Password item (terraform/objectstorage.tf). Regular Sensitive -- NOT
+# write-only/ephemeral: the item write must persist (writer-of-record),
+# and ephemeral values cannot cross into resource attributes.
+variable "substrate_s3_access_key" {
+  sensitive   = true
+  description = "Hetzner Object Storage access key for the substrate runtime (dedicated pair; TF writes it into the substrate-s3 1Password item)"
+}
+
+variable "substrate_s3_secret_key" {
+  sensitive   = true
+  description = "Hetzner Object Storage secret key for the substrate runtime (dedicated pair; TF writes it into the substrate-s3 1Password item)"
 }

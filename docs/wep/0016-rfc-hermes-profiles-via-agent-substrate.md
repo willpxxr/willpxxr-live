@@ -453,7 +453,23 @@ keys stay in TFC, so separating them isolates rotation and attribution.
 Per-key restriction (runtime key limited to object R/W on the snapshot
 bucket via an S3 bucket policy — the MinIO provider has
 minio_s3_bucket_policy, so TF can own the hardening) is recorded as
-follow-up, not a console toggle. Object locking deliberately off —
+follow-up, not a console toggle.
+
+Amendment (2026-10-26, later the same day): the owner entered the keys as
+TFC workspace variables and the credential flow restructured around that:
+the management pair rides TFC write-only variables matched by `ephemeral`
+declarations (the hard pairing; provider configuration is the one
+sanctioned context) so those values never touch state, at the cost of the
+count-gate — count expressions are persistent context that may not read
+ephemeral values, so a missing key now fails the apply loudly instead of
+silently skipping the bucket. The runtime pair rides regular Sensitive
+TFC variables and Terraform writes them into the `substrate-s3`
+1Password item as the writer-of-record (owner decision: masked values
+persist in state, the mcp-token-vault item posture, chosen over a
+hand-paste that would never touch TF; write-only/ephemeral cannot cross
+into resource attributes, hence the two postures). The follow-up
+bucket-policy hardening gains a direct TF surface:
+minio_s3_bucket_policy referencing var.substrate_s3_access_key. Object locking deliberately off —
 substrate rewrites/prunes its snapshots, retention is the runtime's job.
 Endpoint nbg1 (cluster's location, free eu-central internal traffic).
 Install-slice env surface recorded here: ATE_STORAGE_BACKEND=s3,

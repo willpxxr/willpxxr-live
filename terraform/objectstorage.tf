@@ -10,23 +10,30 @@
 # (docs.hetzner.com ST-507F6, "Creating a Bucket via MinIO Terraform
 # Provider"; 3.33.1 pinned there and in providers.tf as the Hetzner-
 # verified version). Buckets created this way appear in Hetzner Console.
-# Keys are Console-generated; the checklist:
+# Keys are Console-generated; the flow:
 #
 #   1. Hetzner Console -> project -> Security -> S3 Credentials: generate
-#      the key pair, set TFC workspace vars s3_access_key + s3_secret_key
-#      (write-only);
-#   2. the next apply un-gates the bucket below and creates it;
-#   3. generate a SECOND key pair for the substrate runtime, and paste it
-#      into the `substrate-s3` 1Password item below. Do NOT reuse the
-#      TFC management pair: Hetzner keypairs are project-wide by default
-#      (bucket create/delete included), the runtime Secret lives inside
-#      the cluster, and a second pair isolates rotation + attribution.
-#      True blast-radius reduction is bucket-policy-based (S3
-#      PutBucketPolicy -- minio_s3_bucket_policy, so TF can own it once
-#      the runtime key ID is a non-sensitive var), not a console toggle;
-#      recorded as follow-up hardening: runtime key limited to object
-#      R/W on this bucket. The install-slice ExternalSecret consumes
+#      the MANAGEMENT pair, set TFC workspace vars s3_access_key +
+#      s3_secret_key (write-only -- paired with the `ephemeral`
+#      declarations in variables.tf, the hard requirement; provider
+#      configuration is the one sanctioned context, so those values
+#      never touch state).
+#   2. generate the RUNTIME pair (dedicated -- Hetzner keypairs are
+#      project-wide by default, bucket create/delete included, and the
+#      runtime Secret lives inside the cluster; a second pair isolates
+#      rotation and attribution). Set TFC workspace vars
+#      substrate_s3_access_key + substrate_s3_secret_key as regular
+#      Sensitive (write-only OFF -- Terraform must persist them into the
+#      `substrate-s3` 1Password item below, and ephemeral values cannot
+#      cross into resource attributes).
+#   3. Applies create the bucket and keep the item current; the
+#      install-slice ExternalSecret consumes
 #      substrate-s3/credentials/access_key_id + .../secret_access_key.
+#      True blast-radius reduction is bucket-policy-based (S3
+#      PutBucketPolicy via minio_s3_bucket_policy -- naturally
+#      TF-reachable through var.substrate_s3_access_key), not a console
+#      toggle; recorded as follow-up hardening: runtime key limited to
+#      object R/W on this bucket.
 #
 # Object locking is deliberately OFF (unlike the public WORM/gist
 # examples): substrate rewrites and prunes its snapshot blobs;
@@ -43,10 +50,12 @@ locals {
 }
 
 resource "minio_s3_bucket" "substrate_snapshots" {
-  # Count-gated until the TFC workspace vars carry the Console-generated
-  # management keys -- applies stay green before they exist (providers.tf
-  # records why configure is offline pre-keys).
-  count = var.s3_access_key == "" || var.s3_secret_key == "" ? 0 : 1
+  # No count-gate: the s3_* variables are ephemeral (TFC write-only
+  # pairing -- see variables.tf), and count expressions are persistent
+  # context that may not read them. Missing keys therefore fail the apply
+  # loudly instead of the bucket silently not existing; configure itself
+  # stays offline pre-keys (s3_compat_mode skips the admin probe -- see
+  # providers.tf).
 
   bucket         = local.substrate_s3_bucket
   acl            = "private"
@@ -54,10 +63,11 @@ resource "minio_s3_bucket" "substrate_snapshots" {
 }
 
 # Runtime credentials for substrate's objectstore-plugin sidecars (atelet +
-# ate-api-server), hand-pasted from the Console-generated runtime pair.
-# synthetic.tf / linear-mcp-oauth placeholder pattern: TF is the
-# writer-of-record for the ITEM so the ExternalSecret has a stable target
-# from day one; ignore_changes keeps applies from reverting the paste.
+# ate-api-server): the dedicated runtime pair, carried as regular TFC
+# workspace variables and written by Terraform as the writer-of-record --
+# the mcp-token-vault item posture (owner decision, 2026-10-26: masked
+# values do persist in state; chosen over a 1Password hand-paste). These
+# vars must be regular Sensitive, NOT write-only (see header).
 resource "onepassword_item" "substrate_s3" {
   vault    = data.onepassword_vault.kubernetes.uuid
   title    = "substrate-s3"
@@ -68,17 +78,13 @@ resource "onepassword_item" "substrate_s3" {
       field_map = {
         access_key_id = {
           type  = "CONCEALED"
-          value = "placeholder-console-generated-s3-key"
+          value = var.substrate_s3_access_key
         }
         secret_access_key = {
           type  = "CONCEALED"
-          value = "placeholder-console-generated-s3-key"
+          value = var.substrate_s3_secret_key
         }
       }
     }
-  }
-
-  lifecycle {
-    ignore_changes = [section_map]
   }
 }
