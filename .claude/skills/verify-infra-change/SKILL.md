@@ -72,6 +72,24 @@ Two gotchas learned the hard way:
   the same day (the `*_extra_config_patches` strategic-merge pin; render
   patches cannot delete fields, so the strip stays runbook-per-node), and
   re-verify node identity after (`talosctl get hostname`, /proc/cmdline).
+  A second sanctioned pattern (2026-10-26, WEP-0016 Phase 1): additive
+  value-only patches via `talosctl patch machineconfig --patch-file`
+  (strategic merge; the node validates the full result — the same safety
+  class as the edit round-trip): occurrence-grep the live config for key
+  collisions first, `--dry-run` the patch (filtered output — it echoes
+  config), apply one node at a time with verification, and reconcile into
+  the matching module input the same day (`kube_api_extra_args` assigns
+  apiServer.extraArgs wholesale; `kubelet_extra_args` merges over the
+  cloud-provider base in both node classes). Two failure classes to know:
+  apiserver arg changes recreate the static pod in place (~30s API blip;
+  Talos 1.13 serves static pods to the kubelet over a localhost HTTP
+  staticPodURL — /etc/kubernetes/manifests stays empty, and an empty dir
+  there is normal, not a fault), and kubelet `--feature-gates` validate
+  against the kubelet's own dependency table, so an incomplete set
+  crash-loops the kubelet until corrected (2026-10-26:
+  ClusterTrustBundleProjection requires ClusterTrustBundle; kind hides
+  this via kubeadm's cluster-level gate propagation — Talos propagates
+  nothing, so set the full gate trio explicitly).
   Nothing else gets an out-of-band pass — September's corruption class was
   ad-hoc patching without exactly this discipline.
 - **Handing a module-internal resource to another manager (e.g. GitOps)**

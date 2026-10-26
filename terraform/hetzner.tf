@@ -142,6 +142,30 @@ module "talos" {
     "user.max_user_namespaces" = "32768"
   }
 
+  # Agent Substrate prerequisites (WEP-0016 Phase 1, 2026-10-26):
+  # cmd/podcertcontroller depends on the PodCertificateRequest and
+  # ClusterTrustBundle APIs, which k8s 1.36 serves only as betas behind these
+  # gates (certificates.k8s.io/v1beta1). Mirrors upstream
+  # hack/create-kind-cluster.sh v0.6.0 lines 104-114: kubeadm propagates that
+  # block's cluster-level gates to kubelets, Talos does not propagate anything,
+  # so the kubelet needs the same trio explicitly -- ClusterTrustBundleProjection
+  # hard-depends on ClusterTrustBundle (k8s v1.36.4 kube_features.go
+  # dependencies), and a projection-only set crash-looped worker-1's kubelet
+  # on 2026-10-26 until the full trio was applied. The module assigns
+  # apiServer.extraArgs wholesale (talos_patch_control_plane.tf) and merges
+  # kubelet_extra_args over the cloud-provider/rotate-server-certificates base
+  # in both node classes. Live nodes carry the identical values via same-day
+  # machine-config patches, per the reconcile rule in the verify-infra-change
+  # skill. Revisit at the k8s 1.37 bump: both kinds are served as stable v1
+  # APIs there, so these gates/flags become removable.
+  kube_api_extra_args = {
+    "feature-gates"  = "ClusterTrustBundle=true,ClusterTrustBundleProjection=true,PodCertificateRequest=true"
+    "runtime-config" = "certificates.k8s.io/v1beta1=true"
+  }
+  kubelet_extra_args = {
+    "feature-gates" = "ClusterTrustBundle=true,ClusterTrustBundleProjection=true,PodCertificateRequest=true"
+  }
+
   # Cilium moved to ArgoCD (gitops apps/cilium, WEP-0011, 2026-09-04).
   # deploy_cilium=false closes the module's for_each gate; the corresponding
   # kubectl_manifest.apply_cilium instances were removed from state via

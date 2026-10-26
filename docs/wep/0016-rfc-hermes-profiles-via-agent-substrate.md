@@ -397,6 +397,29 @@ security posture. Phase-0 gate: satisfied.
   cluster-wide Secret read is a docs-flagged production hazard — we don't
   ship it unscoped).
 
+Execution record (2026-10-26, slice 1 — cluster prerequisites): the
+Pod-Certificate beta APIs that cmd/podcertcontroller depends on are served:
+kube-apiserver now carries `--feature-gates=ClusterTrustBundle,
+ClusterTrustBundleProjection,PodCertificateRequest=true` +
+`--runtime-config=certificates.k8s.io/v1beta1=true` (mirror of upstream
+create-kind-cluster.sh v0.6.0 lines 104-114; static-pod recreation, ~30s API
+blip, then ClusterTrustBundle + PodCertificateRequest verified in v1beta1
+discovery), and all three kubelets carry the same gate trio. One upstream
+difference bit hard: kind's kubeadm propagates cluster-level gates to
+kubelets, Talos propagates nothing — and a projection-only kubelet set
+crash-looped worker-1 for ~25s ("ClusterTrustBundleProjection is enabled,
+but depends on features that are disabled: [ClusterTrustBundle]", k8s
+v1.36.4 kube_features.go dependency table) until the full trio was patched
+in; no pod impact. Talos 1.13 note: static pods are served to the kubelet
+over a localhost HTTP staticPodURL, not /etc/kubernetes/manifests files —
+the empty manifests dir is normal. Side finding, not a fault: worker-2's
+pre-roll pod rows sit as Completed/Error ghosts (podgc keeps them; live
+replacements for every one, all Deployments/STS/DSs at full readiness).
+Persisted same-day in terraform/hetzner.tf as `kube_api_extra_args` +
+`kubelet_extra_args` (module 3.4.15: apiServer.extraArgs is assigned
+wholesale, kubelet args merge over the cloud-provider base). Revisit both
+at the k8s 1.37 bump — the two kinds are served as stable v1 there.
+
 ### Phase 2 — credential chain
 
 - GitHub Apps bootstrapped (UI, once); 1Password items; ExternalSecrets;
