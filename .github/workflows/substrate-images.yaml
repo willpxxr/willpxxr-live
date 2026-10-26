@@ -1,0 +1,96 @@
+name: substrate-images
+
+# Rebuilds Agent Substrate ("ate") container images from the pinned
+# upstream ref and pushes them to GHCR (WEP-0016 Phase 1). Upstream
+# v0.6.0 publishes no release images -- its release workflow only drafts
+# release notes, and its kind flow ko-builds into a throwaway local
+# registry -- so this repo owns the pinned refs that apps/substrate
+# manifests consume. Dispatch-only: the manifest layer pins sha256
+# digests, so images are only ever rebuilt deliberately (version bump or
+# rebuild-forcing fix), never opportunistically.
+#
+# Image names keep ko's default import-path naming
+# (ghcr.io/willpxxr/go.ate.dev/substrate/cmd/<name>:<tag>) rather than
+# --base-import-paths: that flag is documented as "may not work properly
+# with --tags", and the version tag is worth more than flat names. The
+# digests pinned in the GitOps manifests are the real references.
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "agent-substrate/substrate tag to build from"
+        required: true
+        default: "v0.6.0"
+
+permissions: read-all
+
+jobs:
+  build-push:
+    name: "ko build ${{ inputs.upstream_ref }} -> GHCR"
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+
+      - name: "Checkout substrate at the pinned ref"
+        # Public upstream: the fetch is anonymous -- the GITHUB_TOKEN's
+        # contents scope applies to this repo only and is not consulted
+        # for foreign public repos at all.
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: agent-substrate/substrate
+          ref: ${{ inputs.upstream_ref }}
+          path: substrate
+          persist-credentials: false
+
+      - name: "Setup Go (version from substrate's own go.mod)"
+        # v0.6.0 wants go 1.27 (toolchain 1.27.3) -- newer than the dev
+        # machines; the version file keeps this self-updating on ref bumps.
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: substrate/go.mod
+          cache-dependency-path: substrate/go.sum
+
+      - name: "Install ko (pinned)"
+        run: go install github.com/google/ko@v0.19.1
+
+      - name: "Login to GHCR"
+        # ko resolves push credentials from ~/.docker/config.json
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "ko build the seven control-plane/runtime commands"
+        working-directory: substrate
+        env:
+          KO_DOCKER_REPO: ghcr.io/willpxxr
+        run: |
+          ko build \
+            --platform=linux/amd64 \
+            --tags="${{ inputs.upstream_ref }}" \
+            ./cmd/ateapi \
+            ./cmd/atecontroller \
+            ./cmd/atelet \
+            ./cmd/atenet \
+            ./cmd/ate-idp-server \
+            ./cmd/objectstore-plugin \
+            ./cmd/podcertcontroller \
+            | tee "${RUNNER_TEMP}/published.txt"
+
+      - name: "Published digests (render-slice input)"
+        run: |
+          {
+            echo "## substrate images -- ${{ inputs.upstream_ref }}"
+            echo
+            echo '```'
+            cat "${RUNNER_TEMP}/published.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

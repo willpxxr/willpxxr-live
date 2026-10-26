@@ -93,8 +93,11 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   set of bootstrap-only k8s objects Terraform manages directly (see below).
 - **ArgoCD** (self-managed app-of-apps, see `gitops/clusters/de/hetzner/cluster/argocd/`)
   reconciles everything under `gitops/`.
-- **CI** (`.github/workflows/`): OSSF Scorecard, dependency-review, Checkov
-  (IaC security scanning), and a Packer build for the Talos node image.
+- **CI** (`.github/workflows/`): OSSF Scorecard, dependency-review,
+  Checkov (IaC security scanning), a Packer build for the Talos node image,
+  and a dispatch-only ko build of the pinned Agent Substrate upstream tag
+  into GHCR (WEP-0016; the manifests pin digests, so rebuilds are
+  deliberate).
 - **pre-commit** (`.pre-commit-config.yaml`): gitleaks, end-of-file-fixer,
   trailing-whitespace.
 

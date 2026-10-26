@@ -469,7 +469,28 @@ persist in state, the mcp-token-vault item posture, chosen over a
 hand-paste that would never touch TF; write-only/ephemeral cannot cross
 into resource attributes, hence the two postures). The follow-up
 bucket-policy hardening gains a direct TF surface:
-minio_s3_bucket_policy referencing var.substrate_s3_access_key. Object locking deliberately off —
+minio_s3_bucket_policy referencing var.substrate_s3_access_key.
+
+Execution record (2026-10-26, slice 4 — image pipeline): upstream publishes
+no release images (verified against .github/workflows/release.yaml — a tag
+push only drafts release notes; the kind flow ko-builds into a throwaway
+local registry), and building on the dev mac was declined in favor of CI
+(owner call; substrate v0.6.0 wants go 1.27, ahead of the local toolchain).
+The fork option was considered and declined too — the pipeline lives in
+THIS repo as .github/workflows/substrate-images.yml: dispatch-only with an
+upstream_ref input pinned to v0.6.0 (manifests pin sha256 digests, so
+rebuilds are deliberate, never opportunistic); the checkout of the public
+upstream tag is anonymous (no token scope involved — the GITHUB_TOKEN's
+contents scope applies to this repo only); go comes from upstream's own
+go.mod; ko is pinned v0.19.1; images use ko's default import-path naming
+(ghcr.io/willpxxr/go.ate.dev/substrate/cmd/&lt;name&gt;) with the version tag —
+--base-import-paths was dropped deliberately, ko documents it as "may not
+work properly with --tags", and the versioned name beats flat-and-latest.
+GITHUB_TOKEN carries packages:write, so no gh CLI scope changes are needed
+at all. Packages push as private and get a one-time per-package flip to
+public via the GitHub UI before the install slice (owner call: public —
+Apache-2.0 code, nothing secret in the images, and the nodes pull
+anonymously with zero imagePullSecrets machinery). Object locking deliberately off —
 substrate rewrites/prunes its snapshots, retention is the runtime's job.
 Endpoint nbg1 (cluster's location, free eu-central internal traffic).
 Install-slice env surface recorded here: ATE_STORAGE_BACKEND=s3,
