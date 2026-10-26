@@ -444,10 +444,10 @@ flags for non-MinIO backends — their descriptions name Hetzner; verified
 against provider source that compat mode short-circuits the admin-API
 edition probe at configure, so secretless applies stay green pre-keys).
 Management keys are Console-generated TFC workspace vars and the bucket
-is count-gated until they are set; the substrate runtime pair is
-Console-generated and hand-pasted into the `substrate-s3` 1Password item
-(synthetic.tf placeholder pattern), restricted to the bucket when the
-Console offers per-key restriction. Object locking deliberately off —
+is count-gated until they are set; the same pair is hand-pasted into the
+`substrate-s3` 1Password item (synthetic.tf placeholder pattern) and
+serves both consumers — per-key restriction is bucket-policy-based per
+Hetzner's S3-credentials doc, deferred as hardening. Object locking deliberately off —
 substrate rewrites/prunes its snapshots, retention is the runtime's job.
 Endpoint nbg1 (cluster's location, free eu-central internal traffic).
 Install-slice env surface recorded here: ATE_STORAGE_BACKEND=s3,

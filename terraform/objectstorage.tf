@@ -16,10 +16,11 @@
 #      management pair), set TFC workspace vars hetzner_s3_access_key +
 #      hetzner_s3_secret_key;
 #   2. the next apply un-gates the bucket below and creates it;
-#   3. generate the substrate runtime pair, restricted to this bucket if
-#      the Console offers per-key restriction (Hetzner FAQ "How do I
-#      restrict access per key?"), and paste into the `substrate-s3`
-#      1Password item below -- the install-slice ExternalSecret consumes
+#   3. paste the same pair into the `substrate-s3` 1Password item below
+#      (one pair serves both consumers -- Hetzner default: each pair is
+#      valid for every bucket in the project). Per-key restriction is
+#      bucket-policy-based (S3 PutBucketPolicy), not a console toggle --
+#      deferred hardening; the install-slice ExternalSecret consumes
 #      substrate-s3/credentials/access_key_id + .../secret_access_key.
 #
 # Object locking is deliberately OFF (unlike the public WORM/gist
