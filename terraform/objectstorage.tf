@@ -16,11 +16,16 @@
 #      the key pair, set TFC workspace vars s3_access_key + s3_secret_key
 #      (write-only);
 #   2. the next apply un-gates the bucket below and creates it;
-#   3. paste the same pair into the `substrate-s3` 1Password item below
-#      (one pair serves both consumers -- Hetzner default: each pair is
-#      valid for every bucket in the project). Per-key restriction is
-#      bucket-policy-based (S3 PutBucketPolicy), not a console toggle --
-#      deferred hardening; the install-slice ExternalSecret consumes
+#   3. generate a SECOND key pair for the substrate runtime, and paste it
+#      into the `substrate-s3` 1Password item below. Do NOT reuse the
+#      TFC management pair: Hetzner keypairs are project-wide by default
+#      (bucket create/delete included), the runtime Secret lives inside
+#      the cluster, and a second pair isolates rotation + attribution.
+#      True blast-radius reduction is bucket-policy-based (S3
+#      PutBucketPolicy -- minio_s3_bucket_policy, so TF can own it once
+#      the runtime key ID is a non-sensitive var), not a console toggle;
+#      recorded as follow-up hardening: runtime key limited to object
+#      R/W on this bucket. The install-slice ExternalSecret consumes
 #      substrate-s3/credentials/access_key_id + .../secret_access_key.
 #
 # Object locking is deliberately OFF (unlike the public WORM/gist
