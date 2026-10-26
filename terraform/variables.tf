@@ -54,3 +54,20 @@ variable "supabase_region" {
   description = "AWS region for the Supabase project; picked to sit near the de/hetzner cluster (nbg1)."
   default     = "eu-central-1"
 }
+
+# Hetzner Object Storage S3 keys (WEP-0016 Phase 1). Console-generated --
+# Object Storage has no Cloud API -- and used only by the MinIO provider
+# to manage the substrate snapshot bucket. Empty until the Console keys
+# are generated and set as TFC workspace variables; the bucket is
+# count-gated off until then (terraform/objectstorage.tf).
+variable "hetzner_s3_access_key" {
+  sensitive   = true
+  default     = ""
+  description = "Hetzner Object Storage access key (Console-generated; empty = snapshot bucket not yet managed)"
+}
+
+variable "hetzner_s3_secret_key" {
+  sensitive   = true
+  default     = ""
+  description = "Hetzner Object Storage secret key (Console-generated; empty = snapshot bucket not yet managed)"
+}

@@ -433,6 +433,27 @@ search_path pinned to it (the mcp-token-vault precedent). The one-time
 role/schema bootstrap SQL runs in the install slice (gated bootstrap using
 the vault's admin credentials, or hand-SQL fallback) and is recorded there.
 
+Execution record (2026-10-26, slice 3 — snapshot bucket): Hetzner Object
+Storage has no Cloud API — the hcloud provider cannot manage buckets or
+credentials (registry guide; hetznercloud/terraform-provider-hcloud#1005)
+— so the official docs route is the pin: the MinIO provider (3.33.1, the
+version verified in docs.hetzner.com ST-507F6 "Creating a Bucket via
+MinIO Terraform Provider") creates the bucket via the S3 data-plane API,
+with s3_compat_mode + skip_bucket_tagging set (the provider's own compat
+flags for non-MinIO backends — their descriptions name Hetzner; verified
+against provider source that compat mode short-circuits the admin-API
+edition probe at configure, so secretless applies stay green pre-keys).
+Management keys are Console-generated TFC workspace vars and the bucket
+is count-gated until they are set; the substrate runtime pair is
+Console-generated and hand-pasted into the `substrate-s3` 1Password item
+(synthetic.tf placeholder pattern), restricted to the bucket when the
+Console offers per-key restriction. Object locking deliberately off —
+substrate rewrites/prunes its snapshots, retention is the runtime's job.
+Endpoint nbg1 (cluster's location, free eu-central internal traffic).
+Install-slice env surface recorded here: ATE_STORAGE_BACKEND=s3,
+AWS_ENDPOINT_URL=https://nbg1.your-objectstorage.com,
+AWS_S3_USE_PATH_STYLE=true.
+
 ### Phase 2 — credential chain
 
 - GitHub Apps bootstrapped (UI, once); 1Password items; ExternalSecrets;
