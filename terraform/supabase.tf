@@ -23,13 +23,22 @@ resource "random_password" "token_vault_role" {
   special = false
 }
 
-# Substrate (ate) registry store, WEP-0016 Phase 1: dedicated least-privilege
-# role in this same project, mirroring the token_vault pattern above. The role
-# and its dedicated schema are created by a one-time bootstrap at install time
-# (gated Job or hand-SQL, recorded in the WEP-0016 execution record) -- unlike
-# the vault, substrate expects its store to already exist, so the password
-# below is the writer-of-record for it.
-resource "random_password" "substrate_role" {
+# Substrate (ate) registry store, WEP-0016 Phase 1: upstream's two-role
+# model (v0.6.0 docs/postgres.md + operator-install.md settings table) --
+# an owner DSN runs migrations (ATE_API_POSTGRES_OWNER_CONNECTION_STRING,
+# default role substrate_owner) and a read-write DSN serves traffic
+# (ATE_API_POSTGRES_READ_WRITE_CONNECTION_STRING, default role
+# substrate_readwrite). Role names match upstream's defaults verbatim;
+# the dedicated schema (`substrate`) is pinned via ATE_API_POSTGRES_SCHEMA
+# at render time. Unlike the vault, substrate expects its store to already
+# exist: the one-time role/schema bootstrap (install slice, recorded in the
+# WEP-0016 execution record) consumes the passwords below.
+resource "random_password" "substrate_owner" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "substrate_readwrite" {
   length  = 32
   special = false
 }
@@ -101,17 +110,25 @@ locals {
     local.supabase_pooler_host
   )
 
-  # Substrate (ate) store connection, WEP-0016 Phase 1. Same session-pooler
+  # Substrate (ate) store DSNs, WEP-0016 Phase 1 -- upstream's two-DSN
+  # surface (owner = migrations, read-write = traffic). Same session-pooler
   # path and <role>.<project-ref> username convention as db_url above.
   # Deviation from the WEP's "dedicated database" wording, recorded in the
   # 2026-10-26 execution record: Supavisor tenants are platform-enrolled
   # databases only (and the pooler is the only IPv4 path), so the isolation
-  # lands as a dedicated schema owned by the `substrate` role inside
-  # `postgres`, with the role's search_path pinned to it (vault precedent).
-  substrate_db_url = format(
-    "postgresql://substrate.%s:%s@%s:5432/postgres",
+  # lands as a dedicated schema `substrate` inside `postgres`, owned by
+  # substrate_owner with DML granted to substrate_readwrite (the
+  # mcp-token-vault precedent).
+  substrate_owner_connection_string = format(
+    "postgresql://substrate_owner.%s:%s@%s:5432/postgres",
     supabase_project.token_vault.id,
-    random_password.substrate_role.result,
+    random_password.substrate_owner.result,
+    local.supabase_pooler_host
+  )
+  substrate_readwrite_connection_string = format(
+    "postgresql://substrate_readwrite.%s:%s@%s:5432/postgres",
+    supabase_project.token_vault.id,
+    random_password.substrate_readwrite.result,
     local.supabase_pooler_host
   )
 
@@ -160,9 +177,9 @@ resource "onepassword_item" "mcp_token_vault" {
 }
 
 # Substrate store credentials for the apps/substrate ExternalSecret (WEP-0016
-# Phase 1; remoteRef keys substrate/credentials/db_url and
-# .../role_password). Writer-of-record like mcp_token_vault above; the one-time
-# role/schema bootstrap consumes the stored password before substrate's
+# Phase 1; remoteRef keys substrate/credentials/<field> below). Writer-of-record
+# like mcp_token_vault above: the two DSNs feed the components directly; the
+# raw passwords feed the one-time role/schema bootstrap before substrate's
 # first connection.
 resource "onepassword_item" "substrate" {
   vault    = data.onepassword_vault.kubernetes.uuid
@@ -172,13 +189,21 @@ resource "onepassword_item" "substrate" {
   section_map = {
     credentials = {
       field_map = {
-        db_url = {
+        owner_connection_string = {
           type  = "CONCEALED"
-          value = local.substrate_db_url
+          value = local.substrate_owner_connection_string
         }
-        role_password = {
+        readwrite_connection_string = {
           type  = "CONCEALED"
-          value = random_password.substrate_role.result
+          value = local.substrate_readwrite_connection_string
+        }
+        owner_password = {
+          type  = "CONCEALED"
+          value = random_password.substrate_owner.result
+        }
+        readwrite_password = {
+          type  = "CONCEALED"
+          value = random_password.substrate_readwrite.result
         }
       }
     }

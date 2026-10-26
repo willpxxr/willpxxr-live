@@ -482,20 +482,52 @@ upstream_ref input pinned to v0.6.0 (manifests pin sha256 digests, so
 rebuilds are deliberate, never opportunistic); the checkout of the public
 upstream tag is anonymous (no token scope involved — the GITHUB_TOKEN's
 contents scope applies to this repo only); go comes from upstream's own
-go.mod; ko is pinned v0.19.1; images use ko's default import-path naming
-(ghcr.io/willpxxr/go.ate.dev/substrate/cmd/&lt;name&gt;) with the version tag —
---base-import-paths was dropped deliberately, ko documents it as "may not
-work properly with --tags", and the versioned name beats flat-and-latest.
-GITHUB_TOKEN carries packages:write, so no gh CLI scope changes are needed
-at all. Packages push as private and get a one-time per-package flip to
-public via the GitHub UI before the install slice (owner call: public —
-Apache-2.0 code, nothing secret in the images, and the nodes pull
-anonymously with zero imagePullSecrets machinery). Object locking deliberately off —
-substrate rewrites/prunes its snapshots, retention is the runtime's job.
-Endpoint nbg1 (cluster's location, free eu-central internal traffic).
-Install-slice env surface recorded here: ATE_STORAGE_BACKEND=s3,
+go.mod; ko is pinned v0.19.1. GITHUB_TOKEN carries packages:write, so no
+gh CLI scope changes are needed at all. Packages push as private and get
+a one-time per-package flip to public via the GitHub UI before the install
+slice (owner call: public — Apache-2.0 code, nothing secret in the
+images, and the nodes pull anonymously with zero imagePullSecrets
+machinery). Naming, corrected against the first dispatch's output
+(2026-10-26, run 40328976939 — this record initially claimed
+import-path naming, which was wrong): ko's default naming for
+multi-segment import paths is command-name plus an md5 of the import path
+(ko 0.19.1 packageWithMD5), producing
+ghcr.io/willpxxr/ateapi-90104889dbc9f5159a48589cd3135a5b et al — owner
+call, 2026-10-26: loose the hash — so --base-import-paths is on from the
+second dispatch (run 40343185874): clean names, ghcr.io/willpxxr/ateapi
+:v0.6.0 et al, and the --base-import-paths/--tags pairing that ko's help
+hedges against works fine in practice. Both dispatches published
+identical digests (reproducible builds; the rename is label-only). The
+md5-suffixed seven are superseded, unread by anything, and deleted once
+the clean set is flipped public. The app manifests pin the clean set's
+sha256 digests. Carry-over from slice 3's record, re-homed here after a
+record-splice artifact: object locking deliberately off (substrate
+rewrites/prunes its snapshots, retention is the runtime's job); snapshot
+endpoint nbg1 (cluster's location, free eu-central internal traffic);
+install-slice env surface: ATE_STORAGE_BACKEND=s3,
 AWS_ENDPOINT_URL=https://nbg1.your-objectstorage.com,
 AWS_S3_USE_PATH_STYLE=true.
+
+Amendment (2026-10-26, render research; supersedes slice 2's single-role
+wording): upstream v0.6.0's store surface is two-DSN, not one
+(docs/postgres.md + the operator-install settings table) —
+ATE_API_POSTGRES_OWNER_CONNECTION_STRING (default role substrate_owner,
+runs migrations) and ATE_API_POSTGRES_READ_WRITE_CONNECTION_STRING
+(default role substrate_readwrite, serves traffic), with the application
+schema pinned via ATE_API_POSTGRES_SCHEMA (ours: `substrate`). TF now
+mints both roles (random_password.substrate_owner +
+.substrate_readwrite) and the substrate 1Password item carries both DSNs
+plus both raw passwords for the one-time bootstrap; the
+dedicated-schema-inside-postgres deviation stands. Related install facts
+from the same research: ate-api-server refuses to start without
+--snapshot-location (an object-store URI — ours:
+s3://willpxxr-live-substrate-snapshots/); gVisor is the SandboxConfig
+runtime (manifests/ate-install/sandboxconfig-gvisor.yaml); the credential
+provider gets its own setting (atenet.egress.credentialProvider) — value
+syntax verified against the ate-setup source at render time; and the
+kustomize base bundle deliberately excludes pod-certificate-controller,
+atenet-egress, and the SandboxConfig (the installer applies
+variant-selected copies — our render includes them explicitly).
 
 ### Phase 2 — credential chain
 
