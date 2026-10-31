@@ -564,6 +564,57 @@ Dry-run: 15/16 files client-side green against the live cluster; the
 not-yet-installed CRD — it renders byte-identical to upstream and
 converges via the retry policy (the house-recorded ordering pattern).
 
+Execution record (2026-10-31, slice 5 amendment — bootstrap convergence
+chain, five live-proven defects, all in the first-sync path): (1) the
+postgres:18-alpine digest pin had two stray hex chars — the apiserver
+refused every fresh pod with InvalidImageName; re-pinned by registry
+manifest lookup (digest + SHA length + manifest-fetch 200 all verified).
+(2) The main-phase wave-gated bootstrap Job was structurally broken:
+Job spec.template immutability turned every template/SQL change into
+"error when replacing … field is immutable" Replace-PUT collisions, while
+retrying ops re-used frozen task sets against stale manifests — deleted
+roles mid-rotation age-out etc. The cure is the canonical ArgoCD
+resource-hooks pattern: the Job is a PreSync hook with
+generateName: schema-migrate- (each sync creates a fresh object — Job
+immutability is structurally outside the picture) + BeforeHookCreation
+(only the last run persists between syncs). PreSync, not PostSync:
+upstream's ateapi runs migrations as substrate_owner at startup and
+cannot become healthy without the store, and PostSync hooks run only
+after all main resources are Healthy — a permanent deadlock on a clean
+install. Idempotent SQL makes every-sync re-run the free password-rotation
+reconcile (proven live: second run printed NOTICE schemata-already-exist /
+grants-already-held and completed in 3s). (3) The PreSync hook reads its
+SQL via configMapKeyRef, but the ConfigMap was a main-phase resource —
+main phase never runs before PreSync, so the hook deadlocked in
+CreateContainerConfigError (live: configmap not found); the CM is now the
+Job's PreSync wave -1 companion (hooks wave-order within their phase).
+(4) bootstrap-sql.yaml had never been added to the app.yaml manifests
+list at all — the CM was in no op's resource set, ever. (5) The
+ApplicationSet's manifests directory source had no recurse flag —
+ArgoCD directory.recurse defaults false, so the scan never descended
+into rendered/ and rendered/core/*.yaml silently matched nothing: the
+entire upstream bundle (CRDs, deployments, atelet DS, RBAC, podcert ns)
+was absent from every sync despite a green-ish app (ExternalSecrets,
+CNP s, the gVisor RuntimeClass were all top-level files — which is why
+the app looked nearly-converged while the actual substrate was missing).
+recurse: true on the manifests source fixed it for the uniform schema
+(top-level entries match identically). Evidence of full-landing:
+fresh op carried 59 tasks incl. the three ate.dev CRDs, the
+podcertificate-controller-system namespace, and all RBAC; the podcert
+baseline CNP (wave 1) failed its first apply only because of defect 5's
+missing namespace, land ing green once the ns existed. Also live-proven
+along the way (SQL dry-run evidence from the old Job's backoff pods):
+Supabase's session role (postgres) cannot SET ROLE to roles it created,
+so CREATE SCHEMA … AUTHORIZATION substrate_owner requires explicit
+GRANT substrate_owner TO postgres first — the SQL carries the idempotent
+grant pair (commit a46143b, then 7c11dbe hook conversion, 9b7b4e2 CM
+companion, 4b4bee1 app.yaml listing, 92e5bc8 ApplicationSet recurse).
+Operating realities recorded: argocd 3.x CLI in core mode has no refresh
+subcommand (and sync takes no --refresh), terminate-op works with the
+kubectl-context default-namespace set to argocd, and syncs during an
+in-flight op fail with FailedPrecondition — terminate + auto-sync
+re-engage.
+
 ### Phase 2 — credential chain
 
 - GitHub Apps bootstrapped (UI, once); 1Password items; ExternalSecrets;
