@@ -55,25 +55,43 @@ spec:
         - name: jwt-authority-pool
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
           workingDir: /workspace
+          volumeMounts:
+            - name: ate-setup-workspace
+              mountPath: /workspace
           args: ["create", "jwt-authority-pool", "--namespace", "substrate"]
         - name: actor-id-ca-pool
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
           workingDir: /workspace
+          volumeMounts:
+            - name: ate-setup-workspace
+              mountPath: /workspace
           args: ["create", "actor-id-ca-pool", "--namespace", "substrate"]
         - name: actor-id-ca-certs
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
           workingDir: /workspace
+          volumeMounts:
+            - name: ate-setup-workspace
+              mountPath: /workspace
           args: ["create", "actor-id-ca-certs", "--namespace", "substrate"]
         - name: podcertificate-controller-cas
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
           workingDir: /workspace
+          volumeMounts:
+            - name: ate-setup-workspace
+              mountPath: /workspace
           args: ["create", "podcertificate-controller-cas", "--namespace", "substrate"]
         - name: api-config
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
           workingDir: /workspace
+          volumeMounts:
+            - name: ate-setup-workspace
+              mountPath: /workspace
           args: ["create", "api-config", "--namespace", "substrate"]
       containers:
         - name: api-authentication-config
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
           workingDir: /workspace
+          volumeMounts:
+            - name: ate-setup-workspace
+              mountPath: /workspace
           args: ["create", "api-authentication-config", "--namespace", "substrate"]
