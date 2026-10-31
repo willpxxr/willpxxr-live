@@ -22,3 +22,4 @@ manifests:
   - externalsecret.yaml
   - bootstrap-sql.yaml
   - bootstrap-job.yaml
+  - state-bootstrap-rbac.yaml

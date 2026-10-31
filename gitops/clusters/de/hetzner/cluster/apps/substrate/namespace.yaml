@@ -1,5 +1,18 @@
 ---
+# Upstream's atelet DaemonSet is kubelet-adjacent by design: hostPath
+# volumes for its base dir, kubelet plugins, device plugins, host /dev and
+# the image-credential-provider pair. The cluster's default PodSecurity
+# enforce (baseline, Talos default when a namespace carries no labels)
+# rejects hostPath outright -- first full-landing sync verified live
+# 2026-10-31 (FailedCreate: violates PodSecurity "baseline:latest", from
+# every DS create attempt for hours). Privileged is upstream's own
+# operating model for the ate namespace; actors later ride gVisor side
+# pods in this same namespace.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: substrate
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged

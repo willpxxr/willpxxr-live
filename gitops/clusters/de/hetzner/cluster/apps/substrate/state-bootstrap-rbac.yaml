@@ -1,0 +1,132 @@
+# ServiceAccount + RBAC for the ate-setup state-bootstrap hook (the Job in
+# state-bootstrap-job.yaml, PreSync wave -1). Everything here is itself a
+# PreSync hook at wave -2 so the Job's pod can authenticate on the very
+# first sync it runs in -- hook RBAC cannot ride the main phase, PreSync
+# always precedes it (the same ordering contract bootstrap-sql.yaml
+# records).
+#
+# Scope: exactly what the six ate-setup `create` subcommands touch --
+#
+#   jwt-authority-pool, actor-id-ca-pool, actor-id-ca-certs: secrets in
+#     the substrate namespace (actor JWT signing pool + actor-id CA pool
+#     and the derived public cert bundle)
+#   podcertificate-controller-cas: the service-dns / pod-identity /
+#     postgres CA pool secrets in the upstream-owned
+#     podcertificate-controller-system namespace
+#   api-config, api-authentication-config: configmaps in the substrate
+#     namespace
+#
+# plus read-only namespace metadata: the tool EnsureNamespace-checks its
+# targets before writing. Greenfield note: this flow assumes the two
+# namespaces already exist (runbook: pre-create them the way the phase-0
+# work did) -- a create-if-missing would need namespace-create on a
+# ClusterRole, which is not worth handing to a hook identity.
+# api-server-env-vars is deliberately NOT among the subcommands run: it
+# would rewrite upstream's default env ConfigMap/Secret pair, which this
+# app owns instead via ate-api-server-envvars.yaml + the ESO External
+# Secret (creationPolicy: Owner).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ate-state-bootstrap
+  namespace: substrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ate-state-bootstrap-namespaces
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+rules:
+  # ate-setup's EnsureNamespace + OIDC issuer discovery read namespace
+  # metadata; grant nothing beyond get.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ate-state-bootstrap-namespaces
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ate-state-bootstrap-namespaces
+subjects:
+  - kind: ServiceAccount
+    name: ate-state-bootstrap
+    namespace: substrate
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ate-state-bootstrap
+  namespace: substrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets", "configmaps"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ate-state-bootstrap
+  namespace: substrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ate-state-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: ate-state-bootstrap
+    namespace: substrate
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ate-state-bootstrap
+  namespace: podcertificate-controller-system
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ate-state-bootstrap
+  namespace: podcertificate-controller-system
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ate-state-bootstrap
+subjects:
+  - kind: ServiceAccount
+    name: ate-state-bootstrap
+    namespace: substrate

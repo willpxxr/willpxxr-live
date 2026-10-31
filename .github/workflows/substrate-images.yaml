@@ -89,6 +89,7 @@ jobs:
             ./cmd/ate-idp-server \
             ./cmd/objectstore-plugin \
             ./cmd/podcertcontroller \
+            ./cmd/ate-setup \
             | tee "${RUNNER_TEMP}/published.txt"
 
       - name: "Setup Buildx"
