@@ -150,6 +150,20 @@ EOF
   # api-server pod waits forever on "credential bundle is not issued yet"
   # (live 2026-10-31).
   perl -pi -e 's|^(\s*- --postgres-client-namespace=)ate-system$|$1substrate|' "$dst"
+  # ate-api-server only: upstream ships the Deployment with just the otel
+  # envFrom, and its installer patches the env-pair envFrom entries at
+  # deploy time (UpdateAPIServerEnvVars -- the subcommand we deliberately
+  # do not run, owning the env files instead). Render them directly: the
+  # non-secret half from this app ate-api-server-envvars ConfigMap, the
+  # secret half (both postgres DSNs + schema) from the ESO-materialized
+  # ate-api-server-secret-envvars Secret. Without this, the binary starts,
+  # resolves --postgres-read-write-connection-string=@env to nothing, and
+  # exits "persistence backend: ... is required" (live 2026-10-31).
+  case "$(basename "$dst")" in
+    ate-api-server.yaml)
+      perl -0pi -e 's|^        envFrom:\n        - configMapRef:\n            name: ate-otel-config\n|        envFrom:\n        - configMapRef:\n            name: ate-otel-config\n        # Env contract (WEP-0016): non-secret half = the\n        # ate-api-server-envvars ConfigMap; secret half (both postgres\n        # DSNs + schema) = ESO ate-api-server-secret-envvars.\n        - configMapRef:\n            name: ate-api-server-envvars\n        - secretRef:\n            name: ate-api-server-secret-envvars\n|m' "$dst"
+      ;;
+  esac
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys

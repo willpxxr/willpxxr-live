@@ -176,6 +176,13 @@ spec:
         envFrom:
         - configMapRef:
             name: ate-otel-config
+        # Env contract (WEP-0016): non-secret half = the
+        # ate-api-server-envvars ConfigMap; secret half (both postgres
+        # DSNs + schema) = ESO ate-api-server-secret-envvars.
+        - configMapRef:
+            name: ate-api-server-envvars
+        - secretRef:
+            name: ate-api-server-secret-envvars
         volumeMounts:
         - name: objectstore-plugin
           mountPath: /run/objectstore-plugin

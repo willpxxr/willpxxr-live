@@ -703,6 +703,22 @@ one-time template annotation (willpxxr.com/restart, rendered) rolls the
 Deployment the GitOps way so fresh pods issue their PCR against the
 correctly-watching controller.
 
+Slice 7c, same day, the env wiring half the installer owns: with the
+PCR authorization fixed, the api-server pods finally reached their
+binary and exited "persistence backend: --postgres-read-write-
+connection-string is required" -- upstream ships the Deployment with
+ONLY the otel envFrom and patches the env-pair envFrom entries (the
+ConfigMap + the ESO Secret references) into the Deployment at deploy
+time (UpdateAPIServerEnvVars, the same subcommand whose file half we
+deliberately own). The render now ships the pair directly
+(ate-api-server-envvars + ate-api-server-secret-envvars refs), letting
+the @env args resolve. Two render-recipe lessons appended from this
+round: perl -0pi needs /m for ^-anchored mid-file substitution (it
+silently no-ops otherwise), and no apostrophes inside single-quoted
+perl programs ("this app's" broke the quoting -- the failure mode is a
+substitution with unterminated replacement, which consumes the
+following argument and drops -i).
+
 Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
 into this debug arc — first release with published container images
 (ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes
