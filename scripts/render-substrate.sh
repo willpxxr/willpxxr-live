@@ -173,6 +173,26 @@ EOF
   # Live 2026-10-31: the api exits "Invalid flags: --authz-bootstrap-owners
   # must list at least one principal" without it.
   perl -pi -e 'if (/^(\s*)- --actor-jwt-issuer=\@env$/) { $_ .= "$1- --authz-bootstrap-owners=system:serviceaccount:substrate:ate-client\n" }' "$dst"
+  # Dataplane (atenet router + egress): retarget the --namespace arg the
+  # same way metadata.namespace was retargeted -- upstream pins
+  # --namespace=ate-system and our binary must watch substrate (the live
+  # manifests make the rottargeted pods look right while the binary
+  # watches the wrong namespace). Also, the router's ingress client-auth
+  # requires at least one allowed SPIFFE ID (the shipped manifest carries
+  # the CA-file arg but not the list, and the binary exits on the missing
+  # entry, live 2026-10-31). Phase-1 wires ingress FAIL-CLOSED: the ID is
+  # format-valid under this fleet's own trust domain but matches no live
+  # identity until Phase 2's ai-gateway federation mints one deliberately.
+  case "$(basename "$dst")" in
+    atenet-router.yaml|atenet-egress.yaml)
+      perl -pi -e 's|--namespace=ate-system|--namespace=substrate|' "$dst"
+      ;;
+  esac
+  case "$(basename "$dst")" in
+    atenet-router.yaml)
+      perl -pi -e 'if (/^(\s*)- "?--ingress-client-ca-file=\/run\/podidentity\.podcert\.ate\.dev\/trust-bundle\.pem"?$/) { $_ .= "$1# Fail-closed Phase-2 placeholder: valid format, matches no live identity.\n$1- \"--ingress-allowed-spiffe-ids=spiffe://willpxxr.com/ai-gateway\"\n" }' "$dst"
+      ;;
+  esac
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys

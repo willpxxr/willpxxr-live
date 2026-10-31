@@ -760,6 +760,23 @@ needs the privileged kube-system namespace, and ate-controller's
 Service is metrics-only :8080 -- probe service ports from the Service
 spec, not assumptions.
 
+Slice 8b, same day, the dataplane's own landings: the monitoring hold
+came from live evidence (the sync task failed discovery on
+monitoring.googleapis.com/v1 -- Google-managed CRDs only GKE
+provisions; the fleet's otel stack is disabled, so the exporter has no
+consumer either way: router + egress ship, monitoring is held with the
+GKE-isms). The router then exited on the missing ingress client-auth
+list -- the shipped manifest carries --ingress-client-ca-file but not
+--ingress-allowed-spiffe-ids, which the binary requires: Phase 1
+wires it FAIL-CLOSED (a format-valid spiffe://willpxxr.com/ai-gateway
+that matches no live identity; Phase 2's ai-gateway federation mints
+the real one deliberately). And both atenet binaries carried
+--namespace=ate-system args, un-retargeted by the metadata-only
+namespace pass -- the router/egress must watch substrate; the retarget
+list now includes args, not just metadata.namespace fields. atenet-egress
+landed green immediately (3/3 containers -- its MITM pool step in the
+state-bootstrap hook worked on the first run).
+
 Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
 into this debug arc — first release with published container images
 (ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes

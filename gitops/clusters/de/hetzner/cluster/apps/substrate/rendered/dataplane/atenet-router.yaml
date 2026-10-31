@@ -212,7 +212,7 @@ spec:
         # Deployment (manifests/ate-install/atenet-egress.yaml), because the two
         # directions scale independently.
         - "--mode=ingress"
-        - "--namespace=ate-system"
+        - "--namespace=substrate"
         - "--port-xds=18000"
         - "--port-extproc=50051"
         - "--extproc-address=127.0.0.1"
@@ -230,6 +230,8 @@ spec:
         # its own --ingress-allowed-spiffe-ids (ATE_INGRESS_ALLOWED_SPIFFE_IDS),
         # and the router refuses to start without it.
         - "--ingress-client-ca-file=/run/podidentity.podcert.ate.dev/trust-bundle.pem"
+        # Fail-closed Phase-2 placeholder: valid format, matches no live identity.
+        - "--ingress-allowed-spiffe-ids=spiffe://willpxxr.com/ai-gateway"
         # - "--ingress-allowed-spiffe-ids=spiffe://cluster.local/ns/ate-e2e-router-client/sa/router-client"
         # Client auth to ateapi (mtls): verify the serving cert against the
         # servicedns trust bundle and present the podidentity client cert.

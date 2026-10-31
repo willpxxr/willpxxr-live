@@ -1372,7 +1372,7 @@ spec:
         args:
         - router
         - --mode=egress
-        - --namespace=ate-system
+        - --namespace=substrate
         - --port-extproc=50051
         - --extproc-address=127.0.0.1
         - --ateapi-address=dns:///api.ate-system.svc:443
