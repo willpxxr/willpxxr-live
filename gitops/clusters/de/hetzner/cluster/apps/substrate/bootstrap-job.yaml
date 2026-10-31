@@ -1,30 +1,34 @@
-# One-time Supabase bootstrap: upstream's store surface expects the two
-# roles (substrate_owner runs migrations, substrate_readwrite serves
-# traffic) and their schema to already exist -- unlike mcp-token-vault,
-# substrate does not self-bootstrap. The SQL lives in the
-# substrate-bootstrap-sql ConfigMap (bootstrap-sql.yaml) and psql reads
-# it via -f: no shell heredocs in container args (the first run's heredoc
-# form survived a YAML-indent mangle only by luck; a ConfigMap + -f is
-# structurally immune to that class). Rotating the TF passwords requires
-# deleting the completed Job and letting ArgoCD recreate it.
+# Supabase store reconcile as an ArgoCD PRESYNC hook -- the canonical Argo
+# pattern for schema migrations. The Job runs BEFORE the main sync waves
+# apply the control plane, so ateapi's first boot already finds the roles,
+# passwords and schema it needs (upstream runs migrations as
+# substrate_owner at startup and cannot come up without them). generateName
+# means every sync creates a fresh schema-migrate-XXXXX: Job template
+# immutability can never collide with a sync again, and the previous hook
+# instance is deleted BeforeHookCreation (ArgoCD's default hook policy), so
+# exactly the last run stays inspectable between syncs. The SQL is
+# idempotent (CREATE ROLE via \gexec, ALTER ROLE re-assert, GRANTs, CREATE
+# SCHEMA IF NOT EXISTS), so every sync re-reconciles the store -- which is
+# also the password-rotation path: a TF password change lands in 1Password,
+# ESO refreshes the Secret, and the next sync re-runs the ALTER ROLEs. No
+# manual Job deletion, ever.
 #
 # The admin connection (postgres role) comes from the same
 # mcp-token-vault admin_url the vault's own reconciler uses -- the only
 # existing holder of Supabase admin credentials; not duplicated anywhere.
-# Wave shape: the three ExternalSecrets run at wave -1 so this Job's env
-# Secrets exist before its pod starts (an earlier design put the Job
-# itself at wave -1 before its own credentials could exist, deadlocking
-# the sync wave gate).
+# The SQL itself lives in the substrate-bootstrap-sql ConfigMap
+# (bootstrap-sql.yaml) and psql reads it via -f: no shell heredocs in
+# container args. The Job's env Secret and ConfigMap are long-lived managed
+# resources (externalsecret.yaml, bootstrap-sql.yaml) that already exist
+# before each PreSync run.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: substrate-store-bootstrap
+  generateName: schema-migrate-
   namespace: substrate
   annotations:
-    # Job spec.template is immutable; Replace makes template changes
-    # delete-and-recreate instead of failing the apply (the exact
-    # "field is immutable" wall the 2026-10-31 01:22 sync hit).
-    argocd.argoproj.io/sync-options: Replace=true
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 4
   template:
@@ -37,8 +41,10 @@ spec:
         - name: psql
           # Upstream's own bundled-postgres pin (manifests/ate-install/
           # postgres/postgres.yaml), reused here so the fleet references
-          # one postgres image.
-          image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181dba1d
+          # one postgres image. Digest re-verified against the registry
+          # 2026-10-31 (the previous pin had two stray hex chars and the
+          # apiserver refused it as InvalidImageName).
+          image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
           command: ["/bin/sh", "-ec"]
           args:
             - >-
