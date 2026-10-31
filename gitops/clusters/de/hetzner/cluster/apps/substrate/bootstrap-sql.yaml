@@ -1,0 +1,28 @@
+# The one-time Supabase bootstrap SQL, carried as a ConfigMap so the Job's
+# command is a plain `psql -f` invocation (no shell heredocs: a heredoc
+# inside args is one YAML-indent mangle away from a forever-stdin-reading
+# pod -- the first bootstrap run hung for exactly that class of reason).
+# Passwords never appear here: psql injects them from the Secret's env
+# via -v plus :'var' quoting (\gexec-guarded CREATEs are idempotent; the
+# ALTERs re-assert the same TF-generated passwords on re-runs).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: substrate-bootstrap-sql
+  namespace: substrate
+data:
+  bootstrap.sql: |
+    SELECT format('CREATE ROLE substrate_owner LOGIN PASSWORD %L', :'owner_pw')
+    WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'substrate_owner')\gexec
+    SELECT format('CREATE ROLE substrate_readwrite LOGIN PASSWORD %L', :'rw_pw')
+    WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'substrate_readwrite')\gexec
+    ALTER ROLE substrate_owner LOGIN PASSWORD :'owner_pw';
+    ALTER ROLE substrate_readwrite LOGIN PASSWORD :'rw_pw';
+    CREATE SCHEMA IF NOT EXISTS substrate AUTHORIZATION substrate_owner;
+    ALTER ROLE substrate_owner SET search_path TO substrate, public;
+    ALTER ROLE substrate_readwrite SET search_path TO substrate, public;
+    GRANT USAGE, CREATE ON SCHEMA substrate TO substrate_readwrite;
+    ALTER DEFAULT PRIVILEGES FOR ROLE substrate_owner IN SCHEMA substrate
+      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO substrate_readwrite;
+    ALTER DEFAULT PRIVILEGES FOR ROLE substrate_owner IN SCHEMA substrate
+      GRANT USAGE, SELECT ON SEQUENCES TO substrate_readwrite;

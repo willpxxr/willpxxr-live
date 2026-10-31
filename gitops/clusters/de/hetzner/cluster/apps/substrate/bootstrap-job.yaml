@@ -1,15 +1,20 @@
 # One-time Supabase bootstrap: upstream's store surface expects the two
 # roles (substrate_owner runs migrations, substrate_readwrite serves
 # traffic) and their schema to already exist -- unlike mcp-token-vault,
-# substrate does not self-bootstrap. Idempotent SQL (\gexec guards the
-# CREATEs; ALTERs re-apply the same TF-generated passwords on re-runs).
-# sync-wave 0 (default): the three ExternalSecrets run at wave -1 so the
-# Secrets exist before this Job's pod spec can start (the Job's env reads
-# them); earlier the Job carried wave -1 itself, which deadlocked the
-# sync -- ArgoCD gates each wave on health, and a Job that needs a
-# wave-0 Secret can never go first. A completed Job is not re-run by
-# future syncs -- re-trigger rotation-style reruns by deleting the Job
-# and letting the next sync recreate it.
+# substrate does not self-bootstrap. The SQL lives in the
+# substrate-bootstrap-sql ConfigMap (bootstrap-sql.yaml) and psql reads
+# it via -f: no shell heredocs in container args (the first run's heredoc
+# form survived a YAML-indent mangle only by luck; a ConfigMap + -f is
+# structurally immune to that class). Rotating the TF passwords requires
+# deleting the completed Job and letting ArgoCD recreate it.
+#
+# The admin connection (postgres role) comes from the same
+# mcp-token-vault admin_url the vault's own reconciler uses -- the only
+# existing holder of Supabase admin credentials; not duplicated anywhere.
+# Wave shape: the three ExternalSecrets run at wave -1 so this Job's env
+# Secrets exist before its pod starts (an earlier design put the Job
+# itself at wave -1 before its own credentials could exist, deadlocking
+# the sync wave gate).
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -28,27 +33,14 @@ spec:
           # Upstream's own bundled-postgres pin (manifests/ate-install/
           # postgres/postgres.yaml), reused here so the fleet references
           # one postgres image.
-          image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
-          command: ["/bin/sh", "-e", "-c"]
+          image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181dba1d
+          command: ["/bin/sh", "-ec"]
           args:
-            - |
-              psql "$ADMIN_URL" -v ON_ERROR_STOP=1 \
-                -v owner_pw="$OWNER_PASSWORD" -v rw_pw="$READWRITE_PASSWORD" <<'SQL'
-              SELECT format('CREATE ROLE substrate_owner LOGIN PASSWORD %L', :'owner_pw')
-              WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'substrate_owner')\gexec
-              SELECT format('CREATE ROLE substrate_readwrite LOGIN PASSWORD %L', :'rw_pw')
-              WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'substrate_readwrite')\gexec
-              ALTER ROLE substrate_owner  LOGIN PASSWORD :'owner_pw';
-              ALTER ROLE substrate_readwrite LOGIN PASSWORD :'rw_pw';
-              CREATE SCHEMA IF NOT EXISTS substrate AUTHORIZATION substrate_owner;
-              ALTER ROLE substrate_owner SET search_path TO substrate, public;
-              ALTER ROLE substrate_readwrite SET search_path TO substrate, public;
-              GRANT USAGE, CREATE ON SCHEMA substrate TO substrate_readwrite;
-              ALTER DEFAULT PRIVILEGES FOR ROLE substrate_owner IN SCHEMA substrate
-                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO substrate_readwrite;
-              ALTER DEFAULT PRIVILEGES FOR ROLE substrate_owner IN SCHEMA substrate
-                GRANT USAGE, SELECT ON SEQUENCES TO substrate_readwrite;
-              SQL
+            - >-
+              printf '%s\n' "$BOOTSTRAP_SQL" > /tmp/bootstrap.sql &&
+              psql "$ADMIN_URL" -v ON_ERROR_STOP=1
+              -v owner_pw="$OWNER_PASSWORD" -v rw_pw="$READWRITE_PASSWORD"
+              -f /tmp/bootstrap.sql &&
               echo "substrate roles + schema reconciled."
           env:
             - name: ADMIN_URL
@@ -66,3 +58,8 @@ spec:
                 secretKeyRef:
                   name: substrate-bootstrap
                   key: readwrite-password
+            - name: BOOTSTRAP_SQL
+              valueFrom:
+                configMapKeyRef:
+                  name: substrate-bootstrap-sql
+                  key: bootstrap.sql
