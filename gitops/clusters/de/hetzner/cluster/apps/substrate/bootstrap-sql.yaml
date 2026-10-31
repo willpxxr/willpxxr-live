@@ -18,6 +18,12 @@ data:
     WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'substrate_readwrite')\gexec
     ALTER ROLE substrate_owner LOGIN PASSWORD :'owner_pw';
     ALTER ROLE substrate_readwrite LOGIN PASSWORD :'rw_pw';
+    -- Supabase: the session role (postgres) is not a member of roles it
+    -- creates and cannot SET ROLE to them, which CREATE SCHEMA ...
+    -- AUTHORIZATION requires (verified live 2026-10-31). The grants are
+    -- idempotent.
+    GRANT substrate_owner TO postgres;
+    GRANT substrate_readwrite TO postgres;
     CREATE SCHEMA IF NOT EXISTS substrate AUTHORIZATION substrate_owner;
     ALTER ROLE substrate_owner SET search_path TO substrate, public;
     ALTER ROLE substrate_readwrite SET search_path TO substrate, public;
