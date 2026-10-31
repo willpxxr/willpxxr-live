@@ -737,6 +737,29 @@ upstream default). The render injects
 system:serviceaccount:substrate:ate-client (the SA ships in the
 bundle).
 
+Execution record (2026-10-31, slice 8 -- the Phase-1 dataplane gate):
+the socket-LB worker-path probes all passed from the live converged
+app: pod-path DNS via the CoreDNS ClusterIP from both worker pods
+(cross-node by construction, CoreDNS lives on control-plane-1),
+cross-node TCP to the apiserver ClusterIP from both workers, a
+cross-worker HTTPS ClusterIP connection (worker-2 pod -> idp
+ClusterIP -> idp pod on worker-1) corroborated by hubble flows showing
+post-DNAT identity-resolved FORWARDED verdicts, host-namespace TCP to
+both the apiserver and a worker-backed HTTPS ClusterIP (socket-LB is
+host-ns-only per apps/cil/values.yaml), and explicit-ClusterIP DNS
+from the host namespace. No blackholing of any pod->ClusterIP or
+host->ClusterIP path: the 2026-07/08 precedent class is cleared.
+Shipped on that evidence: rendered/dataplane/*.yaml joined the app
+manifest list (atenet-router, -monitoring, -egress) and the
+state-bootstrap hook gained the egress-mitm-ca-pool step that
+atenet-egress's MITM/SDS mint path needs (previously a deliberate
+hold alongside the trio). One probe-hygiene note recorded for future
+reruns: the host-namespace resolv.conf has no cluster search domains
+(host DNS must query the ClusterIP explicitly), a hostNetwork probe
+needs the privileged kube-system namespace, and ate-controller's
+Service is metrics-only :8080 -- probe service ports from the Service
+spec, not assumptions.
+
 Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
 into this debug arc — first release with published container images
 (ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes

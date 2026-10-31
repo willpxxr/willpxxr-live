@@ -82,6 +82,17 @@ spec:
             - name: ate-setup-workspace
               mountPath: /workspace
           args: ["create", "podcertificate-controller-cas", "--namespace", "substrate"]
+        - name: egress-mitm-ca-pool
+          # Shipped together with the dataplane trio (socket-LB probes
+          # green 2026-10-31): atenet-egress mounts this pool for its
+          # MITM/SDS mint path. Skipped from the first bootstrap only
+          # while the trio was held.
+          image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          workingDir: /workspace
+          volumeMounts:
+            - name: ate-setup-workspace
+              mountPath: /workspace
+          args: ["create", "egress-mitm-ca-pool", "--namespace", "substrate"]
         - name: api-config
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
           workingDir: /workspace

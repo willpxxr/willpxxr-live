@@ -18,6 +18,12 @@ manifests:
   # OUT of this list until the socket-LB worker-path probes pass --
   # the 2026-07/08 ClusterIP-blackholing precedent class.
   - rendered/core/*.yaml
+  # Socket-LB worker-path probes passed 2026-10-31 (DNS via ClusterIP from
+  # both workers, cross-node apiserver + cross-worker HTTPS ClusterIP with
+  # hubble FORWARDED post-DNAT evidence, host-namespace socket-LB TCP +
+  # explicit-ClusterIP DNS) -- the 2026-07/08 ClusterIP-blackholing
+  # precedent class is cleared, so the dataplane trio ships.
+  - rendered/dataplane/*.yaml
   - ate-api-server-envvars.yaml
   - externalsecret.yaml
   - bootstrap-sql.yaml
