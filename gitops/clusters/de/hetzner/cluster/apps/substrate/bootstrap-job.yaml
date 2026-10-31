@@ -17,10 +17,10 @@
 # mcp-token-vault admin_url the vault's own reconciler uses -- the only
 # existing holder of Supabase admin credentials; not duplicated anywhere.
 # The SQL itself lives in the substrate-bootstrap-sql ConfigMap
-# (bootstrap-sql.yaml) and psql reads it via -f: no shell heredocs in
-# container args. The Job's env Secret and ConfigMap are long-lived managed
-# resources (externalsecret.yaml, bootstrap-sql.yaml) that already exist
-# before each PreSync run.
+# (bootstrap-sql.yaml), which runs as the wave -1 companion of this Job in
+# the same PreSync phase; psql reads it via -f: no shell heredocs in
+# container args. The Job's env Secret (externalsecret.yaml) is ESO-managed
+# and refreshed out-of-band between syncs.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -29,6 +29,7 @@ metadata:
   annotations:
     argocd.argoproj.io/hook: PreSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   backoffLimit: 4
   template:
