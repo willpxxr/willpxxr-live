@@ -529,6 +529,41 @@ kustomize base bundle deliberately excludes pod-certificate-controller,
 atenet-egress, and the SandboxConfig (the installer applies
 variant-selected copies — our render includes them explicitly).
 
+Execution record (2026-10-31, slice 5 — render + env contract): the
+upstream v0.6.0 bundle is rendered into apps/substrate by
+scripts/render-substrate.sh (committed; an upstream bump = edit
+UPSTREAM_REF, dispatch substrate-images, paste the new digests, rerun).
+Transforms: the seven ko digests + envoy-dataplane (CI run 40390956929 —
+both build paths published byte-identical digests across runs), the
+\${ENVOY_DATAPLANE_IMAGE} substitution, the namespace retarget
+ate-system → substrate (line-exact on metadata.namespace; the podcert
+controller keeps its upstream-owned podcertificate-controller-system
+namespace, for its own \$(POD_NAMESPACE) wiring), and both
+objectstore-plugin sidecars converted from the gcs default to the fleet's
+S3 env (backend s3, region nbg1, endpoint, path-style, static keys from
+the ESO-materialized substrate-s3 Secret — held control-plane-side
+only). The otel exporter endpoint reroutes to loopback; tracing is
+dormant while the fleet's otel stack stays disabled. The env contract
+upstream's installer would have written is now explicit:
+ate-api-server-envvars ConfigMap (roles substrate_owner /
+substrate_readwrite, actor-JWT issuer "willpxxr-ate" — Phase-1
+placeholder, empty GCS transfer SA, snapshot location
+s3://willpxxr-live-substrate-snapshots/), the
+ate-api-server-secret-envvars ExternalSecret (both DSNs from the
+`substrate` 1Password item; the schema rides the Secret half as upstream
+ships it, via an ESO template literal), the substrate-bootstrap
+ExternalSecret (admin_url reused from the vault item + the raw TF role
+passwords), and the one-time idempotent bootstrap Job (upstream's own
+postgres:18-alpine digest; \gexec-guarded role creates with re-asserting
+ALTERs; ArgoCD sync-wave -1; rerun by deleting the completed Job).
+Twelve core files render, and the three dataplane files render but stay
+OUT of the app.yaml manifest list — the socket-LB worker-path probes
+gate them, per the 2026-07/08 ClusterIP-blackholing precedent class.
+Dry-run: 15/16 files client-side green against the live cluster; the
+16th (the SandboxConfig CR) cannot prevalidate against its
+not-yet-installed CRD — it renders byte-identical to upstream and
+converges via the retry policy (the house-recorded ordering pattern).
+
 ### Phase 2 — credential chain
 
 - GitHub Apps bootstrapped (UI, once); 1Password items; ExternalSecrets;

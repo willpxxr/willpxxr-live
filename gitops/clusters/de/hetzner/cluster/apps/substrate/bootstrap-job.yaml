@@ -1,0 +1,70 @@
+# One-time Supabase bootstrap: upstream's store surface expects the two
+# roles (substrate_owner runs migrations, substrate_readwrite serves
+# traffic) and their schema to already exist -- unlike mcp-token-vault,
+# substrate does not self-bootstrap. Idempotent SQL (\gexec guards the
+# CREATEs; ALTERs re-apply the same TF-generated passwords on re-runs).
+# sync-wave -1 so ArgoCD lands it before the store consumers; a completed
+# Job is not re-run by future syncs -- re-trigger rotation-style reruns by
+# deleting the Job and letting the next sync recreate it.
+#
+# The admin connection (postgres role) comes from the same
+# mcp-token-vault admin_url the vault's own reconciler uses -- the only
+# existing holder of Supabase admin credentials; not duplicated anywhere.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: substrate-store-bootstrap
+  namespace: substrate
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  backoffLimit: 4
+  template:
+    metadata:
+      labels:
+        app: substrate-store-bootstrap
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: psql
+          # Upstream's own bundled-postgres pin (manifests/ate-install/
+          # postgres/postgres.yaml), reused here so the fleet references
+          # one postgres image.
+          image: postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+          command: ["/bin/sh", "-e", "-c"]
+          args:
+            - |
+              psql "$ADMIN_URL" -v ON_ERROR_STOP=1 \
+                -v owner_pw="$OWNER_PASSWORD" -v rw_pw="$READWRITE_PASSWORD" <<'SQL'
+              SELECT format('CREATE ROLE substrate_owner LOGIN PASSWORD %L', :'owner_pw')
+              WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'substrate_owner')\gexec
+              SELECT format('CREATE ROLE substrate_readwrite LOGIN PASSWORD %L', :'rw_pw')
+              WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'substrate_readwrite')\gexec
+              ALTER ROLE substrate_owner  LOGIN PASSWORD :'owner_pw';
+              ALTER ROLE substrate_readwrite LOGIN PASSWORD :'rw_pw';
+              CREATE SCHEMA IF NOT EXISTS substrate AUTHORIZATION substrate_owner;
+              ALTER ROLE substrate_owner SET search_path TO substrate, public;
+              ALTER ROLE substrate_readwrite SET search_path TO substrate, public;
+              GRANT USAGE, CREATE ON SCHEMA substrate TO substrate_readwrite;
+              ALTER DEFAULT PRIVILEGES FOR ROLE substrate_owner IN SCHEMA substrate
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO substrate_readwrite;
+              ALTER DEFAULT PRIVILEGES FOR ROLE substrate_owner IN SCHEMA substrate
+                GRANT USAGE, SELECT ON SEQUENCES TO substrate_readwrite;
+              SQL
+              echo "substrate roles + schema reconciled."
+          env:
+            - name: ADMIN_URL
+              valueFrom:
+                secretKeyRef:
+                  name: substrate-bootstrap
+                  key: admin-url
+            - name: OWNER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: substrate-bootstrap
+                  key: owner-password
+            - name: READWRITE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: substrate-bootstrap
+                  key: readwrite-password

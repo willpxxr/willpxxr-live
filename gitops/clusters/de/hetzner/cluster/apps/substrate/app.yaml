@@ -8,3 +8,16 @@ manifests:
   - namespace.yaml
   - network-policy.yaml
   - gvisor-runtimeclass.yaml
+  # WEP-0016 Phase 1: the upstream v0.6.0 bundle, rendered by
+  # scripts/render-substrate.sh (digest-pinned GHCR images, namespace
+  # retarget, S3 sidecar env), plus the fleet's env contract: the
+  # envvars ConfigMap half, the three ExternalSecrets (Secret half +
+  # S3 keys + bootstrap credentials) and the one-time Supabase
+  # role/schema bootstrap Job. The dataplane trio (atenet-router,
+  # -monitoring, -egress) renders into rendered/dataplane/ and stays
+  # OUT of this list until the socket-LB worker-path probes pass --
+  # the 2026-07/08 ClusterIP-blackholing precedent class.
+  - rendered/core/*.yaml
+  - ate-api-server-envvars.yaml
+  - externalsecret.yaml
+  - bootstrap-job.yaml
