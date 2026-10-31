@@ -1,0 +1,28 @@
+# The workspace anchor for the ate-setup state-bootstrap hook Job.
+# Upstream's config loader (cmd/ate-setup/internal/config/load.go
+# LoadFlags) unconditionally resolves its "repo root" by walking up from
+# the working directory until it finds a go.mod -- an installer designed
+# to run from inside a source checkout, never containerized. In the ko
+# image (distroless, CWD=/) that walk hits / and the very first container
+# exits: `no go.mod found above /: run ate-setup from inside the
+# repository` (live 2026-10-31; the walk is deliberate -- upstream's
+# comment says it replaces git rev-parse so it works in source tarballs).
+# RepoRoot only stats the file, so a one-line module declaration is the
+# entire contract; the Job mounts this ConfigMap at /workspace and runs
+# every step with workingDir: /workspace.
+#
+# PreSync wave -2 (with the Job's RBAC in state-bootstrap-rbac.yaml) so
+# the volume source exists before the wave -1 Job's pods can start --
+# the same companion-ordering contract as bootstrap-sql.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ate-setup-workspace
+  namespace: substrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-2"
+data:
+  go.mod: |
+    module ate.local/setup-workspace

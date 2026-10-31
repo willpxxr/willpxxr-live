@@ -44,23 +44,36 @@ spec:
     spec:
       serviceAccountName: ate-state-bootstrap
       restartPolicy: Never
+      # ate-setup resolves a "repo root" via go.mod walk from its CWD
+      # (see state-bootstrap-workspace.yaml); the mounted workspace CM
+      # anchors it and every container runs from there.
+      volumes:
+        - name: ate-setup-workspace
+          configMap:
+            name: ate-setup-workspace
       initContainers:
         - name: jwt-authority-pool
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          workingDir: /workspace
           args: ["create", "jwt-authority-pool", "--namespace", "substrate"]
         - name: actor-id-ca-pool
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          workingDir: /workspace
           args: ["create", "actor-id-ca-pool", "--namespace", "substrate"]
         - name: actor-id-ca-certs
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          workingDir: /workspace
           args: ["create", "actor-id-ca-certs", "--namespace", "substrate"]
         - name: podcertificate-controller-cas
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          workingDir: /workspace
           args: ["create", "podcertificate-controller-cas", "--namespace", "substrate"]
         - name: api-config
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          workingDir: /workspace
           args: ["create", "api-config", "--namespace", "substrate"]
       containers:
         - name: api-authentication-config
           image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          workingDir: /workspace
           args: ["create", "api-authentication-config", "--namespace", "substrate"]
