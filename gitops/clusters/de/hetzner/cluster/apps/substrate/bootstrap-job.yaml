@@ -20,6 +20,11 @@ kind: Job
 metadata:
   name: substrate-store-bootstrap
   namespace: substrate
+  annotations:
+    # Job spec.template is immutable; Replace makes template changes
+    # delete-and-recreate instead of failing the apply (the exact
+    # "field is immutable" wall the 2026-10-31 01:22 sync hit).
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   backoffLimit: 4
   template:

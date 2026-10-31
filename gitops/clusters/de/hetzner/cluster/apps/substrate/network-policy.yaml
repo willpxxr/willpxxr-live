@@ -104,6 +104,12 @@ kind: CiliumNetworkPolicy
 metadata:
   name: podcertificate-controller-baseline
   namespace: podcertificate-controller-system
+  annotations:
+    # Wave 1: this policy lives in the namespace created by another
+    # manifest's doc (pod-certificate-controller.yaml), and ArgoCD's
+    # wave gate -- not kind ordering -- is what guarantees that
+    # Namespace exists before this applies.
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   description: "Upstream ships no policy bundle for the podcert controller's own namespace (podcertificate-controller-system; the pod-certificate-controller.yaml manifest creates it). Mirror the app convention there: same-ns, CoreDNS, and API server egress (it watches PodCertificateRequests + ClusterTrustBundles and writes approvals)."
   endpointSelector: {}
