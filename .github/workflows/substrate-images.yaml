@@ -121,6 +121,9 @@ jobs:
             echo
             echo '```'
             cat "${RUNNER_TEMP}/published.txt"
+            echo "=== published.txt ==="
+            cat "${RUNNER_TEMP}/published.txt"
+            echo "=== end published.txt ==="
             echo "Published ghcr.io/willpxxr/envoy-dataplane@${{ steps.envoy.outputs.digest }}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
