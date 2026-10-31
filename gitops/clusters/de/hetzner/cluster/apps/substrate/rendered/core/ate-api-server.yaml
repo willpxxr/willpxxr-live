@@ -78,6 +78,7 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9090"
+        willpxxr.com/restart: "2026-10-31-postgres-pcr-recreate"
     spec:
       # TODO: Add topologySpreadConstraints to spread replicas across nodes and zones.
       serviceAccountName: ate-api-server

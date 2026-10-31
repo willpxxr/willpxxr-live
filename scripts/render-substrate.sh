@@ -115,19 +115,33 @@ EOF
   # to the GKE-managed collector that does not exist here.
   perl -pi -e 's|^(\s*OTEL_EXPORTER_OTLP_ENDPOINT:) http://opentelemetry-collector\.gke-managed-otel\.svc\.cluster\.local:4317$|$1 http://127.0.0.1:4317|' "$dst"
   # ate-idp-server --issuer: upstream's deploy step patches this arg from
-  # its ACTOR_JWT_ISSUER setting (default https://ate-idp.<ns>.svc); the
-  # shipped manifest ships without it and the binary exits "required
-  # flags not set: --issuer" (live 2026-10-31). Fleet value = the
-  # Phase-1 actor-JWT issuer in ate-api-server-envvars.yaml
-  # (ATE_API_ACTOR_JWT_ISSUER) -- the two halves must stay in lockstep:
-  # the idp mints iss=--issuer, the api validates against its env var.
+  # its ACTOR_JWT_ISSUER setting; the shipped manifest ships without it and
+  # the binary exits "required flags not set: --issuer" (live 2026-10-31).
+  # The idp VALIDATES the value as https://<host> (no path/query/fragment,
+  # live: `issuer "willpxr-ate" must be https://<host>`), so the issuer is
+  # the idp's own in-cluster service URL -- upstream's own default shape
+  # (installdefaults.ActorJWTIssuer). The api's matching half lives in
+  # ate-api-server-envvars.yaml (ATE_API_ACTOR_JWT_ISSUER) -- the two must
+  # stay in lockstep: the idp mints iss=--issuer, the api validates against
+  # its env var.
   # Basename-guarded: the --actor-id-jwt-pool anchor line also appears in
   # ate-api-server.yaml, whose issuer is already wired the env way
   # (--actor-jwt-issuer=@env) -- an injected --issuer there would be an
   # unknown flag and crash it (caught on diff review 2026-10-31).
   case "$(basename "$dst")" in
     ate-idp-server.yaml)
-      perl -pi -e 'if (/^(\s*)- --actor-id-jwt-pool=\/run\/actor-id-jwt-pool\/pool\.json$/) { $_ .= "$1- --issuer=willpxxr-ate\n" }' "$dst"
+      perl -pi -e 'if (/^(\s*)- --actor-id-jwt-pool=\/run\/actor-id-jwt-pool\/pool\.json$/) { $_ .= "$1- --issuer=https://ate-idp.substrate.svc\n" }' "$dst"
+      ;;
+  esac
+  # ate-api-server only: a template annotation marking the one-time pod
+  # recreation after the postgres PodCertificateRequest authz fix. A denied
+  # PCR is PERMANENT for the pod that requested it ("UnauthorizedServiceAccount",
+  # live 2026-10-31, from the pre-rollout controller watching ate-system) --
+  # fresh pods must re-request. The annotation is the GitOps-native way to
+  # roll the Deployment; the value records why this generation exists.
+  case "$(basename "$dst")" in
+    ate-api-server.yaml)
+      perl -pi -e 'if (/^(\s*)prometheus\.io\/port: "9090"$/) { $_ .= "$1willpxxr.com/restart: \"2026-10-31-postgres-pcr-recreate\"\n" }' "$dst"
       ;;
   esac
   # podcertcontroller --postgres-client-namespace: upstream pins its own

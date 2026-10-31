@@ -11,9 +11,12 @@ metadata:
 data:
   ATE_API_POSTGRES_OWNER_ROLE: "substrate_owner"
   ATE_API_POSTGRES_READ_WRITE_ROLE: "substrate_readwrite"
-  # Owner-chosen iss claim for actor JWTs (WEP-0016 Phase 1 placeholder;
-  # Phase 2's credential chain may refine it).
-  ATE_API_ACTOR_JWT_ISSUER: "willpxxr-ate"
+  # The iss claim for actor JWTs. Must be https://<host>-shaped -- the
+  # ate-idp-server validates its own --issuer that way and the two halves
+  # are one value rendered twice (the idp mints iss, the api validates
+  # against this env var). Lockstep with the --issuer injection in
+  # scripts/render-substrate.sh. Phase 2's credential chain may refine it.
+  ATE_API_ACTOR_JWT_ISSUER: "https://ate-idp.substrate.svc"
   # GCS-only setting (credential-exchange snapshot transfer SA); the S3
   # snapshot backend never reads it, but the key must exist for the
   # sidecar's configMapKeyRef.

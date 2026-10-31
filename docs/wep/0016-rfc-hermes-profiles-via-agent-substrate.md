@@ -687,6 +687,22 @@ hook-delete-policy HookSucceeded,HookFailed so every terminal instance
 self-cleans; the stale generations were swept once as hook ephemera
 (lifecycle Argo owns; not a managed-resource deletion).
 
+Slice 7b, same day, the issuer and the postgres client identity: with
+the three fixes above applied, the idp's new pod still crashed -- the
+--issuer value must be https://<host>-shaped (the binary rejects the
+"willpxr-ate" Phase-1 placeholder outright), and the two issuer halves
+are one value rendered twice: --issuer=https://ate-idp.substrate.svc
+(render-injected, upstream's own ActorJWTIssuer default shape) and
+ATE_API_ACTOR_JWT_ISSUER in ate-api-server-envvars.yaml, now
+URL-shaped and in lockstep. And the api-server's postgres client certs:
+the pre-rollout controller denied the PCR permanently for the 8h pods
+("only ate-system/ate-api-server may request" -- postgressigner.go
+authorizes <postgres-client-namespace>/ate-api-server), so even with
+the retargeted controller running, those pods can never re-request; a
+one-time template annotation (willpxxr.com/restart, rendered) rolls the
+Deployment the GitOps way so fresh pods issue their PCR against the
+correctly-watching controller.
+
 Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
 into this debug arc — first release with published container images
 (ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes
