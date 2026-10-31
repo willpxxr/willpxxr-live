@@ -719,6 +719,15 @@ perl programs ("this app's" broke the quoting -- the failure mode is a
 substitution with unterminated replacement, which consumes the
 following argument and drops -i).
 
+Slice 7d, same day, the ESO template merge: the api-server still
+resolved empty DSN flags because the ESO Secret carried only its literal
+key -- ESO v1 semantics: with target.template present, spec.data
+entries are template INPUTS only and materialize in the Secret only if
+the template emits them (the schema literal was the only emitted key;
+both DSN refs had sat in spec.data unrendered since slice 2). The
+template now emits both DSNs via v2 placeholders and the spec change
+itself forces ESO to re-sync outside refreshInterval.
+
 Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
 into this debug arc — first release with published container images
 (ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes
