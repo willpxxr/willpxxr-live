@@ -114,6 +114,28 @@ EOF
   # dormant path fails fast and quietly instead of resolving/connecting
   # to the GKE-managed collector that does not exist here.
   perl -pi -e 's|^(\s*OTEL_EXPORTER_OTLP_ENDPOINT:) http://opentelemetry-collector\.gke-managed-otel\.svc\.cluster\.local:4317$|$1 http://127.0.0.1:4317|' "$dst"
+  # ate-idp-server --issuer: upstream's deploy step patches this arg from
+  # its ACTOR_JWT_ISSUER setting (default https://ate-idp.<ns>.svc); the
+  # shipped manifest ships without it and the binary exits "required
+  # flags not set: --issuer" (live 2026-10-31). Fleet value = the
+  # Phase-1 actor-JWT issuer in ate-api-server-envvars.yaml
+  # (ATE_API_ACTOR_JWT_ISSUER) -- the two halves must stay in lockstep:
+  # the idp mints iss=--issuer, the api validates against its env var.
+  # Basename-guarded: the --actor-id-jwt-pool anchor line also appears in
+  # ate-api-server.yaml, whose issuer is already wired the env way
+  # (--actor-jwt-issuer=@env) -- an injected --issuer there would be an
+  # unknown flag and crash it (caught on diff review 2026-10-31).
+  case "$(basename "$dst")" in
+    ate-idp-server.yaml)
+      perl -pi -e 'if (/^(\s*)- --actor-id-jwt-pool=\/run\/actor-id-jwt-pool\/pool\.json$/) { $_ .= "$1- --issuer=willpxxr-ate\n" }' "$dst"
+      ;;
+  esac
+  # podcertcontroller --postgres-client-namespace: upstream pins its own
+  # namespace; ours must be the retargeted one, or the controller ignores
+  # the substrate pods' postgres PodCertificateRequests and every
+  # api-server pod waits forever on "credential bundle is not issued yet"
+  # (live 2026-10-31).
+  perl -pi -e 's|^(\s*- --postgres-client-namespace=)ate-system$|$1substrate|' "$dst"
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys
@@ -125,6 +147,56 @@ if 'ATE_STORAGE_BACKEND' in raw:
         sys.exit(f"{path}: expected exactly 1 sidecar anchor, found {raw.count(anchor)}")
     open(path, "w").write(raw.replace(anchor, os.environ["S3_ENV_REPLACEMENT"] + "\n"))
     print(f"  {os.path.basename(path)}: sidecar S3 env patched")
+PYEOF
+  # atelet only: excise the kubelet credential-provider wiring as a
+  # deliberate Phase-2 hold (WEP-0016). The two hostPaths are GKE/kind-ism
+  # node state -- /home/kubernetes/bin (plugin binaries) and
+  # /etc/srv/kubernetes/cri_auth_config.yaml (FileOrCreate creates files,
+  # never parent dirs, and that dir does not exist on Talos; live 2026-10-31:
+  # every atelet waited in PodInitializing on exactly this). Upstream's kind
+  # bootstrap writes these; a Talos fleet has no writer. Phase 2 wires the
+  # ESO GithubAccessToken credential chain and lands the node files
+  # deliberately (machine.files or a documented node patch). Until then
+  # every actor image is a public pull, which needs no credential provider.
+  python3 - "$dst" <<'PYEOF'
+import os, sys
+path = sys.argv[1]
+raw = open(path).read()
+if "image-credential-provider" not in raw:
+    sys.exit(0)
+blocks = {
+    "args": """        - --image-credential-provider-config=/run/image-credential-provider/config.yaml
+        - --image-credential-provider-bin-dir=/run/image-credential-provider/bin
+""",
+    "mounts": """        - name: image-credential-provider-bin
+          mountPath: /run/image-credential-provider/bin
+          readOnly: true
+        - name: image-credential-provider-config
+          mountPath: /run/image-credential-provider/config.yaml
+          readOnly: true
+""",
+    "volumes": """      # The kubelet's own credential provider bin dir and config; these paths
+      # are GKE's, other node distributions differ. The bin dir also holds the
+      # node's other kubelet-installed binaries -- the plugin contract is
+      # directory-scoped, so a narrower mount would have to hard-code the
+      # provider name and give up being cloud-agnostic.
+      - name: image-credential-provider-bin
+        hostPath:
+          path: /home/kubernetes/bin
+          type: DirectoryOrCreate
+      - name: image-credential-provider-config
+        hostPath:
+          path: /etc/srv/kubernetes/cri_auth_config.yaml
+          type: FileOrCreate
+""",
+}
+for label, block in blocks.items():
+    n = raw.count(block)
+    if n != 1:
+        sys.exit(f"{path}: expected exactly 1 credential-provider block ({label}), found {n}")
+    raw = raw.replace(block, "")
+open(path, "w").write(raw)
+print(f"  {os.path.basename(path)}: credential-provider wiring excised (Phase-2 hold)")
 PYEOF
 }
 
@@ -145,6 +217,10 @@ done
 echo "Verifying: no unreplaced refs survive..."
 if grep -rnE 'ko://|\$\{ENVOY_DATAPLANE_IMAGE\}|namespace: ate-system' "$OUT_CORE" "$OUT_DP"; then
   echo "ERROR: unreplaced upstream references remain" >&2
+  exit 1
+fi
+if grep -rn 'image-credential-provider' "$OUT_CORE"; then
+  echo "ERROR: credential-provider wiring should be excised from core (Phase-2 hold)" >&2
   exit 1
 fi
 echo "OK: $(ls "$OUT_CORE" | wc -l | tr -d ' ') core files, $(ls "$OUT_DP" | wc -l | tr -d ' ') dataplane files rendered into apps/substrate/rendered/."

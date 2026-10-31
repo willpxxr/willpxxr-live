@@ -657,6 +657,36 @@ file) anchors the walk, mounted at the Job's workingDir /workspace; and
 existing namespace), so the bootstrap ClusterRole carries
 create+patch on namespaces in addition to get.
 
+Execution record (2026-10-31, slice 7 -- render completeness): the
+remaining convergence blockers were render-level gaps -- places where
+upstream's installer patches the shipped manifests at deploy time, so
+the plain bundle carries no value or the wrong one. (1) ate-idp-server
+ships without --issuer and exits "required flags not set: --issuer";
+the render now injects --issuer=willpxxr-ate (matching
+ATE_API_ACTOR_JWT_ISSUER in ate-api-server-envvars.yaml -- the idp mints
+iss, the api validates it, they must stay in lockstep). The injection is
+basename-guarded: the --actor-id-jwt-pool anchor line also appears in
+ate-api-server's args, whose issuer is env-wired (--actor-jwt-issuer=
+@env); the first unguarded version would have injected a
+crash-on-unknown-flag into the api -- caught on render-diff review.
+(2) podcertcontroller ships --postgres-client-namespace=ate-system, so
+the substrate pods' postgres PodCertificateRequests were never issued
+("credential bundle is not issued yet" on every api-server pod,
+indefinitely); retargeted to substrate. (3) atelet mounts two
+GKE/kind-ism hostPaths for kubelet credential-provider wiring
+(/home/kubernetes/bin and /etc/srv/kubernetes/cri_auth_config.yaml --
+FileOrCreate never creates parent dirs, and that path does not exist on
+Talos; upstream's kind bootstrap is the only writer): excised by the
+render as a deliberate Phase-2 hold together with the ESO
+GithubAccessToken credential chain (Phase-1 actor pulls are all public
+images and need no provider), enforced by a render-time grep gate.
+(4) generateName hook Jobs accumulate under the default
+BeforeHookCreation semantics (it tracks named hooks only -- four
+generations live-observed): both generateName Job hooks now carry
+hook-delete-policy HookSucceeded,HookFailed so every terminal instance
+self-cleans; the stale generations were swept once as hook ephemera
+(lifecycle Argo owns; not a managed-resource deletion).
+
 Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
 into this debug arc — first release with published container images
 (ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes

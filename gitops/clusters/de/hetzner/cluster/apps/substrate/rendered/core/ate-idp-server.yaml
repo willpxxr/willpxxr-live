@@ -46,6 +46,7 @@ spec:
         image: ghcr.io/willpxxr/ate-idp-server@sha256:655392ce4642af764e2ffe866e6bbd8c02b22244fd951deca301092ddd142db4
         args:
         - --actor-id-jwt-pool=/run/actor-id-jwt-pool/pool.json
+        - --issuer=willpxxr-ate
         - --server-cred-bundle=/run/servicedns.podcert.ate.dev/credential-bundle.pem
         ports:
         - name: https

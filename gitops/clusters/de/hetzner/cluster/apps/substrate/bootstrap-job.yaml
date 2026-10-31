@@ -4,9 +4,11 @@
 # passwords and schema it needs (upstream runs migrations as
 # substrate_owner at startup and cannot come up without them). generateName
 # means every sync creates a fresh schema-migrate-XXXXX: Job template
-# immutability can never collide with a sync again, and the previous hook
-# instance is deleted BeforeHookCreation (ArgoCD's default hook policy), so
-# exactly the last run stays inspectable between syncs. The SQL is
+# immutability can never collide with a sync again, and the delete policy
+# HookSucceeded,HookFailed makes every instance clean itself up at its
+# terminal state -- BeforeHookCreation does not track generateName
+# instances, so completed Jobs accumulate instead (live-verified
+# 2026-10-31: four generations before this policy). The SQL is
 # idempotent (CREATE ROLE via \gexec, ALTER ROLE re-assert, GRANTs, CREATE
 # SCHEMA IF NOT EXISTS), so every sync re-reconciles the store -- which is
 # also the password-rotation path: a TF password change lands in 1Password,
@@ -28,7 +30,7 @@ metadata:
   namespace: substrate
   annotations:
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,HookFailed
     argocd.argoproj.io/sync-wave: "0"
 spec:
   backoffLimit: 4

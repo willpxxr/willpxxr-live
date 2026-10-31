@@ -16,7 +16,9 @@
 # ("an existing pool is kept", upstream create.go) so every sync re-runs
 # harmlessly -- this Job is the per-sync reconcile path for the whole
 # PKI/JWT/api-config state, exactly like bootstrap-job.yaml is for the
-# Supabase roles.
+# Supabase roles. The delete policy HookSucceeded,HookFailed self-cleans
+# every terminal instance: BeforeHookCreation does not track generateName
+# instances, so failed/completed Jobs accumulate instead (live 2026-10-31).
 #
 # Deliberately NOT run: `create api-server-env-vars` (it would rewrite
 # upstream's default env ConfigMap/Secret pair, which this app owns via
@@ -33,7 +35,7 @@ metadata:
   namespace: substrate
   annotations:
     argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,HookFailed
     argocd.argoproj.io/sync-wave: "-1"
 spec:
   backoffLimit: 3
