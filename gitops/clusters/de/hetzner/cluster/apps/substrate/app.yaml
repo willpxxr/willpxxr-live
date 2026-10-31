@@ -23,7 +23,14 @@ manifests:
   # hubble FORWARDED post-DNAT evidence, host-namespace socket-LB TCP +
   # explicit-ClusterIP DNS) -- the 2026-07/08 ClusterIP-blackholing
   # precedent class is cleared, so the dataplane trio ships.
-  - rendered/dataplane/*.yaml
+  # The dataplane trio ships as router + egress only: upstream's monitoring
+  # member consumes monitoring.googleapis.com/v1 -- Google-managed CRDs
+  # provisioned by GKE, absent on any other fleet (live: the sync task
+  # fails discovery, 2026-10-31) -- and the fleet's otel stack is disabled
+  # (AGENTS), so the metrics exporter has no consumer. Held with the other
+  # GKE-isms until upstream ships a portable form or observability returns.
+  - rendered/dataplane/atenet-router.yaml
+  - rendered/dataplane/atenet-egress.yaml
   - ate-api-server-envvars.yaml
   - externalsecret.yaml
   - bootstrap-sql.yaml
