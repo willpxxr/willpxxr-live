@@ -130,5 +130,13 @@ spec:
           targetRevision: main
           path: {{ .path.path }}
           directory:
+            # recurse: include patterns match relative paths, so an app's
+            # manifests may live in subdirectories (e.g. substrate's
+            # rendered/core/*.yaml); without it the scan never descends
+            # and subdirectory globs silently match nothing (the whole
+            # rendered upstream bundle was absent from every sync until
+            # this landed, 2026-10-31). Top-level entries match the same
+            # either way.
+            recurse: true
             include: "{ {{- range $i, $e := .manifests }}{{ if $i }},{{ end }}{{ $e }}{{- end -}} }"
       {{- end }}
