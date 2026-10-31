@@ -1,0 +1,66 @@
+# The upstream setup-state bootstrap, as an ArgoCD PreSync hook at wave -1
+# (its RBAC rides wave -2 in state-bootstrap-rbac.yaml). Upstream's
+# installer normally generates this cluster state in-flight; a
+# manifests-only render of the bundle never does, and every control-plane
+# pod deadlocks without it -- the first full-landing sync sat for hours in
+# Init/ContainerCreating with `secrets "service-dns-ca-pool" not found` /
+# `credential bundle is not issued yet` (the podcert controller is the
+# PKI issuer for everyone else's ClusterTrustBundle volumes, and its own
+# ca-state volume needs the three CA pools first) and the ate-api-server
+# needs the actor JWT/CA pools + the two config ConfigMaps to start
+# (2026-10-31, live-verified).
+#
+# Each container is one `ate-setup create` subcommand (ko images are
+# distroless: no shell -- and initContainers give both the sequencing and
+# one step's log stream per container). The tool is idempotent by design
+# ("an existing pool is kept", upstream create.go) so every sync re-runs
+# harmlessly -- this Job is the per-sync reconcile path for the whole
+# PKI/JWT/api-config state, exactly like bootstrap-job.yaml is for the
+# Supabase roles.
+#
+# Deliberately NOT run: `create api-server-env-vars` (it would rewrite
+# upstream's default env ConfigMap/Secret pair, which this app owns via
+# ate-api-server-envvars.yaml + ESO -- see state-bootstrap-rbac.yaml), and
+# `create egress-mitm-ca-pool` (dataplane trio is held until the socket-LB
+# probes pass). postgres-server-ca stays absent on purpose: the
+# ate-api-server mount is optional and only consulted by sslmode=verify-ca
+# DSNs -- ours ride the Supabase pooler with no server-CA verification.
+# On a greenfield rebuild the two namespaces must pre-exist (runbook).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: substrate-state-bootstrap-
+  namespace: substrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: substrate-state-bootstrap
+    spec:
+      serviceAccountName: ate-state-bootstrap
+      restartPolicy: Never
+      initContainers:
+        - name: jwt-authority-pool
+          image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          args: ["create", "jwt-authority-pool", "--namespace", "substrate"]
+        - name: actor-id-ca-pool
+          image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          args: ["create", "actor-id-ca-pool", "--namespace", "substrate"]
+        - name: actor-id-ca-certs
+          image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          args: ["create", "actor-id-ca-certs", "--namespace", "substrate"]
+        - name: podcertificate-controller-cas
+          image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          args: ["create", "podcertificate-controller-cas", "--namespace", "substrate"]
+        - name: api-config
+          image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          args: ["create", "api-config", "--namespace", "substrate"]
+      containers:
+        - name: api-authentication-config
+          image: ghcr.io/willpxxr/ate-setup@sha256:c2d888e7960005242f3428a7615da8d88cd6113a30d40ef5c64f4cc64d1afffa
+          args: ["create", "api-authentication-config", "--namespace", "substrate"]

@@ -615,6 +615,40 @@ kubectl-context default-namespace set to argocd, and syncs during an
 in-flight op fail with FailedPrecondition — terminate + auto-sync
 re-engage.
 
+Execution record (2026-10-31, slice 6 — upstream setup-state bootstrap):
+the manifests-only render was structurally incomplete. Upstream's
+installer (cmd/ate-setup) generates cluster state no manifest carries:
+the actor JWT authority pool + actor-id CA pool + derived public certs,
+the podcert controller's service-dns/pod-identity/postgres CA pools
+(its ca-state volume refuses to start without them, and the controller
+is the PKI issuer for every other pod's ClusterTrustBundle projections —
+the first full-landing sync sat hours in Init/ContainerCreating on
+"credential bundle is not issued yet" / "matched zero
+ClusterTrustBundles" / secrets-not-found), and the ate-api-config +
+ate-api-authentication ConfigMaps. It also deadlocked atelet: the
+DaemonSet's hostPath volume set is rejected by the cluster's default
+PodSecurity enforce (baseline, live FailedCreate evidence) — ns substrate
+is now labeled privileged (audit/warn aligned), upstream's own operating
+model for the runner namespace. Cure: the CI ko build gains a ninth
+target (ate-setup; digest c2d888e796…, flat-name image output confirmed
+against the rendered manifests' image format) and apps/substrate gains
+PreSync hook state — RBAC at wave -2 (state-bootstrap-rbac.yaml:
+secrets+configmaps in substrate, secrets in the upstream-owned podcert
+ns, a namespaces:get ClusterRole for the tool's EnsureNamespace/issuer
+discovery) and a generateName Job at wave -1 (state-bootstrap-job.yaml)
+running six idempotent ate-setup create subcommands as sequential
+initContainers (ko images are distroless — no shell — one step per
+container; "an existing pool is kept" upstream makes every sync a
+re-reconcile, same contract as the schema-migrate hook). Skipped
+deliberately: create api-server-env-vars (would clobber the app-owned
+env CM + ESO Secret pair) and egress-mitm-ca-pool (dataplane trio held
+behind the socket-LB probes). postgres-server-ca stays absent: the
+ate-api-server mount is optional:true and only consulted by
+sslmode=verify-ca DSNs; ours ride the Supabase pooler with no
+server-CA verification (DSN verified, no sslmode param). Greenfield
+caveat recorded in the manifest comments: the two namespaces must
+pre-exist for the hook flow (runbook bootstrap, the phase-0 pattern).
+
 ### Phase 2 — credential chain
 
 - GitHub Apps bootstrapped (UI, once); 1Password items; ExternalSecrets;
