@@ -728,6 +728,15 @@ both DSN refs had sat in spec.data unrendered since slice 2). The
 template now emits both DSNs via v2 placeholders and the spec change
 itself forces ESO to re-sync outside refreshInterval.
 
+Slice 7e, same day, the last required flag: with both DSNs resolving,
+the api exited "Invalid flags: --authz-bootstrap-owners must list at
+least one principal" -- the global-root owner bootstrap identity,
+unset in the shipped manifest and patched by the installer with
+kubectl-ate's admin SA (system:serviceaccount:<ns>:ate-client, the
+upstream default). The render injects
+system:serviceaccount:substrate:ate-client (the SA ships in the
+bundle).
+
 Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
 into this debug arc — first release with published container images
 (ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes

@@ -164,6 +164,15 @@ EOF
       perl -0pi -e 's|^        envFrom:\n        - configMapRef:\n            name: ate-otel-config\n|        envFrom:\n        - configMapRef:\n            name: ate-otel-config\n        # Env contract (WEP-0016): non-secret half = the\n        # ate-api-server-envvars ConfigMap; secret half (both postgres\n        # DSNs + schema) = ESO ate-api-server-secret-envvars.\n        - configMapRef:\n            name: ate-api-server-envvars\n        - secretRef:\n            name: ate-api-server-secret-envvars\n|m' "$dst"
       ;;
   esac
+  # ate-api-server --authz-bootstrap-owners: required (at least one
+  # principal), unset in the shipped manifest, and patched by upstream's
+  # installer at deploy time with kubectl-ate admin identity
+  # (setting.go: "Unset means kubectl-ate's ServiceAccount,
+  # system:serviceaccount:<namespace>:ate-client"). Our namespace renders
+  # the same default; the SA ships in the bundle (ate-controller.yaml).
+  # Live 2026-10-31: the api exits "Invalid flags: --authz-bootstrap-owners
+  # must list at least one principal" without it.
+  perl -pi -e 'if (/^(\s*)- --actor-jwt-issuer=\@env$/) { $_ .= "$1- --authz-bootstrap-owners=system:serviceaccount:substrate:ate-client\n" }' "$dst"
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys
