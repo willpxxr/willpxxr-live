@@ -22,7 +22,7 @@ metadata:
   name: allow-dns-egress
   namespace: substrate
 spec:
-  description: "DNS resolution via CoreDNS (image pulls need name resolution during the smoke; Phase-1 substrate adds its own egress rules)."
+  description: "DNS resolution via CoreDNS. Load-bearing for the toFQDNs rules below -- Cilium's FQDN matching is driven by the pods' DNS lookups."
   endpointSelector: {}
   egress:
     - toEndpoints:
@@ -35,3 +35,92 @@ spec:
               protocol: UDP
             - port: "53"
               protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver-egress
+  namespace: substrate
+spec:
+  description: "Every ate controller talks to the API server: ateapi (store CRs), ate-controller (CRs, pods, secrets per its ClusterRole), atelet (worker pools + credential provider), atenet (router/egress telemetry)."
+  endpointSelector: {}
+  egress:
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-supabase-pooler-egress
+  namespace: substrate
+spec:
+  description: "ateapi's Postgres store lives in the existing Supabase project (WEP-0016 Decision §2), reached through the Supavisor session pooler -- the only IPv4 path -- on 5432. Wildcarded to the pooler zone because the terraform local derives the host from the pooler data source, whose shard prefix (aws-0, aws-1, ...) is per-project."
+  endpointSelector: {}
+  egress:
+    - toFQDNs:
+        - matchPattern: "*.pooler.supabase.com"
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-object-storage-egress
+  namespace: substrate
+spec:
+  description: "Snapshot blobs go to the TF-managed Hetzner Object Storage bucket (willpxxr-live-substrate-snapshots, nbg1 -- same location as the cluster, free eu-central internal traffic), read/written by the objectstore-plugin sidecars on atelet and ate-api-server with static S3 keys."
+  endpointSelector: {}
+  egress:
+    - toFQDNs:
+        - matchName: nbg1.your-objectstorage.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-gvisor-assets-egress
+  namespace: substrate
+spec:
+  description: "The gvisor SandboxConfig pins digest-verified gVisor release tarballs on the upstream public bucket (gs://gvisor/releases/...); atelet fetches them on first use of a sandbox version. sha256-pinned in the manifest, so the download is content-verified."
+  endpointSelector: {}
+  egress:
+    - toFQDNs:
+        - matchName: storage.googleapis.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: podcertificate-controller-baseline
+  namespace: podcertificate-controller-system
+spec:
+  description: "Upstream ships no policy bundle for the podcert controller's own namespace (podcertificate-controller-system; the pod-certificate-controller.yaml manifest creates it). Mirror the app convention there: same-ns, CoreDNS, and API server egress (it watches PodCertificateRequests + ClusterTrustBundles and writes approvals)."
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: podcertificate-controller-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: podcertificate-controller-system
+    - toEndpoints:
+        - matchLabels:
+            k8s-app: kube-dns
+            io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+    - toEntities:
+        - kube-apiserver

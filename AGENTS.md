@@ -207,9 +207,13 @@ ArgoCD renders every app from a per-app `app.yaml` via the single
   default-deny posture. Every namespace gets explicit `allow-same-namespace` +
   `allow-dns-egress` (+ `allow-kube-apiserver-egress` if the workload talks to
   the API server — list every controller that watches resources, not just the
-  obvious ones). Egress to a specific third-party SaaS host whose IPs aren't
-  enumerable uses `toEntities: [world]` restricted to port 443, one rule per
-  external dependency, each with a `description` explaining *why*. `kube-system`
+  obvious ones). Egress to a third-party dependency uses a Cilium FQDN rule
+  (`toFQDNs` with `matchName`/`matchPattern` + `toPorts`) when it has a stable
+  DNS name (owner call 2026-10-31, pattern set by apps/substrate), or
+  `toEntities: [world]` restricted to the needed port when the host set is
+  genuinely unenumerable (rotating CDN IPs, ACME validation, and similar);
+  one rule per external dependency, each with a `description` explaining
+  *why*. `kube-system`
   is the one deliberate exception (`allow-all` — OVH-managed components whose
   requirements aren't documented). UI/exposure apps additionally need the Envoy
   data plane to reach their backend: add an egress rule to
