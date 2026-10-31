@@ -22,7 +22,7 @@ metadata:
   name: allow-dns-egress
   namespace: substrate
 spec:
-  description: "DNS resolution via CoreDNS. Load-bearing for the toFQDNs rules below -- Cilium's FQDN matching is driven by the pods' DNS lookups."
+  description: "DNS resolution via CoreDNS. Load-bearing for the toFQDNs rules below: the L7 dns-match forces flows through Cilium's DNS proxy, which is what registers FQDN->IP for the caller -- with only an L3/L4 port-53 allow the DNS bypasses the proxy and every toFQDNs rule deadlocks (verified live 2026-10-31: pooler connect denied as plain 'world')."
   endpointSelector: {}
   egress:
     - toEndpoints:
@@ -35,6 +35,9 @@ spec:
               protocol: UDP
             - port: "53"
               protocol: TCP
+          rules:
+            dns:
+              - matchPattern: "*"
 ---
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy

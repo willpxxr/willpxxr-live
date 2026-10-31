@@ -213,7 +213,11 @@ ArgoCD renders every app from a per-app `app.yaml` via the single
   `toEntities: [world]` restricted to the needed port when the host set is
   genuinely unenumerable (rotating CDN IPs, ACME validation, and similar);
   one rule per external dependency, each with a `description` explaining
-  *why*. `kube-system`
+  *why*. A namespace whose policies use `toFQDNs` rules must also carry
+  `toPorts.rules.dns` on its `allow-dns-egress` (an L3/L4-only port-53
+  allow lets DNS bypass Cilium's DNS proxy, so FQDN->IP never registers
+  for the caller and every toFQDNs rule deadlocks — verified live
+  2026-10-31 in apps/substrate). `kube-system`
   is the one deliberate exception (`allow-all` — OVH-managed components whose
   requirements aren't documented). UI/exposure apps additionally need the Envoy
   data plane to reach their backend: add an egress rule to
