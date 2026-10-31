@@ -3,20 +3,18 @@
 # traffic) and their schema to already exist -- unlike mcp-token-vault,
 # substrate does not self-bootstrap. Idempotent SQL (\gexec guards the
 # CREATEs; ALTERs re-apply the same TF-generated passwords on re-runs).
-# sync-wave -1 so ArgoCD lands it before the store consumers; a completed
-# Job is not re-run by future syncs -- re-trigger rotation-style reruns by
-# deleting the Job and letting the next sync recreate it.
-#
-# The admin connection (postgres role) comes from the same
-# mcp-token-vault admin_url the vault's own reconciler uses -- the only
-# existing holder of Supabase admin credentials; not duplicated anywhere.
+# sync-wave 0 (default): the three ExternalSecrets run at wave -1 so the
+# Secrets exist before this Job's pod spec can start (the Job's env reads
+# them); earlier the Job carried wave -1 itself, which deadlocked the
+# sync -- ArgoCD gates each wave on health, and a Job that needs a
+# wave-0 Secret can never go first. A completed Job is not re-run by
+# future syncs -- re-trigger rotation-style reruns by deleting the Job
+# and letting the next sync recreate it.
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: substrate-store-bootstrap
   namespace: substrate
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
 spec:
   backoffLimit: 4
   template:
