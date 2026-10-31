@@ -91,6 +91,8 @@ jobs:
             ./cmd/podcertcontroller \
             ./cmd/ate-setup \
             ./cmd/ateworkergvisor \
+            ./cmd/kubectl-ate \
+            ./demos/counter \
             | tee "${RUNNER_TEMP}/published.txt"
 
       - name: "Setup Buildx"
