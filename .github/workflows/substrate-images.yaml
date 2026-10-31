@@ -90,6 +90,7 @@ jobs:
             ./cmd/objectstore-plugin \
             ./cmd/podcertcontroller \
             ./cmd/ate-setup \
+            ./cmd/ateworkergvisor \
             | tee "${RUNNER_TEMP}/published.txt"
 
       - name: "Setup Buildx"
