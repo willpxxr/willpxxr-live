@@ -44,11 +44,13 @@ metadata:
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "-2"
 rules:
-  # ate-setup's EnsureNamespace + OIDC issuer discovery read namespace
-  # metadata; grant nothing beyond get.
+  # ate-setup's EnsureNamespace is a bare {name}-only server-side apply
+  # (a no-op against an existing namespace; kubectl-create-apply idiom) --
+  # it needs patch (and create for a from-scratch rebuild) in addition to
+  # the get its issuer discovery uses. Grant nothing else on namespaces.
   - apiGroups: [""]
     resources: ["namespaces"]
-    verbs: ["get"]
+    verbs: ["get", "list", "create", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
