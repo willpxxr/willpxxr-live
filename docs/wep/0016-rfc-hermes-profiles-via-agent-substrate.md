@@ -648,6 +648,31 @@ sslmode=verify-ca DSNs; ours ride the Supabase pooler with no
 server-CA verification (DSN verified, no sslmode param). Greenfield
 caveat recorded in the manifest comments: the two namespaces must
 pre-exist for the hook flow (runbook bootstrap, the phase-0 pattern).
+Two later live-proven refinements: (1) the ate-setup binary's config
+loader resolves a repo root by walking up from its CWD for a go.mod
+(the installer assumes a source checkout) and exits otherwise -- a
+wave -2 ConfigMap (state-bootstrap-workspace.yaml: one-line module
+file) anchors the walk, mounted at the Job's workingDir /workspace; and
+(2) EnsureNamespace is a bare-name server-side apply (no-op against an
+existing namespace), so the bootstrap ClusterRole carries
+create+patch on namespaces in addition to get.
+
+Post-slice note (2026-10-31): upstream published v1.0.0-rc.1 two days
+into this debug arc — first release with published container images
+(ghcr.io/agent-substrate/substrate/<image>, amd64+arm64), which removes
+the reason this repo builds nine ko targets at all. It also carries
+fleet-critical fixes for this exact install: gVisor actors exceeding a
+memory limit no longer kill co-tenant actors on the worker (+ microVM
+equivalents), atelet device-plugin wedge fixed, actor egress lifetime
+403 fixed, PostgreSQL migrations squashed+locked once merged (the
+shared-`postgres` two-DSN deviation's weakest seam), actor-id CA to
+ECDSA P-256 for external relying parties (Phase-2), control plane
+non-root. Decision: converge v0.6.0 first (slice 6 above), then bump as
+a deliberate slice to the 1.0 line (GA preferred over rc.1 -- the live
+fleet doesn't pin release candidates; the bump recipe is the recorded
+one: UPSTREAM_REF, dispatch, paste digests, re-render, re-probe; the
+CI pipeline retires in favor of upstream's published images, keeping a
+buildx-free manifests-only flow).
 
 ### Phase 2 — credential chain
 
