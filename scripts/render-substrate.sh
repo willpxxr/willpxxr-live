@@ -286,6 +286,18 @@ for i, l in enumerate(lines):
 PYEOF
       ;;
   esac
+  # ate-api-server --postgres-pool-max-conns: upstream defaults to the
+  # pgx auto-pool (0), sized by CPU count -- two replicas' boot/migration
+  # bursts (plus surge pods during rolls) exceed the Supabase pooler's
+  # per-role SESSION cap (pool_size 15, project-plan-wide; live
+  # 2026-11-01: EMAXCONNSESSION "max clients reached in session mode"
+  # crashed every rolled pod). Cap each pod well under the ceiling:
+  # 2 replicas x 3 conns + owner-role (migrations, brief) + headroom.
+  case "$(basename "$dst")" in
+    ate-api-server.yaml)
+      perl -pi -e 'if (/^(\s*)- --postgres-schema=\@env$/) { $_ .= "$1- --postgres-pool-max-conns=3\n" }' "$dst"
+      ;;
+  esac
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys

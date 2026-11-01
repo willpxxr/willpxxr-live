@@ -212,6 +212,7 @@ spec:
           - --postgres-read-write-role=@env
           - --postgres-owner-role=@env
           - --postgres-schema=@env
+          - --postgres-pool-max-conns=3
           - --actor-id-jwt-pool=/run/actor-id-jwt-pool/pool.json
           - --actor-jwt-issuer=@env
           - --authz-bootstrap-owners=system:serviceaccount:substrate:ate-client
