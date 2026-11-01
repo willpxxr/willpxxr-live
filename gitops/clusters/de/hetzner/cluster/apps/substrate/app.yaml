@@ -37,4 +37,9 @@ manifests:
   - bootstrap-job.yaml
   - state-bootstrap-rbac.yaml
   - state-bootstrap-job.yaml
+  # Phase-1 exit smoke set: the first WorkerPool, ate-client admin RBAC,
+  # the fleet-owned counter actor template (WEP-0016).
+  - workerpool.yaml
+  - smoke-rbac.yaml
+  - smoke-template.yaml
   - state-bootstrap-workspace.yaml

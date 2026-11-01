@@ -1,0 +1,48 @@
+# The Phase-1 exit smoke actor template, modeled on upstream's own
+# demos/counter template (the counter binary exercises the wakeup probe,
+# an HTTP + TCP port, durable dir, and snapshot/resume) but fleet-owned:
+#
+#   - image = the CI-build of demos/counter, digest-pinned
+#   - snapshot location = the fleet's Hetzner Object Storage bucket
+#     (the upstream demo template hardwires gs://${BUCKET_NAME}/ -- a
+#     GKE-ism we do not run)
+#   - no workerSelector: it runs on any pool (the smoke targets the
+#     `profiles` pool; the upstream demo pins `workload: counter` on
+#     its own dedicated pool)
+#
+# Carried as a ConfigMap for the one-time kubectl-ate probe (and later
+# the profiles slice): ActorTemplates are API objects, not CRs, so
+# they enter through `kubectl-ate create actor-template -f` as
+# ate-client -- the admin SA the API lists in authz-bootstrap-owners.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ate-smoke-actor-template
+  namespace: substrate
+data:
+  counter.yaml: |
+    metadata:
+      atespace: smoke
+      name: counter
+    containers:
+    - name: counter
+      image: ghcr.io/willpxxr/counter@sha256:ae5103ccebce3eb006d65ae76a611e16195b7b5eb58f86e5a6259ddc1e1932ee
+      command:
+      - /ko-app/counter
+      wakeupProbe:
+        httpGet:
+          path: /readyz
+          port: 80
+      volumeMounts:
+      - name: data
+        mountPath: /home/counter
+    resources:
+      limits:
+        cpuMillicores: 1000
+        memoryBytes: 536870912
+    snapshotConfig:
+      preferredFidelity: SNAPSHOT_FIDELITY_MEMORY
+      storageLocation: s3://willpxxr-live-substrate-snapshots/smoke-counter/
+    volumes:
+    - name: data
+      durableDir: {}

@@ -1,0 +1,31 @@
+# The fleet's first WorkerPool (WEP-0016 Phase 1): the gVisor worker
+# pool that Phase-0 prepared workers 1+2 for. Workers run the
+# CI-built ateworker-gvisor image (the ko default-import-path name
+# ateworker-gvisor; dry-run note: the first workflow edit dropped the
+# hyphen and ko failed "importpath is not `package main`" -- and the
+# tee pipe swallowed ko's exit code; both fixed in the workflow).
+# sandboxClasses follows the class default (the gvisor-default
+# SandboxConfig the bundle installs, annotated is-class-default).
+# Sizing mirrors upstream's own counter-demo pool (capacity comes from
+# limits, requests stay under limits for packability -- see the demo
+# manifest's comments, internal/sizing).
+apiVersion: ate.dev/v1alpha1
+kind: WorkerPool
+metadata:
+  name: profiles
+  namespace: substrate
+  labels:
+    pool: profiles
+spec:
+  replicas: 2
+  workerImage: ghcr.io/willpxxr/ateworker-gvisor@sha256:6698483a9ee3fee4b2c2738517a412c10b4ef553045166475cc10081e5b4ba1c
+  sandboxClasses:
+    - name: gvisor
+  template:
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 1Gi

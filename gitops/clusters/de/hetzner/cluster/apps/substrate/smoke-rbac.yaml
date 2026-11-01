@@ -1,0 +1,36 @@
+# Least-privilege RBAC for ate-client: the ServiceAccount the API names
+# as authz-bootstrap-owners (upstream's designated admin identity, the
+# shared fallback kubectl-ate acts as). Its default connection mode is
+# a kubectl-style port-forward to the ate-api-server pod, which needs
+# pods get + pods/portforward -- nothing more (the rest of its power
+# lives in the ate API's own authz, where this SA is a global owner).
+# The upstream bundle ships no RBAC for it: upstream's operator runs
+# from a cluster-admin workstation kubeconfig. This is the fleet's
+# scoped equivalent for the in-cluster admin path (smoke tests now,
+# profile management in the Phase-later slices).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ate-client
+  namespace: substrate
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/portforward"]
+    verbs: ["get", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ate-client
+  namespace: substrate
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ate-client
+subjects:
+  - kind: ServiceAccount
+    name: ate-client
+    namespace: substrate
