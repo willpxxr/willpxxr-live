@@ -14,6 +14,13 @@ metadata:
   name: ate-client
   namespace: substrate
 rules:
+  # kubectl-ate's default connection mode port-forwards to the
+  # ate-api-server pod: it first GETs the "api" Service in
+  # ATE_NAMESPACE (missing verb live-verified 2026-11-01), then
+  # forwards to that Service's endpoints.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list"]
