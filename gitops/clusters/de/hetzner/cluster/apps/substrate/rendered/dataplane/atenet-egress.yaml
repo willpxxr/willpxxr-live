@@ -1375,7 +1375,7 @@ spec:
         - --namespace=substrate
         - --port-extproc=50051
         - --extproc-address=127.0.0.1
-        - --ateapi-address=dns:///api.ate-system.svc:443
+        - --ateapi-address=dns:///api.substrate.svc:443
         - --ateapi-ca-file=/run/servicedns.podcert.ate.dev/trust-bundle.pem
         - --ateapi-client-cert=/run/podidentity.podcert.ate.dev/credential-bundle.pem
         # Same bundle Envoy validates the handshake against. The handler

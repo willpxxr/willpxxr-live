@@ -17,7 +17,13 @@ metadata:
   labels:
     pool: profiles
 spec:
-  replicas: 2
+  # One worker: the fleet is deliberately squeezed (no new spend), and
+  # a pool that cannot place every replica is worse than a smaller one
+  # -- upstream's own placement advice in the counter demo (live:
+  # the second replica sat Pending on 0/3 nodes, insufficient memory
+  # on both workers, 2026-11-01). The smoke actor places on worker-2;
+  # sizing grows when the profile slices actually need it.
+  replicas: 1
   workerImage: ghcr.io/willpxxr/ateworker-gvisor@sha256:6698483a9ee3fee4b2c2738517a412c10b4ef553045166475cc10081e5b4ba1c
   sandboxClasses:
     - name: gvisor

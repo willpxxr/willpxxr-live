@@ -235,7 +235,7 @@ spec:
         # - "--ingress-allowed-spiffe-ids=spiffe://cluster.local/ns/ate-e2e-router-client/sa/router-client"
         # Client auth to ateapi (mtls): verify the serving cert against the
         # servicedns trust bundle and present the podidentity client cert.
-        - "--ateapi-address=k8s:///api.ate-system.svc:443"
+        - "--ateapi-address=k8s:///api.substrate.svc:443"
         - "--ateapi-ca-file=/run/servicedns-ca/trust-bundle.pem"
         - "--ateapi-client-cert=/run/podidentity.podcert.ate.dev/credential-bundle.pem"
         # Graceful shutdown knobs. --drain-timeout is left at its derived

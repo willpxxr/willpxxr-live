@@ -265,7 +265,7 @@ spec:
         volumeMounts:
         - name: objectstore-plugin
           mountPath: /run/objectstore-plugin
-        # servicedns: the apiserver's own gRPC serving cert (DNS SAN api.ate-system.svc).
+        # servicedns: the apiserver's own gRPC serving cert (DNS SAN api.substrate.svc).
         - name: "servicedns"
           mountPath: "/run/servicedns.podcert.ate.dev"
         # podidentity: the apiserver's client identity (SPIFFE) when it dials

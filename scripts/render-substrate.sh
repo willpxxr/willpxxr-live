@@ -193,6 +193,42 @@ EOF
       perl -pi -e 'if (/^(\s*)- "?--ingress-client-ca-file=\/run\/podidentity\.podcert\.ate\.dev\/trust-bundle\.pem"?$/) { $_ .= "$1# Fail-closed Phase-2 placeholder: valid format, matches no live identity.\n$1- \"--ingress-allowed-spiffe-ids=spiffe://willpxxr.com/ai-gateway\"\n" }' "$dst"
       ;;
   esac
+  # Namespace retarget, service-target half: the atelet/controller
+  # binaries DEFAULT their ateapi gRPC target to api.ate-system.svc
+  # (both --ateapi-address and --ateapi-server-name; the shipped
+  # manifests carry no such args, so the defaults apply). On this
+  # fleet that makes the atelet watch Endpointslices of
+  # ate-system/api -- forbidden (the SA is substrate/atelet) and
+  # wrong-namespace anyway; workers then retry "could not acquire a
+  # worker epoch" forever (live 2026-11-01). Retarget every service
+  # DNS literal the same way metadata.namespace was retargeted.
+  perl -pi -e 's|api\.ate-system\.svc|api.substrate.svc|g' "$dst"
+  # atelet only: its manifest ships without --ateapi-address /
+  # --ateapi-server-name, so the BINARY defaults (api.ate-system.svc)
+  # apply -- wrong namespace on this fleet: the atelet's credential
+  # broker watches EndpointSlices of ate-system/api (forbidden for
+  # substrate/atelet) and every worker registration retries "could not
+  # acquire a worker epoch" (live 2026-11-01). Render the correct
+  # target explicitly.
+  case "$(basename "$dst")" in
+    atelet.yaml)
+      ATELET_API_ARGS='        - --ateapi-address=k8s:///api.substrate.svc:443
+        - --ateapi-server-name=api.substrate.svc
+' \
+      ATELET_API_ANCHOR='        - --ateapi-ca-file=/run/servicedns.podcert.ate.dev/trust-bundle.pem
+' \
+      python3 - "$dst" <<'PYEOF'
+import os, sys
+path = sys.argv[1]
+raw = open(path).read()
+anchor = os.environ["ATELET_API_ANCHOR"]
+if raw.count(anchor) == 1:
+    raw = raw.replace(anchor, anchor + os.environ["ATELET_API_ARGS"])
+    open(path, "w").write(raw)
+    print(f"  {os.path.basename(path)}: ateapi target args injected")
+PYEOF
+      ;;
+  esac
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys
