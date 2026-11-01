@@ -64,10 +64,11 @@ metadata:
 spec:
   replicas: 2
   strategy:
-    # Update replicas one at a time, create a new one first, then delete the old one.
+    # Zero-surge: the old pod releases its postgres sessions BEFORE
+    # the replacement boots -- hard pooler session cap (WEP-0016).
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app: ate-api-server

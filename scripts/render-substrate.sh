@@ -298,6 +298,45 @@ PYEOF
       perl -pi -e 'if (/^(\s*)- --postgres-schema=\@env$/) { $_ .= "$1- --postgres-pool-max-conns=3\n" }' "$dst"
       ;;
   esac
+  # ate-api-server + ate-idp-server: make their 2-replica rolls
+  # ZERO-SURGE. Upstream's strategy is surge-based (maxSurge: 1 /
+  # maxUnavailable: 0): the replacement pod boots while BOTH old pods
+  # still hold their postgres sessions against the Supabase pooler's
+  # per-role session cap (pool_size 15), and the boot burst + two
+  # established pools + colliding crash-loop retry boots pin that cap
+  # -- the surge pod dies EMAXCONNSESSION at "reading database clock"
+  # and the roll never converges (live 2026-11-01; the per-pod
+  # --postgres-pool-max-conns=3 cap alone did NOT fix it: sessions are
+  # a shared ceiling across pods, not per-pod). Under maxSurge: 0 the
+  # old pod terminates FIRST and releases its sessions before the
+  # replacement boots. Also matches the squeezed-fleet placement rule.
+  # Replicas dip 2->1 per step -- right for Phase 1, revisit with
+  # capacity (WEP-0016).
+  case "$(basename "$dst")" in
+    ate-api-server.yaml|ate-idp-server.yaml)
+      python3 - "$dst" <<'PYEOF'
+import os, sys
+path = sys.argv[1]
+lines = open(path).read().splitlines(keepends=True)
+if not any(l.strip() == "maxSurge: 0" for l in lines):
+    for i, l in enumerate(lines):
+        if l.strip() == "maxUnavailable: 0" and i + 1 < len(lines) and lines[i + 1].strip() == "maxSurge: 1":
+            lines[i] = l.replace("maxUnavailable: 0", "maxUnavailable: 1")
+            lines[i + 1] = lines[i + 1].replace("maxSurge: 1", "maxSurge: 0")
+            start = max(0, i - 3)
+            for j in range(start, i):
+                if lines[j].lstrip().startswith("# Update replicas one at a time"):
+                    indent = lines[j][: len(lines[j]) - len(lines[j].lstrip())]
+                    lines[j] = (
+                        indent + "# Zero-surge: the old pod releases its postgres sessions BEFORE\n"
+                        + indent + "# the replacement boots -- hard pooler session cap (WEP-0016).\n"
+                    )
+            open(path, "w").write("".join(lines))
+            print(f"  {os.path.basename(path)}: strategy rewritten to zero-surge")
+            break
+PYEOF
+      ;;
+  esac
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys
