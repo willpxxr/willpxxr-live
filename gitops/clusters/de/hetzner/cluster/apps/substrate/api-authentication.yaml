@@ -1,0 +1,25 @@
+# ate-api-server's authentication config, APP-OWNED: upstream's
+# ate-setup api-authentication-config step hardcodes the token
+# audience as api.ate-system.svc (buildAuthenticationConfig), but
+# kubectl-ate mints its audience-restricted session token as
+# api.<ATE_NAMESPACE>.svc -- on this retargeted fleet that is
+# api.substrate.svc, and the mismatch fails as
+# "Unauthenticated: invalid bearer token" (live 2026-11-01). The
+# issuer half is upstream's own derivation (the kube apiserver's
+# service-account issuer, from OIDC discovery; Talos default):
+# https://kube.cluster.local:6443. Only the audience line differs
+# from the tool-generated object. The create step still runs in the
+# state-bootstrap hook -- it no-ops against this file ("already
+# exists; keeping it") and documents that the upstream tool cannot
+# render a retargeted audience.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ate-api-authentication
+  namespace: substrate
+data:
+  authentication.yaml: |
+    jwtProviders:
+    - name: kubernetes
+      issuer: https://kube.cluster.local:6443
+      audiences: [api.substrate.svc]

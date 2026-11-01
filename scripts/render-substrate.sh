@@ -141,7 +141,7 @@ EOF
   # roll the Deployment; the value records why this generation exists.
   case "$(basename "$dst")" in
     ate-api-server.yaml)
-      perl -pi -e 'if (/^(\s*)prometheus\.io\/port: "9090"$/) { $_ .= "$1willpxxr.com/restart: \"2026-10-31-postgres-pcr-recreate\"\n" }' "$dst"
+      perl -pi -e 'if (/^(\s*)prometheus\.io\/port: "9090"$/) { $_ .= "$1willpxxr.com/restart: \"2026-10-31-postgres-pcr-recreate\"\n$1willpxxr.com/authn-audience: \"api.substrate.svc\"\n" }' "$dst"
       ;;
   esac
   # podcertcontroller --postgres-client-namespace: upstream pins its own

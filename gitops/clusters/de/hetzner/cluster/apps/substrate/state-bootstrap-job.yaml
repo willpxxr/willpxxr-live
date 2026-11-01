@@ -108,3 +108,10 @@ spec:
             - name: ate-setup-workspace
               mountPath: /workspace
           args: ["create", "api-authentication-config", "--namespace", "substrate"]
+          # NOTE: this step's output is superseded by the app-owned
+          # ate-api-authentication.yaml (api-authentication.yaml in this
+          # dir): the tool hardcodes the upstream audience
+          # api.ate-system.svc and cannot render the retargeted one. The
+          # step stays to keep the checkpoint (its "already exists;
+          # keeping it" no-op confirms git's object owns the state); the
+          # authoritative content is the git manifest.

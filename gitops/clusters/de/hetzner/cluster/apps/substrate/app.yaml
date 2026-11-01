@@ -42,4 +42,5 @@ manifests:
   - workerpool.yaml
   - smoke-rbac.yaml
   - smoke-template.yaml
+  - api-authentication.yaml
   - state-bootstrap-workspace.yaml
