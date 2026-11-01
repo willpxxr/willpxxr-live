@@ -236,6 +236,38 @@ for i, l in enumerate(lines):
 PYEOF
       ;;
   esac
+  # atenet singles (egress + router): both Deployments are 1-replica
+  # and the fleet has zero placement headroom, so the DEFAULT rolling
+  # strategy (maxSurge 25% -> a second pod placed before the old one
+  # terminates) jams forever -- the surge pod sits Pending on
+  # insufficient-memory and the rollout never completes (live
+  # 2026-11-01; upstream's own counter-demo comment: a pool that
+  # cannot place every replica is worse than a smaller one). Replace
+  # in place instead: terminate-then-create. This trades seconds of
+  # unavailability per roll -- right for Phase 1 (no dataplane
+  # consumers yet); revisit when capacity or replicas grow.
+  case "$(basename "$dst")" in
+    atenet-egress.yaml|atenet-router.yaml)
+      SCALING_STRATEGY='
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+' \
+      python3 - "$dst" <<'PYEOF'
+import os, sys
+path = sys.argv[1]
+lines = open(path).read().splitlines(keepends=True)
+for i, l in enumerate(lines):
+    if l == "  replicas: 1\n":
+        lines.insert(i + 1, os.environ["SCALING_STRATEGY"])
+        open(path, "w").write("".join(lines))
+        print(f"  {os.path.basename(path)}: zero-surge strategy injected")
+        break
+PYEOF
+      ;;
+  esac
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys
