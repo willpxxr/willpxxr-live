@@ -204,18 +204,20 @@ EOF
   # DNS literal the same way metadata.namespace was retargeted.
   perl -pi -e 's|api\.ate-system\.svc|api.substrate.svc|g' "$dst"
   # atelet + ate-controller: their manifests ship the CA-file args but
-  # no --ateapi-address / --ateapi-server-name, so the BINARY defaults
-  # (api.ate-system.svc) apply -- wrong namespace on this fleet. The
-  # atelet's epoch broker and the controller's worker-registration
-  # syncer both then watch Endpointslices of ate-system/api (forbidden
-  # for their SAs) -- and with the controller unable to reach the API,
-  # Worker rows never land in the store, so the api's worker cache
-  # reads zero and every worker registration retries
-  # "Worker <uid> not found" (live 2026-11-01). Render the correct
-  # target explicitly, anchored on each file's own --ateapi-ca-file
-  # arg (the two files use different path spellings for the bundle).
+  # no api-target arg, so the BINARY defaults (api.ate-system.svc)
+  # apply -- wrong namespace on this fleet. The atelet's epoch broker
+  # and the controller's worker-registration syncer both then watch
+  # Endpointslices of ate-system/api (forbidden for their SAs) -- and
+  # with the controller unable to reach the API, Worker rows never
+  # land in the store, so the api's worker cache reads zero and every
+  # worker registration retries "Worker <uid> not found" (live
+  # 2026-11-01). Upstream names the flag DIFFERENTLY per binary:
+  # atelet --ateapi-address, atecontroller --ateapi-conn-spec -- the
+  # first cut injected atelet's name into the controller and it exits
+  # "unknown flag: --ateapi-address" (live, caught on rollout).
+  # Anchored on each file's own --ateapi-ca-file arg.
   case "$(basename "$dst")" in
-    atelet.yaml|ate-controller.yaml)
+    atelet.yaml)
       python3 - "$dst" <<'PYEOF'
 import os, sys
 path = sys.argv[1]
@@ -223,15 +225,31 @@ lines = open(path).read().splitlines(keepends=True)
 for i, l in enumerate(lines):
     if l.lstrip().startswith("- --ateapi-ca-file="):
         indent = l[: len(l) - len(l.lstrip())]
-        if l.lstrip().startswith("- --ateapi-ca-file=") and not any(
-            x.lstrip().startswith("- --ateapi-address=") for x in lines
-        ):
+        if not any(x.lstrip().startswith("- --ateapi-address=") for x in lines):
             lines[i + 1:i + 1] = [
                 indent + "- --ateapi-address=k8s:///api.substrate.svc:443\n",
                 indent + "- --ateapi-server-name=api.substrate.svc\n",
             ]
             open(path, "w").write("".join(lines))
-            print(f"  {os.path.basename(path)}: ateapi target args injected")
+            print(f"  {os.path.basename(path)}: ateapi address args injected")
+        break
+PYEOF
+      ;;
+    ate-controller.yaml)
+      python3 - "$dst" <<'PYEOF'
+import os, sys
+path = sys.argv[1]
+lines = open(path).read().splitlines(keepends=True)
+for i, l in enumerate(lines):
+    if l.lstrip().startswith("- --ateapi-ca-file="):
+        indent = l[: len(l) - len(l.lstrip())]
+        if not any(x.lstrip().startswith("- --ateapi-conn-spec=") for x in lines):
+            lines[i + 1:i + 1] = [
+                indent + "- --ateapi-conn-spec=k8s:///api.substrate.svc:443\n",
+                indent + "- --ateapi-server-name=api.substrate.svc\n",
+            ]
+            open(path, "w").write("".join(lines))
+            print(f"  {os.path.basename(path)}: ateapi conn-spec args injected")
         break
 PYEOF
       ;;
