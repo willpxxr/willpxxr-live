@@ -67,3 +67,12 @@ Split CI by what each system can actually do.
   hcloud has no OIDC surface to federate a workload identity with, so it
   waits for a generic secrets mechanism (its monthly cron is GHA-shaped
   regardless).
+- Probed empirically 2026-11-07 (commit `b225cf4`): a check's identity bearer
+  is a sealed, non-JWT stand-in inside the VM (1823 opaque bytes; octo-sts
+  answered `invalid bearer token`), so federation with an external STS is
+  closed until Checks exposes raw OIDC or ships the native GitHub token.
+  Independently, GHCR rejects GitHub App installation tokens for registry
+  pushes (octo-sts#840), so an octo-sts token could only ever power
+  GitHub-API work (statuses, SARIF), not the image builds. The probe, its
+  read-only trust policy, and the identity were removed after the finding;
+  re-create from git history if raw tokens ever land.

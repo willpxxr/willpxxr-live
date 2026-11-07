@@ -15,20 +15,4 @@ trust:
   cache:
     trunk:
       rings: [2]
-identities:
-  octo-sts-probe:
-    # GCP-typed solely to get token material into the VM (an ADC config whose
-    # credential_source.file points at the bearer); the dummy provider is
-    # never contacted -- the probe presents the VM's bearer to octo-sts.dev
-    # instead. Read-only, postsubmit-only; see WEP-0017.
-    description: Octo STS exchange probe (advisory, read-only GitHub token).
-    checks: [ci.checks.octo-sts-probe]
-    audiences:
-      - https://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/checks/providers/checks
-    gcp:
-      provider: projects/123456789012/locations/global/workloadIdentityPools/checks/providers/checks
-      audience: https://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/checks/providers/checks
-    allow:
-      - run: postsubmit
-        ref: refs/heads/main
-    ring: 2
+identities: {}

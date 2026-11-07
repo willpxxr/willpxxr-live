@@ -1,9 +1,0 @@
-# Trust a Chainguard Checks postsubmit run of this repo (identity
-# octo-sts-probe, repository id a0feea521babb4c9a7bf773a1e2b8027) to
-# federate a read-only, short-lived GitHub token via Octo STS.
-# Probe for WEP-0017's revisit items: see docs/wep/0017.
-issuer: https://issuer.enforce.dev
-subject: chainguard:a0feea521babb4c9a7bf773a1e2b8027:octo-sts-probe
-
-permissions:
-  contents: read
