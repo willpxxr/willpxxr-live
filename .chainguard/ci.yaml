@@ -3,7 +3,7 @@
 # publishes, cron, secrets) stays on GitHub Actions.
 version: 1
 environment:
-  packages: [python-3.13, py3.13-pip]
+  packages: [python-3.13, py3.13-pip, git]
   caches:
     python: {}
 checks:
@@ -12,13 +12,14 @@ checks:
     trigger: postsubmit
     timeout: 10m
     script: |
-      # Pinned deliberately; --soft-fail keeps new findings report-only,
-      # github_failed_only's ::error lines render as annotations.
-      # --skip-download: skip the optional Prisma guideline fetch (hermetic
-      # egress; the links were empty anyway). --download-external-modules:
-      # also scan inside the hcloud-talos registry module, resolved via
-      # registry.terraform.io and fetched from GitHub.
-      pip install -q checkov==3.4.3
+      # --skip-download: no Prisma guideline fetch (links stay empty either
+      # way); --download-external-modules: scan inside the hcloud-talos module.
+      # checkov's registry client trusts only certifi (append the VM's CA) and
+      # its clone leg shells out to git (BC_CA_BUNDLE feeds GIT_SSL_CAINFO).
+      pip install -q --root-user-action=ignore --disable-pip-version-check checkov==3.4.3
+      cat /usr/local/share/ca-certificates/microvm-guest-ca-*.crt \
+        >> "$(python3 -c 'import certifi; print(certifi.where())')"
+      export BC_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
       checkov --directory terraform --framework terraform --soft-fail \
         --output github_failed_only \
         --skip-download \
