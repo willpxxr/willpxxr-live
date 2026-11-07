@@ -7,7 +7,6 @@ namespace: substrate
 manifests:
   - namespace.yaml
   - network-policy.yaml
-  - gvisor-runtimeclass.yaml
   # WEP-0016 Phase 1: the upstream v0.6.0 bundle, rendered by
   # scripts/render-substrate.sh (digest-pinned GHCR images, namespace
   # retarget, S3 sidecar env), plus the fleet's env contract: the

@@ -1,0 +1,10 @@
+# ArgoCD app definition (see argocd/apps-applicationset.yaml + WEP-0001).
+# The fleet-wide gVisor RuntimeClass as its own app: registering runsc
+# as a node runtime is a fleet infrastructure concern (every node's
+# containerd registers it via the 2026-10-25 Talos schematic roll,
+# WEP-0016 Phase 0), not an ate-specific one -- the substrate app
+# carried it only because the substrate install was its first consumer.
+# Cluster-scoped: no namespace field.
+name: gvisor
+manifests:
+  - runtimeclass.yaml
