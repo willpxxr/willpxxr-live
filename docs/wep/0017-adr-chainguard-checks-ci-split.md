@@ -26,8 +26,9 @@ Split CI by what each system can actually do.
   bump over the 2.0.930 the old action ran -- fresher checks, so new
   findings may show up; they do not fail the check. A ring-2 cache pool
   (`.chainguard/ci/identities.yaml`) keeps the pip install warm.
-- **Cut-over is phased**: `.github/workflows/checkov.yml` runs in parallel
-  and is removed in a follow-up commit once results match on a real push.
+- **Cut-over completed 2026-11-07**: `.github/workflows/checkov.yml` was
+  removed once the Checks-side scan superseded it (module internals scanned,
+  findings as annotations; green runs `8614a44`, `8f36b87`, `af8f3fb`).
 - **Deleted**: `dependency-review.yml` -- PR-triggered only, this repo
   deliberately has no PRs, so it had never run.
 - **Stays on GitHub Actions**, each blocked by a beta limit rather than
