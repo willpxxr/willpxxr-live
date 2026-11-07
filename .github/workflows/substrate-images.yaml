@@ -1,13 +1,22 @@
 name: substrate-images
 
-# Rebuilds Agent Substrate ("ate") container images from the pinned
-# upstream ref and pushes them to GHCR (WEP-0016 Phase 1). Upstream
-# v0.6.0 publishes no release images -- its release workflow only drafts
-# release notes, and its kind flow ko-builds into a throwaway local
-# registry -- so this repo owns the pinned refs that apps/substrate
-# manifests consume. Rebuilds stay deliberate (the GitOps layer pins
-# sha256 digests) but fire on a committed bump to .github/substrate-ref;
-# workflow_dispatch remains as the rebuild-forcing override.
+# Builds the Agent Substrate ("ate") images that upstream releases do NOT
+# publish (WEP-0016). Since v1.0.0 upstream publishes every install image
+# itself -- `publish release-images` pushes ateapi, atecontroller, atelet,
+# atenet, ate-idp-server, ateworker-gvisor, ateworker-microvm,
+# kubernetes-secrets, objectstore-plugin, podcertcontroller to
+# ghcr.io/agent-substrate/substrate, plus the buildx-built envoy-dataplane --
+# and install/upgrade runs from upstream's own ate-setup checkout, not from
+# these images. What releases still leave out are the demo and tooling
+# binaries: this workflow builds exactly those two, minted as probe images:
+#
+#   - cmd/kubectl-ate   -- the kubectl plugin used by the one-time smoke
+#                          probes (releases attach bare binaries only)
+#   - demos/counter     -- the Phase-1 exit smoke actor
+#
+# Rebuilds stay deliberate (the app manifests pin sha256 digests) and fire
+# on a committed bump to .github/substrate-ref; workflow_dispatch remains
+# as the rebuild-forcing override.
 on:
   push:
     branches: ["main"]
@@ -38,7 +47,7 @@ jobs:
       - name: "Checkout this repo (the pinned-ref file lives here)"
         # The resolve step below reads .github/substrate-ref before the
         # upstream checkout, and the trigger-fired workspace starts empty.
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b16304ceea73d27597364c9af683 # v4.2.2
         with:
           sparse-checkout: .github
           persist-credentials: false
@@ -56,7 +65,7 @@ jobs:
         # Public upstream: the fetch is anonymous -- the GITHUB_TOKEN's
         # contents scope applies to this repo only and is not consulted
         # for foreign public repos at all.
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b16304ceea73d27597364c9af683 # v4.2.2
         with:
           repository: agent-substrate/substrate
           ref: ${{ steps.ref.outputs.ref }}
@@ -64,8 +73,8 @@ jobs:
           persist-credentials: false
 
       - name: "Setup Go (version from substrate's own go.mod)"
-        # v0.6.0 wants go 1.27 (toolchain 1.27.3) -- newer than the dev
-        # machines; the version file keeps this self-updating on ref bumps.
+        # The version file keeps this self-updating on ref bumps
+        # (v1.0.0's toolchain line drives the choice).
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: substrate/go.mod
@@ -82,14 +91,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: "ko build the seven control-plane/runtime commands"
+      - name: "ko build the two images upstream releases do not publish"
         working-directory: substrate
         env:
           KO_DOCKER_REPO: ghcr.io/willpxxr
         run: |
           # --base-import-paths: image names = ghcr.io/willpxxr/<cmd> (ko's
           # default naming is <cmd>-<md5 of the import path>, --bare is not
-          # usable with seven targets). ko's help hedges "may not work
+          # usable with multiple targets). ko's help hedges "may not work
           # properly with --tags" for non-default namers -- the first
           # dispatch verified the combination and kept both (2026-10-26).
           set -o pipefail
@@ -97,36 +106,9 @@ jobs:
             --base-import-paths \
             --platform=linux/amd64 \
             --tags="${{ steps.ref.outputs.ref }}" \
-            ./cmd/ateapi \
-            ./cmd/atecontroller \
-            ./cmd/atelet \
-            ./cmd/atenet \
-            ./cmd/ate-idp-server \
-            ./cmd/objectstore-plugin \
-            ./cmd/podcertcontroller \
-            ./cmd/ate-setup \
-            ./cmd/ateworker-gvisor \
             ./cmd/kubectl-ate \
             ./demos/counter \
             | tee "${RUNNER_TEMP}/published.txt"
-
-      - name: "Setup Buildx"
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      - name: "Build + push envoy-dataplane (docker buildx)"
-        # The router + egress dataplanes are NOT stock envoy: upstream bakes
-        # a Rust-built dynamic module into a pinned envoyproxy/envoy base
-        # (cmd/dataplane/envoy; ate-setup tags it envoy-dataplane under
-        # KO_DOCKER_REPO like the ko images -- internal/images/prebuilt.go).
-        # The recipe is Docker-native (rust builder stage -> envoy runtime),
-        # so this one is buildx, not ko.
-        id: envoy
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: substrate/cmd/dataplane/envoy
-          platforms: linux/amd64
-          push: true
-          tags: ghcr.io/willpxxr/envoy-dataplane:${{ steps.ref.outputs.ref }}
 
       - name: "Published digests (render-slice input)"
         run: |
@@ -135,9 +117,8 @@ jobs:
             echo
             echo '```'
             cat "${RUNNER_TEMP}/published.txt"
-            echo "=== published.txt ==="
+            echo '=== published.txt ==='
             cat "${RUNNER_TEMP}/published.txt"
-            echo "=== end published.txt ==="
-            echo "Published ghcr.io/willpxxr/envoy-dataplane@${{ steps.envoy.outputs.digest }}"
+            echo '=== end published.txt ==='
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
