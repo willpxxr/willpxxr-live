@@ -14,6 +14,5 @@ manifests:
   - backend-security-policy-synthetic-anthropic.yaml
   - security-policy.yaml
   - security-policy-synthetic-anthropic.yaml
-  - envoy-extension-policy-semantic-router.yaml
   - externalsecret-synthetic.yaml
   - traffic-policy.yaml

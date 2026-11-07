@@ -111,3 +111,14 @@ evidence; (b) the Lua-after-AI-extproc path (the AI gateway's v0.6+ slot)
 calling vSR's classify API to rewrite the model; (c) the CR-driven refactor
 (IntelligentPool/IntelligentRoute) once invocation works. The chain is
 fail-open: requests always work, just without classification.
+
+## Execution note (2026-11-07)
+
+The vLLM Semantic Router stack is DISABLED as not in use (owner call): the
+`semantic-router` app flipped to `app.yaml.disabled` (helm release removed by
+the ApplicationSet cascade), the `EnvoyExtensionPolicy` ext-proc attachment and
+its gateway netpol egress allowance deleted from the live apps. The namespace
+`vllm-semantic-router-system` predates the app convention (no repo owner
+outside the helm release) and is cleaned up one-time by hand once the cascade
+empties it. Nothing else references the router: the AI gateway's live routes
+are the synthetic/backend policies, which never routed through the ext-proc.
