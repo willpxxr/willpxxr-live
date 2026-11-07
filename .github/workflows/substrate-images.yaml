@@ -47,7 +47,7 @@ jobs:
       - name: "Checkout this repo (the pinned-ref file lives here)"
         # The resolve step below reads .github/substrate-ref before the
         # upstream checkout, and the trigger-fired workspace starts empty.
-        uses: actions/checkout@11bd71901bbe5b16304ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           sparse-checkout: .github
           persist-credentials: false
@@ -65,7 +65,7 @@ jobs:
         # Public upstream: the fetch is anonymous -- the GITHUB_TOKEN's
         # contents scope applies to this repo only and is not consulted
         # for foreign public repos at all.
-        uses: actions/checkout@11bd71901bbe5b16304ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: agent-substrate/substrate
           ref: ${{ steps.ref.outputs.ref }}
