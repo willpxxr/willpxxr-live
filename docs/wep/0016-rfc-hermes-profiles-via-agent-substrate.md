@@ -2,7 +2,8 @@
 
 **Type:** RFC · **Status:** Accepted (2026-10-25; drafted 2026-10-24; fleet
 direction revised to stay-hcloud 2026-10-25, snapshot backend to Hetzner
-Object Storage 2026-10-25) · **Date:** 2026-10-24
+Object Storage 2026-10-25) · Phase-1 exit smoke green on v1.0.0
+2026-11-07 (git adoption slice pending, slice 10 record) · **Date:** 2026-10-24
 
 ## Context
 
@@ -793,6 +794,152 @@ fleet doesn't pin release candidates; the bump recipe is the recorded
 one: UPSTREAM_REF, dispatch, paste digests, re-render, re-probe; the
 CI pipeline retires in favor of upstream's published images, keeping a
 buildx-free manifests-only flow).
+
+Execution record (2026-11-07, slice 9 — v1.0.0 cutover: installer
+bootstrap replaces the render): the v0.6 arc dead-ended on token
+validation — the missing CA + discovery-token legs of the authn CM were
+installer-owned state the render could not reproduce, the same class of
+gap that produced slice 6's hook bootstrap. Owner call: cut to upstream
+v1.0.0 at GA and change the install model itself, not just the version —
+one-time `ate-setup` installer bootstrap (the ArgoCD-install precedent
+class), then git adoption of the sanitized live objects; the
+UPSTREAMREF→dispatch→paste-digests→render recipe is retired
+(scripts/render-substrate.sh stays untouched as v0.6 archaeology; do not
+run it against v1.0). Teardown first: `app.yaml.disabled` (f09fea8), the
+AppSet cascade taking the ns, CRDs, and CRs with it (one orphaned-finalizer
+patch on the `gvisor-default` SandboxConfig after the CRD dropped
+mid-delete), with the vLLM semantic-router decommission riding the same
+window (27ddd3b, WEP-0013) and the gVisor RuntimeClass already split into
+its own cluster-scoped app (54f4067). The installer runs from a v1.0.0
+tag clone carrying four checkout-holds, each in-file commented (the
+slice-7/8 lesson made structural): (1) base/kustomization.yaml drops the
+GKE-only atenet-router-monitoring member; (2) the ate-api-server
+objectstore-plugin init container defaults to gcs — converted to the
+fleet's S3 env; (3) the atelet objectstore-plugin sidecar likewise
+(ATE_STORAGE_BACKEND=s3, AWS_REGION=nbg1,
+AWS_ENDPOINT_URL=https://nbg1.your-objectstorage.com,
+AWS_S3_USE_PATH_STYLE=true, static keys from the ESO-materialized
+substrate-s3 Secret); (4) atelet's credential-provider args/mounts/volumes
+excised — the kubeadm hostPaths do not exist on Talos, and the provider
+is install-disabled fleet-wide anyway. Settings: upstream pre-built
+images only (ghcr.io/agent-substrate/substrate:v1.0.0, the ko-published
+10-image set; no attestations are published on any of them — digests are
+the trust boundary), `--sandbox-classes=gvisor
+--ateapi-postgres-schema substrate --ateapi-postgres-pool-max-conns 3
+--snapshot-location s3://willpxxr-live-substrate-snapshots/
+--credential-provider {"enabled":false} --rollout-timeout 300s`, DSNs via
+op from the substrate 1Password item, and the inert pair
+`--snapshot-transfer-gsa-name unused-on-s3 --gcp-project-id
+inert-config-only` satisfying the non-kind-unconditional
+RequireTransferServiceAccount (GCS-only consumption; the S3 path never
+executes it). Two standing reversals of earlier decisions, both owner
+calls: the namespace retarget deviation from Decision §2 is REVERTED —
+everything runs in upstream's default `ate-system` (retarget surgery
+caused half the v0.6 defects), and the Supabase schema survived the
+cutover unmigrated (the v1.0 migrations converged on it, closing the
+shared-`postgres` seam that motivated waiting for GA). CI trims to the
+two targets upstream releases omit (kubectl-ate, counter; dispatch
+42375466989 green; the checkout-action pin fix da76832 rode ahead of
+it). Convergence took six idempotent installer passes, each retiring
+one live-proven failure: (1) PodSecurity — the fresh namespace lacked
+`privileged` labels and atelet's hostPath volume set FailedCreate
+(v0.6's slice-6 finding, re-learned on the default ns); enforce/audit/warn
+privileged is upstream's own operating posture for the runner ns.
+(2) image-cache layout v2→v3 (upstream release note #2392) — cleared
+/var/lib/ate/image-cache on both workers. (3) Cilium egress selection —
+a minimal OIDC-only CNP on the api pods flipped every other api egress
+to deny (CoreDNS 53 timeouts; the unselected busybox probes resolved
+fine, which is what unmasked it); the full re-homed CNP bundle is the
+posture, with the OIDC leg retargeted to the apiserver's node path
+10.0.1.101:6443 (hcloud-private IP — the public 5.75.173.162 times out
+from pods; hostAliases pins kube.cluster.local → 10.0.1.101 in the api
+pod spec; the Service :443 vs node-IP :6443 distinction is recorded in
+the CNP comment). (4) Supabase's EMAXCONNSESSION (pool_size 15)
+deadlocks upstream's default surge roll — three generations coexist, the
+new pod never boots against the session cap; maxSurge=0/maxUnavailable=1
+kill-old-first is the standing roll recipe (v0.6 redux, live-proven a
+second time). (5) the authn endgame — v1.0's kubernetesJWTProvider
+writes certificateAuthorityFile and discoveryTokenFile only when the
+cluster's SA issuer equals inClusterIssuer
+("https://kubernetes.default.svc[.cluster.local]", create.go:246);
+Talos's https://kube.cluster.local:6443 misses the switch and the
+generator silently emits the 3-field CM whose JWKS fetch can never
+succeed (distroless pods carry no system trust store, and the hardened
+apiserver 401s anonymous discovery) — the live CM patched to the full
+five fields and the api rolled; audience api.ate-system.svc is now
+correct by construction (no retarget). Convergent proof: atespace create
+green at 14:06Z — the exact call that had failed for two days.
+
+Slice 10, same day — the Phase-1 exit smoke (green) and the v1.0
+semantics it taught: five live-proven finds, each first met as a
+failure. (1) Actor templates: per-template snapshot `storageLocation` is
+Forbidden unless the PerTemplateSnapshotLocation preview gate is on
+(the api runs ExternalVolumes/GoldenEgressPolicy/PerTemplateSnapshotLocation
+all off) — the cluster-wide install-time snapshot location is the only
+locus; the smoke template reshaped to upstream's own demo shape
+(`preferredFidelity: SNAPSHOT_FIDELITY_MEMORY` only) and the counter
+image re-pinned from the v0.6-era build (`ae5103cc…`, predates the v1.0
+agent SDK) to the v1.0.0-tag CI build (`bcc089b0…`). (2) The v1.0 actor
+lifecycle: create lands ACTOR_STATE_SUSPENDED — resume (CLI verb or
+router traffic) is what boots the actor, and resume requires the
+template's golden snapshot: the api reconciles a transitory golden actor
+through the worker (gVisor boot via runsc, wakeupProbe /readyz:80,
+memory checkpoint — 90ms), uploads the zstd-compressed snapshot parts to
+the cluster location, tags the template, deletes the golden actor.
+(3) Registry egress: the actor-image pull is a direct pod dial (atelet
+imageCache.EnsureImage → remote.Image) that needs BOTH ghcr.io and
+pkg-containers.githubusercontent.com in the CNP set — GHCR serves
+manifests itself but redirects blob fetches to its CDN, and the
+single-host rule moved the failure without fixing it (live 14:34); the
+new `allow-actor-image-registry-egress` documents both. (4) The green
+chain, in order and on the clock: atespace create 14:06 → template
+create + golden baked 14:54 → actor create (suspended) → resume 14:56 →
+ACTOR_STATE_RUNNING on default-worker-7c44cc9478-5x5hx (10.0.16.252),
+the counter's own heartbeat (Count N, 10s cadence, stable fshash)
+streaming through the sandbox; a later suspend took 75ms and closed
+SNAPSHOT_STORAGE_STATE_COMPLETED at
+s3://…/atespaces/smoke/actors/…/snapshots/… with the worker slot freed
+(0/1000 actors while suspended). (5) The pool rename: `profiles` →
+`default-worker` (owner call — the pool is runtime infrastructure and
+the default home for actors; "profiles" collides with this WEP's
+coded-profile actor taxonomy, and "gvisor-workers" was rejected as
+describing the sandbox rather than the role) — the CRD group is now
+ate.dev/v1 (v1alpha1 gone), the worker image is upstream's published
+ateworker-gvisor digest (f8987236…), and the pool controller reconciles
+its own per-pool CNP (substrate-default-worker). Operator tooling landed
+the same day: upstream v1.0.0 attaches release binaries —
+kubectl-ate-darwin-arm64 (sidecar .sha256 verified) at
+/opt/homebrew/bin/kubectl-ate; kubectl discovers it as `kubectl ate`,
+it port-forwards to the api through the admin kubeconfig, mints the
+audience token via TokenRequest, and acts as the shared bootstrap
+identity ate-client (--token-file is the own-principal escape for
+multi-operator hygiene; the warning on every command is by-design UX).
+egress-policy is a per-actor resource — none exist yet; the
+credential-provider is install-disabled, so exercising EgressPolicy is
+parked with the Phase-2 credential chain.
+
+Status at pause (2026-11-07): live substrate fully green (api 2/2 on the
+zero-surge strategy, idp ×2, controller, atelet 2/2 on both workers,
+router, egress 3/3, default-worker 1/1 registered epoch 1 with gVisor
+runtimes reported; gvisor RuntimeClass app live since 54f4067). The
+adoption slice is the queued next step, deliberately un-shipped at
+pause: the curated files are updated in the working tree and
+live-applied but uncommitted (workerpool.yaml, smoke-rbac.yaml,
+smoke-template.yaml re-homed to ate-system; api-authentication.yaml
+re-aimed at audience api.ate-system.svc with all five fields;
+network-policy.yaml with the oidc node-IP fix and the registry rule) —
+then a sanitized live snapshot into rendered/ (Secrets excluded), then
+app.yaml.disabled → app.yaml re-enable, then Argo's Synced/Healthy
+adoption check. One idempotent installer rerun is owed for its success
+record (retry configs at ~/Library/Caches/ate-setup/failed/). Cosmetic
+threads on record: the headless api Service (clusterIP: None) makes
+plain-DNS NXDOMAIN for the bare name — upstream-intentional client-side
+gRPC LB, ate clients resolve via endpointslices; the OTLP WARNs target
+the nonexistent gke-managed-otel collector (upstream GKE-ism,
+--otlp-endpoint ''); per-key S3 bucket policy hardening remains the
+slice-3-recorded follow-up; the demo's proxy→router traffic leg needs
+the router's --ingress-allowed-spiffe-ids (empty at install) and lands
+with the Phase-2 proxy work.
 
 ### Phase 2 — credential chain
 
