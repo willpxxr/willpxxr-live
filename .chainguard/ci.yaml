@@ -3,7 +3,7 @@
 # publishes, cron, secrets) stays on GitHub Actions.
 version: 1
 environment:
-  packages: [python-3.13, py3.13-pip, git, terraform]
+  packages: [python-3.13, py3.13-pip, git, terraform, curl, jq]
   caches:
     python: {}
 checks:
@@ -30,3 +30,49 @@ checks:
     description: terraform fmt -- the same formatting gate the local pre-push skill enforces
     trigger: postsubmit
     cmd: terraform fmt -check -recursive
+  octo-sts-probe:
+    # WEP-0017 revisit item, empirical: can a check present its identity to
+    # an external STS, or is the bearer sealed to blessed endpoints? Either
+    # outcome is recorded in the ADR. Note: even on success, GHCR rejects
+    # GitHub App installation tokens for registry pushes (octo-sts#840), so
+    # this can never unblock the image builds -- only GitHub-API work.
+    description: Octo STS exchange probe (advisory) -- can a check's identity token leave the VM for an external STS?
+    trigger: postsubmit
+    advisory: true
+    identity: octo-sts-probe
+    timeout: 5m
+    script: |
+      echo "== identity material in the VM =="
+      env | grep -E '^(GOOGLE_|AWS_|AZURE_)' | sed 's/=.*/=<set>/' || true
+      ls -la /run/chainguard/identities/ 2>/dev/null || echo 'no /run/chainguard/identities'
+      ADC="${GOOGLE_APPLICATION_CREDENTIALS:-}"
+      if [ -z "$ADC" ] || [ ! -f "$ADC" ]; then
+        echo "no ADC config materialized; the identity never reached the VM"
+        exit 0
+      fi
+      echo "adc config: $ADC"
+      jq . "$ADC" | head -20
+      TOKEN_FILE=$(jq -r '.credential_source.file // empty' "$ADC")
+      if [ -z "$TOKEN_FILE" ] || [ ! -f "$TOKEN_FILE" ]; then
+        echo "no credential_source.file inside the ADC config"
+        exit 0
+      fi
+      TOK=$(cat "$TOKEN_FILE")
+      case "$TOK" in
+        *.*.*) echo "bearer shape: JWT-like, ${#TOK} bytes" ;;
+        *) echo "bearer shape: opaque, ${#TOK} bytes (no JWT structure)" ;;
+      esac
+      echo "bearer head: $(printf '%s' "$TOK" | head -c 8)..."
+      echo "== octo-sts exchange attempt =="
+      code=$(curl -sS -o /var/tmp/exchange.json -w '%{http_code}' \
+        -H "Authorization: Bearer $TOK" \
+        'https://octo-sts.dev/sts/exchange?scope=willpxxr/willpxxr-live&identity=checks-probe')
+      echo "HTTP $code"
+      if jq -e '.token' /var/tmp/exchange.json >/dev/null 2>&1; then
+        echo 'EXCHANGE SUCCEEDED -- token masked:'
+        jq '.token |= (.[0:8] + "...")' /var/tmp/exchange.json
+      else
+        cat /var/tmp/exchange.json
+      fi
+    network:
+      egress: [octo-sts.dev, sts.googleapis.com, api.github.com]
