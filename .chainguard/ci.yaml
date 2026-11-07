@@ -3,7 +3,7 @@
 # publishes, cron, secrets) stays on GitHub Actions.
 version: 1
 environment:
-  packages: [python-3.13, py3.13-pip, git]
+  packages: [python-3.13, py3.13-pip, git, terraform]
   caches:
     python: {}
 checks:
@@ -26,3 +26,7 @@ checks:
         --download-external-modules true
     network:
       egress: [pypi.org, files.pythonhosted.org, registry.terraform.io, github.com]
+  fmt:
+    description: terraform fmt -- the same formatting gate the local pre-push skill enforces
+    trigger: postsubmit
+    cmd: terraform fmt -check -recursive

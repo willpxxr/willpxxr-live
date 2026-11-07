@@ -93,10 +93,11 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   set of bootstrap-only k8s objects Terraform manages directly (see below).
 - **ArgoCD** (self-managed app-of-apps, see `gitops/clusters/de/hetzner/cluster/argocd/`)
   reconciles everything under `gitops/`.
-- **CI** -- split (WEP-0017): push-time Checkov scanning of `terraform/`
-  runs on Chainguard Checks (`.chainguard/`, postsubmit check on every
-  commit to main, findings as annotations -- it cannot gate a
-  push-to-main repo). GitHub Actions (`.github/workflows/`) keeps what the
+- **CI** -- split (WEP-0017): push-time checks run on Chainguard Checks
+  (`.chainguard/`, postsubmit on every commit to main -- a Checkov scan of
+  `terraform/` with findings as annotations and a `terraform fmt -check`
+  gate; they cannot gate a push-to-main repo). GitHub Actions
+  (`.github/workflows/`) keeps what the
   Checks beta cannot host: the per-push mcp-token-vault GHCR build (GitOps
   pins sha-<commit> tags), the dispatch-only substrate ko/buildx publish
   (WEP-0016), the monthly Talos Packer build (HCLOUD_TOKEN, cron), and the
