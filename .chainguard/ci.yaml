@@ -14,7 +14,14 @@ checks:
     script: |
       # Pinned deliberately; --soft-fail keeps new findings report-only,
       # github_failed_only's ::error lines render as annotations.
+      # --skip-download: skip the optional Prisma guideline fetch (hermetic
+      # egress; the links were empty anyway). --download-external-modules:
+      # also scan inside the hcloud-talos registry module, resolved via
+      # registry.terraform.io and fetched from GitHub.
       pip install -q checkov==3.4.3
-      checkov --directory terraform --framework terraform --soft-fail --output github_failed_only
+      checkov --directory terraform --framework terraform --soft-fail \
+        --output github_failed_only \
+        --skip-download \
+        --download-external-modules true
     network:
-      egress: [pypi.org, files.pythonhosted.org]
+      egress: [pypi.org, files.pythonhosted.org, registry.terraform.io, github.com]
