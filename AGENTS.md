@@ -99,8 +99,9 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   gate; they cannot gate a push-to-main repo). GitHub Actions
   (`.github/workflows/`) keeps what the
   Checks beta cannot host: the per-push mcp-token-vault GHCR build (GitOps
-  pins sha-<commit> tags), the dispatch-only substrate ko/buildx publish
-  (WEP-0016), the monthly Talos Packer build (HCLOUD_TOKEN, cron), and the
+  pins sha-<commit> tags), the substrate ko/buildx publish (ref-bump
+  triggered via `.github/substrate-ref` with dispatch as the override,
+  WEP-0016), the monthly Talos Packer build (HCLOUD_TOKEN, cron), and the
   weekly Scorecard sweep (cron + SARIF). dependency-review dropped
   (PR-only; no PRs here).
 - **pre-commit** (`.pre-commit-config.yaml`): gitleaks, end-of-file-fixer,

@@ -34,9 +34,12 @@ Split CI by what each system can actually do.
 - **Stays on GitHub Actions**, each blocked by a beta limit rather than
   inclination: `mcp-token-vault.yml` (per-push GHCR publish behind the
   GitOps sha-<commit> image pinning -- needs a GitHub token),
-  `substrate-images.yaml` (dispatch-only, GHCR, buildx), `talos-image.yml`
-  (HCLOUD_TOKEN secret plus monthly cron), `scorecards.yml` (weekly cron and
-  GitHub code-scanning SARIF upload).
+  `substrate-images.yaml` (GHCR, buildx; trigger modernized 2026-11-07 to
+  fire on a committed bump to `.github/substrate-ref`, with
+  `workflow_dispatch` kept as the rebuild-forcing override -- the build
+  itself waits on credentials), `talos-image.yml` (HCLOUD_TOKEN secret plus
+  monthly cron), `scorecards.yml` (weekly cron and GitHub code-scanning
+  SARIF upload).
 
 ## Consequences
 
@@ -52,9 +55,15 @@ Split CI by what each system can actually do.
   pinned in ring `1.trusted`, the cache limited to ring 2. A future PR flow
   inherits working trust semantics from day one, and an untrusted opener
   would correctly get neither cache nor trust.
-- Revisit when Checks leaves beta: the `trust.github_token` ring is already
-  required in the schema, so GitHub tokens are coming -- mcp-token-vault and
-  substrate-images become migration candidates then (the vault build also
-  needs persistent Docker layer caching to not regress against `type=gha`).
-  talos-image additionally needs cron support and an arbitrary-secrets
-  story for HCLOUD_TOKEN.
+- Revisit when Checks leaves beta. Endgame decided 2026-11-07: stay on GHCR
+  and wait for the GitHub token (`trust.github_token` is already required
+  in the schema) -- mcp-token-vault and substrate-images become migration
+  candidates then (the vault build also needs persistent Docker layer
+  caching to not regress against `type=gha`). The cgr.dev alternative is
+  closed on the free tier: pushing through a Chainguard workload identity
+  needs an assumable identity, and Starter organizations cannot create
+  identities (pull tokens only), so it would take a paid plan plus a GitOps
+  registry migration. talos-image needs an arbitrary-secrets story on top:
+  hcloud has no OIDC surface to federate a workload identity with, so it
+  waits for a generic secrets mechanism (its monthly cron is GHA-shaped
+  regardless).
