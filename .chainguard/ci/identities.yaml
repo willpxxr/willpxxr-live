@@ -1,0 +1,18 @@
+# Trust rings + cache pool for Chainguard Checks (WEP-0017). Ring 2 =
+# postsubmit runs on main, the only ring this repo exercises; the owner
+# subring exists because the schema requires one.
+version: 1
+trust:
+  groups:
+    owner:
+      github:
+        # Numeric id, not login: the login is only a label.
+        user: {willpxxr: 51009659}
+  subrings:
+    trusted:
+      authors: [owner]
+  github_token: 1.trusted
+  cache:
+    trunk:
+      rings: [2]
+identities: {}

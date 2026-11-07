@@ -1,0 +1,20 @@
+# Push-time CI via Chainguard Checks (WEP-0017). Postsubmit checks run on
+# every commit landing on main; what the Checks beta can't host (GHCR
+# publishes, cron, secrets) stays on GitHub Actions.
+version: 1
+environment:
+  packages: [python-3.13, py3.13-pip]
+  caches:
+    python: {}
+checks:
+  checkov:
+    description: Checkov misconfiguration scan of terraform/ (report-only; findings appear as annotations on the commit check)
+    trigger: postsubmit
+    timeout: 10m
+    script: |
+      # Pinned deliberately; --soft-fail keeps new findings report-only,
+      # github_failed_only's ::error lines render as annotations.
+      pip install -q checkov==3.4.3
+      checkov --directory terraform --framework terraform --soft-fail --output github_failed_only
+    network:
+      egress: [pypi.org, files.pythonhosted.org]
