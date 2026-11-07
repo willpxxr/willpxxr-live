@@ -55,8 +55,10 @@ Split CI by what each system can actually do.
   pinned in ring `1.trusted`, the cache limited to ring 2. A future PR flow
   inherits working trust semantics from day one, and an untrusted opener
   would correctly get neither cache nor trust.
-- Revisit when Checks leaves beta. Endgame decided 2026-11-07: stay on GHCR
-  and wait for the GitHub token (`trust.github_token` is already required
+- **Deferred (2026-11-07), not abandoned**: the four remaining workflows
+  switch over to Checks as the blocking capabilities mature; re-check when
+  the beta lifts. Per-workflow unlocks: stay on GHCR and wait for the
+  GitHub token (`trust.github_token` is already required
   in the schema) -- mcp-token-vault and substrate-images become migration
   candidates then (the vault build also needs persistent Docker layer
   caching to not regress against `type=gha`). The cgr.dev alternative is

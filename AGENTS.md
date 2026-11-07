@@ -103,7 +103,10 @@ must do*. They apply to any agent (human or LLM) working in this repo.
   triggered via `.github/substrate-ref` with dispatch as the override,
   WEP-0016), the monthly Talos Packer build (HCLOUD_TOKEN, cron), and the
   weekly Scorecard sweep (cron + SARIF). dependency-review dropped
-  (PR-only; no PRs here).
+  (PR-only; no PRs here). The remaining GHA workflows switch over to Checks
+  as the blocking capabilities mature (GitHub tokens, generic secrets,
+  cron, docker layer caching) -- deferred 2026-11-07, not abandoned; see
+  WEP-0017's revisit section.
 - **pre-commit** (`.pre-commit-config.yaml`): gitleaks, end-of-file-fixer,
   trailing-whitespace.
 
