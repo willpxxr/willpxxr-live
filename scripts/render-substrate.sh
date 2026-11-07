@@ -337,6 +337,42 @@ if not any(l.strip() == "maxSurge: 0" for l in lines):
 PYEOF
       ;;
   esac
+  # ate-api-server hostAliases: the kube ServiceAccount issuer URL
+  # (baked into every bound SA token, incl. the ones kubectl-ate mints
+  # for ate-api sessions) is https://kube.cluster.local:6443 -- a name
+  # Talos resolves ONLY in node /etc/hosts; from pods it is NXDOMAIN
+  # (live 2026-11-07), and :6443 is bound only by the control-plane
+  # nodes directly (the apiserver Service is :443). Alias the issuer
+  # name to control-plane-1's public IP so oidcjwt's OIDC
+  # discovery/JWKS fetch resolves. The apiserver serving cert SANs
+  # cover kube.cluster.local (verified live 2026-11-07), so the TLS
+  # name check passes. Third leg, with api-authentication.yaml's
+  # certificateAuthorityFile/discoveryTokenFile and
+  # network-policy.yaml's allow-oidc-apiserver-egress
+  # (WEP-0016). NOTE: hardcodes control-plane-1's IP -- if that node
+  # is ever replaced, this IP and the matching CNP rule move with it.
+  case "$(basename "$dst")" in
+    ate-api-server.yaml)
+      OIDC_ALIAS='
+      hostAliases:
+        # OIDC issuer kube.cluster.local -> control-plane-1 :6443 (WEP-0016)
+        - ip: 5.75.173.162
+          hostnames: [kube.cluster.local]
+' \
+      python3 - "$dst" <<'PYEOF'
+import os, sys
+path = sys.argv[1]
+lines = open(path).read().splitlines(keepends=True)
+if not any("kube.cluster.local" in l for l in lines):
+    for i, l in enumerate(lines):
+        if l == "    spec:\n":
+            lines[i + 1:i + 1] = [os.environ["OIDC_ALIAS"]]
+            open(path, "w").write("".join(lines))
+            print(f"  {os.path.basename(path)}: OIDC hostAlias injected")
+            break
+PYEOF
+      ;;
+  esac
   # Objectstore sidecar S3 env (ate-api-server + atelet only).
   python3 - "$dst" <<'PYEOF'
 import os, sys

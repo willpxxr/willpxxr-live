@@ -82,6 +82,11 @@ spec:
         willpxxr.com/restart: "2026-10-31-postgres-pcr-recreate"
         willpxxr.com/authn-audience: "api.substrate.svc"
     spec:
+
+      hostAliases:
+        # OIDC issuer kube.cluster.local -> control-plane-1 :6443 (WEP-0016)
+        - ip: 5.75.173.162
+          hostnames: [kube.cluster.local]
       # TODO: Add topologySpreadConstraints to spread replicas across nodes and zones.
       serviceAccountName: ate-api-server
       # Budget for the full shutdown sequence: --drain-delay (sized to cover

@@ -7,11 +7,34 @@
 # "Unauthenticated: invalid bearer token" (live 2026-11-01). The
 # issuer half is upstream's own derivation (the kube apiserver's
 # service-account issuer, from OIDC discovery; Talos default):
-# https://kube.cluster.local:6443. Only the audience line differs
-# from the tool-generated object. The create step still runs in the
-# state-bootstrap hook -- it no-ops against this file ("already
-# exists; keeping it") and documents that the upstream tool cannot
-# render a retargeted audience.
+# https://kube.cluster.local:6443.
+#
+# The audience alone was not enough (live 2026-11-07): the issuer URL
+# is not usable from a pod as-is, so the VALIDATION side needs what
+# the upstream provider schema supports (cmd/ateapi
+# internal/apiauthn/config.go, camelCase keys):
+#
+#   - certificateAuthorityFile: oidcjwt.NewHTTPClient with no CA file
+#     falls back to the SYSTEM trust store -- empty on a distroless
+#     ko image -- so the fetch of kube's OIDC discovery/JWKS can
+#     never verify the apiserver's serving cert. The cluster CA is
+#     already projected into every pod at
+#     /var/run/secrets/kubernetes.io/serviceaccount/ca.crt.
+#   - discoveryTokenFile: this apiserver rejects ANONYMOUS OIDC
+#     discovery (401, live 2026-11-07; the anonymous-binding
+#     hardening class). oidcjwt's issuerDiscoveryTransport then
+#     injects this pod's own SA token on issuer-scoped requests;
+#     authenticated reads return 200 (live 2026-11-07).
+#
+# Resolution of the issuer HOST is a pod-spec concern (hostAliases to
+# control-plane-1, injected by scripts/render-substrate.sh) and the
+# :6443 egress is permitted by allow-oidc-apiserver-egress in
+# network-policy.yaml -- this config is the third leg of that fix.
+#
+# The upstream create step still runs in the state-bootstrap hook --
+# it no-ops against this file ("already exists; keeping it") and
+# documents that the upstream tool cannot render a retargeted
+# audience.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -23,3 +46,5 @@ data:
     - name: kubernetes
       issuer: https://kube.cluster.local:6443
       audiences: [api.substrate.svc]
+      certificateAuthorityFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      discoveryTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token

@@ -54,6 +54,24 @@ spec:
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
+  name: allow-oidc-apiserver-egress
+  namespace: substrate
+spec:
+  description: "ate-api-server validates every kubectl-ate session token against the OIDC issuer baked into kube ServiceAccount tokens -- https://kube.cluster.local:6443. That name resolves only at node level on Talos and :6443 is bound directly by the control-plane nodes, so this is the apiserver's own node-IP path, NOT the Service: the api pods alias kube.cluster.local -> control-plane-1 5.75.173.162 (hostAliases, scripts/render-substrate.sh) and this rule permits :6443 to that IP. The kube-apiserver ENTITY above covers the Service :443; the node-IP :6443 flow is dropped without this (live 2026-11-07: connect timeout until added, 200 after). Anonymous discovery is 401 on this cluster, so the fetch also needs the pod's SA token + cluster CA -- see api-authentication.yaml. If control-plane-1 is ever replaced, this CIDR moves with its IP."
+  endpointSelector:
+    matchLabels:
+      app: ate-api-server
+  egress:
+    - toCIDR:
+        - 5.75.173.162/32
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
   name: allow-supabase-pooler-egress
   namespace: substrate
 spec:
