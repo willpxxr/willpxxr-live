@@ -78,7 +78,7 @@ data:
     - name: auditor
       # Resolve from the first agent-images build output. Never a
       # floating tag.
-      image: ghcr.io/willpxxr/agent-base@sha256:PLACEHOLDER-BASE-DIGEST
+      image: ghcr.io/willpxxr/agent-base@sha256:cdd2bead319021c6fe23b536a1e27c7a9c22d11131bfdbd32d50a53f4c132c91
       command:
       - /opt/hermes/docker/entrypoint-dispatch.sh
       args:
@@ -114,4 +114,4 @@ data:
       image:
         # Resolve from the first agent-images build output. Digest
         # required by ImageVolumeSource validation; read-only mount.
-        reference: ghcr.io/willpxxr/skill-security-audit@sha256:PLACEHOLDER-SKILL-DIGEST
+        reference: ghcr.io/willpxxr/skill-security-audit@sha256:74519a77caf6450e74bf7888b7ab41eecf76e78f5731750046cfd2a3a3e72762
