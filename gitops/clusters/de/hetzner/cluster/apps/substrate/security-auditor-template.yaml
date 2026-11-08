@@ -1,0 +1,117 @@
+# The WEP-0016 security-audit profile actor template (Phase-3 prep,
+# 2026-11-08): a hermes agent loaded with Cloudflare's
+# security-audit-skill as a shared, pinned, read-only OCI artifact --
+# skills-as-OCI via substrate's ImageVolumeSource.
+#
+# Composition (nothing is baked per-profile -- the point):
+#   - image: agent-base (hermes@digest +ONLY the fleet agent config:
+#     skills.external_dirs -> /skills). No skills in the base; it
+#     rebuilds only on hermes bumps.
+#   - volumes[].image: skill artifacts, scratch images whose ROOT is
+#     the skill tree at a pinned upstream commit. ImageVolumeSource is
+#     read-only by design (worker binds "ro"), REQUIRES a digest (API
+#     validation), the worker pulls via its imageCache (anonymous:
+#     the artifact is flipped public after first green build; registry
+#     egress = the allow-actor-image-registry-egress CNP), and a
+#     changed reference invalidates snapshots -- correct lifecycle:
+#     skill bump -> new digest -> golden re-bake. THIS is how specific
+#     skill versions are pulled into agents, and how skills stay
+#     shared: two agents referencing the same digest share one truth.
+#     Upstream #2514 (plugin-backed artifact volumes for S3 etc.) is
+#     the watch for the generalization of this same shape.
+#
+# Pin chain: .github/agent-images-ref (SKILL_* pins + HERMES_BASE)
+#   -> agent-images workflow
+#   -> ghcr.io/willpxxr/skill-security-audit@sha256:…  (this template)
+#   -> ghcr.io/willpxxr/agent-base@sha256:…            (this template)
+# The placeholders below resolve when the first build prints its
+# digests (the ref file's landing fires the paths trigger).
+#
+# Hermes mechanics (verified against upstream, WEP-0016 slice 11):
+#   - the mounted tree at /skills/security-audit joins the skill index
+#     via skills.external_dirs (in agent-base's config.yaml) --
+#     full-class skills: index, /slash commands, skill_view. hermes
+#     env-var config is rejected upstream (their #10887), hence the
+#     config rides the base image.
+#   - run command: hermes' own entrypoint dispatcher, which carries
+#     the non-PID-1 fallback (s6 / stage2) designed for wrapped
+#     runtimes like this sandbox.
+#   - wakeupProbe is HTTP-only (ateworker.proto: "Only HTTP is
+#     supported today"); hermes gateway serves /health unauthenticated
+#     on :8642, but the listener defaults to loopback + disabled --
+#     hence the env pair (API_SERVER_ENABLED / API_SERVER_HOST; the
+#     API-server bearer key deliberately absent: /health answers
+#     without it, and that secret belongs to the Phase-2 dispatch
+#     seam, not to git).
+#   - Sizing vs the default-worker pool (1000mc/960Mi advertised): one
+#     auditor saturates the slot -- one audit at a time on the
+#     squeezed fleet. Parallel hunter replay is upsize-on-restock
+#     territory. Memory size = first-dispatch measurement (Phase 0's
+#     record-RSS task returns).
+#   - Workspace: durableDir at /workspace -- audit targets + findings
+#     persist across suspend/resume. SNAPSHOT_FIDELITY_MEMORY: long
+#     audits hibernate with ledger + findings state intact.
+#   - First-create verification items (the api validates loudly --
+#     counter smoke evidence: field paths in errors): image volume
+#     field spelling (image.reference), env/command/args shapes,
+#     timeoutSeconds acceptance, stage2 behavior toward the base
+#     image's existing config.yaml (preserve, not seed-over), and the
+#     skill appearing in the booted agent's skills list.
+#
+# The atespace `security` gets created at first use (one atespace per
+# profile, Decision section 3): kubectl ate create atespace security.
+#
+# Carried as a ConfigMap (smoke-template.yaml convention): actor
+# templates are API objects, not CRs -- they enter through
+# `kubectl-ate create actor-template -f` as ate-client.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ate-security-auditor-template
+  namespace: ate-system
+data:
+  security-auditor.yaml: |
+    metadata:
+      atespace: security
+      name: security-auditor
+    containers:
+    - name: auditor
+      # Resolve from the first agent-images build output. Never a
+      # floating tag.
+      image: ghcr.io/willpxxr/agent-base@sha256:PLACEHOLDER-BASE-DIGEST
+      command:
+      - /opt/hermes/docker/entrypoint-dispatch.sh
+      args:
+      - gateway
+      run
+      env:
+      - name: API_SERVER_ENABLED
+        value: "true"
+      - name: API_SERVER_HOST
+        value: "0.0.0.0"
+      wakeupProbe:
+        httpGet:
+          path: /health
+          port: 8642
+        # hermes first boot under gVisor: python venv + s6 + stage2
+        # seeding -- generous; tighten after measuring.
+        timeoutSeconds: 180
+      volumeMounts:
+      - name: workspace
+        mountPath: /workspace
+      - name: skill-security-audit
+        mountPath: /skills/security-audit
+    resources:
+      limits:
+        cpuMillicores: 1000
+        memoryBytes: 805306368
+    snapshotConfig:
+      preferredFidelity: SNAPSHOT_FIDELITY_MEMORY
+    volumes:
+    - name: workspace
+      durableDir: {}
+    - name: skill-security-audit
+      image:
+        # Resolve from the first agent-images build output. Digest
+        # required by ImageVolumeSource validation; read-only mount.
+        reference: ghcr.io/willpxxr/skill-security-audit@sha256:PLACEHOLDER-SKILL-DIGEST

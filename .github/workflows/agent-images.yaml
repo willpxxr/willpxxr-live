@@ -1,0 +1,160 @@
+name: agent-images
+
+# Builds the WEP-0016 Phase-3 agent image set -- the substrate profile
+# actors' composition machinery, skills-as-OCI-artifacts:
+#
+#   1. ghcr.io/willpxxr/skill-<name>   (flip public once, first green
+#      build of each -- the atelet imageCache pulls anonymous)
+#      Per-skill scratch artifact images, one per SKILL_* pin in
+#      .github/agent-images-ref. The image ROOT IS the skill tree
+#      (SKILL.md + companions); the digest is the skill's version
+#      identity. Actor templates mount these read-only via
+#      ImageVolumeSource -- the mechanism upstream issue #2514 calls
+#      the existing OCI image volume support and proposes generalizing
+#      to plugin-backed sources (S3 etc.); watch that issue.
+#
+#   2. ghcr.io/willpxxr/agent-base     (same public posture)
+#      The skills base image agents run FROM: the digest-pinned
+#      hermes base + the fleet agent-config conventions ONLY
+#      (skills.external_dirs -> /skills). Carries no skills -- skills
+#      join per-template as image volumes, so a skill bump re-bakes
+#      exactly the profiles that mount it, never the base.
+#
+# Nothing is composed per-profile here: the security-auditor actor
+# template references agent-base@digest + skill-security-audit@digest
+# directly. Pin discipline: ref file -> build inputs, template ->
+# consumed digests; never a floating tag anywhere. Adding a skill =
+# one SKILL_* line in the ref file + one explicit build block here.
+on:
+  push:
+    branches: ["main"]
+    paths: [".github/agent-images-ref"]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  build-push:
+    name: "agent-base + skills -> GHCR"
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit
+
+      - name: "Checkout this repo (the pinned-ref file lives here)"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: "Resolve pins"
+        id: refs
+        run: |
+          file_val() { grep "^$2=" .github/agent-images-ref | cut -d= -f2; }
+          base="$(file_val HERMES_BASE)"
+          audit_pin="$(file_val SKILL_SECURITY_AUDIT)"
+          audit_repo="${audit_pin%@*}"; audit_sha="${audit_pin#*@}"
+          echo "composing hermes=$base security-audit=${audit_repo}@${audit_sha}"
+          {
+            echo "base=$base"
+            echo "audit_repo=$audit_repo"
+            echo "audit_sha=$audit_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: "Login to GHCR"
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Build + push skill-security-audit (scratch artifact)"
+        # The skill's own zero-dependency Node test suites gate the
+        # build (node rides in every agent via hermes' pm toolchain;
+        # the validators run in-agent the same way). First-dispatch
+        # verification item: the test CLIs' exact invocation -- if a
+        # suite is not bare-node-runner-shaped, drop it here, never
+        # from the runtime contract.
+        env:
+          AUDIT_REPO: ${{ steps.refs.outputs.audit_repo }}
+          AUDIT_SHA: ${{ steps.refs.outputs.audit_sha }}
+          IMAGE: ghcr.io/willpxxr/skill-security-audit
+        run: |
+          set -o pipefail
+          git clone -q "https://github.com/${AUDIT_REPO}.git" skill-src
+          git -C skill-src checkout -q "$AUDIT_SHA"
+          cd skill-src/skills/security-audit
+          node --version
+          node validate-findings.test.cjs
+          node validate-coverage-ledger.test.cjs
+          cd "$GITHUB_WORKSPACE/skill-src"
+          cat > Dockerfile.skill <<'EOF'
+          FROM scratch
+          # The artifact root IS the skill tree: SKILL.md + companions
+          # at / -- exactly what templates mount at /skills/security-audit.
+          COPY skills/security-audit/ /
+          EOF
+          docker build --platform linux/amd64 \
+            --label org.opencontainers.image.source="https://github.com/${AUDIT_REPO}" \
+            --label org.opencontainers.image.revision="$AUDIT_SHA" \
+            -f Dockerfile.skill \
+            -t "${IMAGE}:${AUDIT_SHA:0:12}" .
+          docker push "${IMAGE}:${AUDIT_SHA:0:12}" | tee "${RUNNER_TEMP}/skill-push.txt"
+          digest="$(docker inspect --format '{{index .RepoDigests 0}}' "${IMAGE}:${AUDIT_SHA:0:12}" | sed 's/.*@//')"
+          echo "SKILL SECURITY-AUDIT DIGEST (template image-volume reference): ${IMAGE}@${digest}"
+
+      - name: "Build + push agent-base (hermes + fleet agent config)"
+        env:
+          IMAGE: ghcr.io/willpxxr/agent-base
+          HERMES_BASE: ${{ steps.refs.outputs.base }}
+        run: |
+          set -o pipefail
+          mkdir agent-build && cd agent-build
+          cat > config.yaml <<'EOF'
+          # Fleet agent-config conventions, carried by agent-base. hermes
+          # upstream policy: user-facing config lives in config.yaml --
+          # env-var config proposals are rejected (their #10887) -- so the
+          # base image is the composition point. stage2 seeds config only
+          # when absent: this file persists (WEP-0016 carries the
+          # first-boot verification).
+          skills:
+            # Actor templates mount per-skill OCI artifacts read-only
+            # (ImageVolumeSource) under /skills/<name>; this scan root
+            # makes every mount a first-class skill. Non-existent paths
+            # are silently skipped (upstream-documented), so agents
+            # without skill mounts boot clean.
+            external_dirs:
+              - /skills
+          EOF
+          cat > Dockerfile <<EOF
+          FROM ${HERMES_BASE}
+          # hermes reads config from \$HERMES_HOME (=/opt/data). No actor
+          # volume mounts there: image content persists through the
+          # sandbox fs, stage2's chown + seed run normally and preserve
+          # this file.
+          COPY --chmod=a+rX,go-w config.yaml /opt/data/config.yaml
+          EOF
+          docker build --platform linux/amd64 \
+            --label org.opencontainers.image.source=https://github.com/willpxxr/willpxxr-live \
+            -t "${IMAGE}:latest" .
+          docker push "${IMAGE}:latest" | tee "${RUNNER_TEMP}/agent-base-push.txt"
+          digest="$(docker inspect --format '{{index .RepoDigests 0}}' "${IMAGE}:latest" | sed 's/.*@//')"
+          echo "AGENT-BASE DIGEST (template image reference): ${IMAGE}@${digest}"
+
+      - name: "Published digests (template-paste input)"
+        run: |
+          {
+            echo "## agent images -- pinned set"
+            echo
+            echo '```'
+            cat "${RUNNER_TEMP}/skill-push.txt"
+            echo "--- agent-base:"
+            cat "${RUNNER_TEMP}/agent-base-push.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

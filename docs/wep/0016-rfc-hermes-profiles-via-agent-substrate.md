@@ -963,6 +963,54 @@ Each profile ships: ActorTemplate, atespace, EgressPolicy, GitHub App +
 dispatch smoke, and one real exercised PR recorded in this WEP's execution
 record.
 
+Execution record (2026-11-08, slice 11 — Phase-3 prep: the
+security-audit profile as skills-as-OCI): the first profile-shaped
+actor lands as an image pipeline + template draft, built on a
+mechanism the cutover arc had not yet met. Cloudflare's
+security-audit-skill (MIT; SKILL.md + ten hunting-class companions +
+two zero-dependency Node validators; six-phase audit orchestration
+with adversarial validation — its stated runtime requirements are a
+literal description of an ate actor: OS-enforced sandbox, no external
+network for target-controlled execution, resource limits,
+scratch-path-only writes) publishes no tags — upstream commits are
+its only version surface. Design, after two mid-flight corrections
+both recorded for posterity: (1) ExternalVolumes (the preview gate)
+is the WRONG primitive for skills — the schema provisions an empty
+per-actor PVC (capacity_bytes + storage_class_name, rw-only, dies
+with the actor), which on this fleet would mint 10GB-min hcloud
+Volumes; it stays interesting for per-actor audit-target workspaces
+(Phase-3 decision), not shared skills. (2) The right mechanism EXISTS
+in v1.0.0 un-gated: Volume.image (ImageVolumeSource — what upstream
+#2514 calls the existing OCI image volume support) mounts an OCI
+image's contents READ-ONLY, REQUIRES a digest (API validation), the
+worker pulls via its imagecache (the same anonymous posture + registry
+egress as actor images), and a changed reference invalidates
+snapshots — a skill bump therefore re-bakes exactly the goldens of
+templates that mount it. Final architecture:
+ghcr.io/willpxxr/agent-base (hermes@index-digest + ONLY the fleet
+agent config — skills.external_dirs → /skills, because hermes rejects
+env-var configuration upstream, their #10887) + per-skill scratch
+artifact images (root = the skill tree at the pinned commit; digest =
+version identity) + actor templates pulling specific versions as
+image volumes at /skills/<name> — skills that might be shared just
+reference the same digest; nothing is composed per-profile. Workflow
+.github/workflows/agent-images.yaml + pins .github/agent-images-ref
+(SKILL_SECURITY_AUDIT=c1c8a8c…, HERMES_BASE) follow the
+substrate-images discipline (paths-triggered deliberate rebuilds,
+dispatch override, pinned actions, harden-runner, public flip once
+per package after first green build — the skill artifact is public
+content under MIT). The template draft (security-auditor-template.yaml)
+carries its own first-create verification list (field spellings —
+the api validates loudly; stage2's preserve-not-seed behavior toward
+the base image's config.yaml; the skill visible in the booted agent's
+skills list; audit-agent RSS measured, the Phase-0 calibration task
+returning). Upstream watch: #2514 — plugin-backed artifact volumes
+for S3 and other sources, the generalization of this exact shape
+(AssetProvider.FetchAsset already takes URI + sha256 + destination +
+size limit). The profile's remaining blockers to a first real audit
+are unchanged: the Phase-2 credential chain (gateway egress, M2M
+client) and the proxy/dispatch seam.
+
 ## Consequences
 
 - No migration and no new nodes: today's de/hetzner cluster hosts

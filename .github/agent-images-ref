@@ -1,0 +1,24 @@
+# Pins for the substrate agent-image set (WEP-0016 Phase 3): the
+# agent-base composition image + the per-skill artifact images that
+# actor templates mount as read-only OCI image volumes
+# (ImageVolumeSource -- digest required by API validation; #2514 is the
+# watch for the plugin-backed generalization to non-registry sources).
+#
+# A committed bump to this file fires the agent-images workflow (the
+# .github/substrate-ref precedent: deliberate rebuilds, workflow_dispatch
+# as the force-rebuild override).
+#
+# Per-skill pins: SKILL_<NAME>=<org/repo>@<commit-sha>. The skill repos
+# publish no tags (checked 2026-11-08; upstream commits are the only
+# version surface). Each builds as a scratch image
+# ghcr.io/willpxxr/skill-<name-lowercased> whose ROOT IS the skill tree
+# (SKILL.md + companions) -- agents mount it at /skills/<name> via the
+# template's image volume. Version identity = the artifact digest.
+# Adding a skill = one pin line + its build loop entry handles it.
+SKILL_SECURITY_AUDIT=cloudflare/security-audit-skill@c1c8a8c1471069fb0e188eeaeff69b8e8db6564a8
+# The agent-base composition: hermes + the fleet agent-config
+# conventions (skills.external_dirs -> /skills). The live orchestrator
+# rode :latest; agents do not. Multi-arch index digest -- BuildKit
+# resolves to the amd64 manifest (the same FROM-a-digest pattern
+# hermes' own Dockerfile uses for its Debian base).
+HERMES_BASE=docker.io/nousresearch/hermes-agent@sha256:adb7890916de63245523492be8f68f9d2095fecbec4e2a6dab7960311f0fc002
