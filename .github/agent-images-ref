@@ -20,9 +20,14 @@
 # and died loudly at git checkout pathspec. Pins verify themselves:
 # a wrong sha never builds.)
 SKILL_SECURITY_AUDIT=cloudflare/security-audit-skill@c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
+# 2026-11-08: the first pin carried a transcription drift (position-60:
+# 8 vs 1). This value was resolved from the registry and written
+# mechanically -- never hand-transcribe digests. Upstream's semver
+# anchor for this digest: v0.23.0 (== stable == latest, pushed
+# 2026-11-05); prefer bumping the pin to a NEW semver's digest.
 # The agent-base composition: hermes + the fleet agent-config
 # conventions (skills.external_dirs -> /skills). The live orchestrator
 # rode :latest; agents do not. Multi-arch index digest -- BuildKit
 # resolves to the amd64 manifest (the same FROM-a-digest pattern
 # hermes' own Dockerfile uses for its Debian base).
-HERMES_BASE=docker.io/nousresearch/hermes-agent@sha256:adb7890916de63245523492be8f68f9d2095fecbec4e2a6dab7960311f0fc002
+HERMES_BASE=docker.io/nousresearch/hermes-agent@sha256:adb7890916de63245523492be8f68f9d2095fecbec4e2a6dab7960381f0fc002
