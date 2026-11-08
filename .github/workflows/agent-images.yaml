@@ -56,10 +56,17 @@ jobs:
       - name: "Resolve pins"
         id: refs
         run: |
-          file_val() { grep "^$2=" .github/agent-images-ref | cut -d= -f2; }
+          file_val() { grep "^$1=" .github/agent-images-ref | cut -d= -f2; }
           base="$(file_val HERMES_BASE)"
           audit_pin="$(file_val SKILL_SECURITY_AUDIT)"
+          # Empty/malformed pins must fail loudly: they compose into
+          # silent nonsense downstream (first build died cloning
+          # https://github.com/.git/ -- a green resolve step with
+          # empty outputs, 2026-11-08).
+          [ -n "$base" ] || { echo "::error::HERMES_BASE pin missing from .github/agent-images-ref"; exit 1; }
+          case "$audit_pin" in *"@"*) ;; *) echo "::error::SKILL_SECURITY_AUDIT pin missing or malformed in .github/agent-images-ref (want org/repo@sha)"; exit 1;; esac
           audit_repo="${audit_pin%@*}"; audit_sha="${audit_pin#*@}"
+          [ -n "$audit_repo" ] && [ -n "$audit_sha" ] || { echo "::error::SKILL_SECURITY_AUDIT pin malformed: ${audit_pin}"; exit 1; }
           echo "composing hermes=$base security-audit=${audit_repo}@${audit_sha}"
           {
             echo "base=$base"
