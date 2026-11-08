@@ -999,12 +999,18 @@ reference the same digest; nothing is composed per-profile. Workflow
 substrate-images discipline (paths-triggered deliberate rebuilds,
 dispatch override, pinned actions, harden-runner, public flip once
 per package after first green build — the skill artifact is public
-content under MIT). The template draft (security-auditor-template.yaml)
-carries its own first-create verification list (field spellings —
-the api validates loudly; stage2's preserve-not-seed behavior toward
-the base image's config.yaml; the skill visible in the booted agent's
-skills list; audit-agent RSS measured, the Phase-0 calibration task
-returning). Upstream watch: #2514 — plugin-backed artifact volumes
+content under MIT). The template draft
+(security-auditor-template.yaml) carries its own first-create
+verification list (field spellings — the api validates loudly;
+stage2's preserve-not-seed behavior toward the base image's
+config.yaml; the skill visible in the booted agent's skills list;
+audit-agent RSS measured, the Phase-0 calibration task returning).
+Amendment, same day: the profile ships as its OWN ArgoCD application
+(apps/security-auditor), not merged into substrate — owner call;
+profile apps are the organizational unit for profile-owned objects
+riding the runtime's namespace (the rider-app pattern: no
+namespace.yaml/network-policy.yaml of its own, the substrate app owns
+the namespace + posture; recorded in new-gitops-app + AGENTS). Upstream watch: #2514 — plugin-backed artifact volumes
 for S3 and other sources, the generalization of this exact shape
 (AssetProvider.FetchAsset already takes URI + sha256 + destination +
 size limit). The profile's remaining blockers to a first real audit

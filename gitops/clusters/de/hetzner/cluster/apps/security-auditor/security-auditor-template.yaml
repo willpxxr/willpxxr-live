@@ -83,7 +83,7 @@ data:
       - /opt/hermes/docker/entrypoint-dispatch.sh
       args:
       - gateway
-      run
+      - run
       env:
       - name: API_SERVER_ENABLED
         value: "true"

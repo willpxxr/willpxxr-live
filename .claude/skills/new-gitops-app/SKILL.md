@@ -31,8 +31,17 @@ apps/<name>/
 ├── network-policy.yaml      # default-deny posture — always
 ├── values.yaml              # helm apps: consumed via valueFiles, never synced as a manifest
 ├── externalsecret.yaml      # if it needs a secret from 1Password
-└── <other manifests>        # each listed in app.yaml's `manifests:`
+├── <other manifests>        # each listed in app.yaml's `dict manifests:`
 ```
+
+**Rider apps** (objects live in a peer app's namespace): omit
+`namespace.yaml` — the namespace's owning app manages it — and omit
+`network-policy.yaml` too, pointing to the owner's posture in the
+app.yaml comments instead (duplicate CNPs in one namespace would put
+two Applications in drift-conflict over the same posture). First case:
+`apps/security-auditor` riding substrate's `ate-system` (WEP-0016
+Phase 3, 2026-11-08). Document the boundary in the rider's app.yaml
+header — the boundary IS the interface.
 
 `app.yaml` template (helm + manifests, the common shape):
 

@@ -1,0 +1,23 @@
+# The security-auditor PROFILE's own app (owner call 2026-11-08: profiles
+# ship as their own ArgoCD applications, not merged into substrate --
+# same split instinct as the gVisor RuntimeClass, 54f4067). The profile
+# app is the organizational unit for everything the profile owns on the
+# k8s side; the ate-API objects (atespace, the ActorTemplate instance,
+# actors) enter through kubectl-ate, carried by this app's ConfigMaps.
+#
+# RIDER-APP shape (first of its kind): every object here lives in
+# ate-system, which is owned and policy-postured by the substrate app
+# (namespace.yaml + the 8-rule CNP bundle carry the posture). This app
+# deliberately ships NO namespace.yaml and NO network-policy.yaml of
+# its own -- duplicating either would put two Argo apps in conflict
+# over the same objects. The runtime owner holds the namespace; the
+# profile apps ride it.
+#
+# Adding a profile object = drop the manifest in this dir + list it
+# below. Future arrivals: per-profile EgressPolicy carriers (Phase 2's
+# gateway-egress + credential chain), the dispatch seam's manifests,
+# bootstrap helpers.
+name: security-auditor
+namespace: ate-system
+manifests:
+  - security-auditor-template.yaml

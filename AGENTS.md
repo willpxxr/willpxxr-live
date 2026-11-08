@@ -212,6 +212,13 @@ ArgoCD renders every app from a per-app `app.yaml` via the single
   content, and `templatePatch` cannot prevent Application creation.
 - **`values.yaml`** — helm values (never synced as a manifest; consumed via the
   `$app` valueFiles reference).
+- **Rider apps** — an app whose objects live in a *peer app's* namespace ships
+  no `namespace.yaml`/`network-policy.yaml` of its own: the namespace-owning
+  app holds the namespace object and the posture (duplicate CNPs would put two
+  Applications in drift-conflict over the same objects). Document the
+  boundary in the rider's `app.yaml` header. First case: `apps/security-auditor`
+  riding substrate's `ate-system` (WEP-0016 Phase 3) — profile apps are the
+  organizational home for each profile's k8s-side surface.
 - **`namespace.yaml`** + **`network-policy.yaml`** — `CiliumNetworkPolicy`,
   default-deny posture. Every namespace gets explicit `allow-same-namespace` +
   `allow-dns-egress` (+ `allow-kube-apiserver-egress` if the workload talks to

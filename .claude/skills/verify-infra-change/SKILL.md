@@ -149,6 +149,18 @@ If `pyyaml`/`yq` aren't installed, don't bother installing them just for a synta
 check — `kubectl --dry-run=client` already both parses the YAML and validates the
 schema in one step, which is strictly more useful.
 
+**ConfigMaps that embed YAML payloads** (actor-template carriers, config files as
+`data:` strings): `kubectl apply --dry-run=client` validates only the OUTER
+ConfigMap — the embedded document can still be malformed and nothing k8s-side
+will notice until its consumer reads it. Parse the payload too:
+
+```
+python3 -c "import yaml,sys; yaml.safe_load(yaml.safe_load(open(sys.argv[1]))['data']['<key>'])" <cm-file>
+```
+
+This caught a missing `-` in an actor template's `args:` list that two sets of
+eyes and a kubectl dry-run had waved through (2026-11-08, WEP-0016).
+
 ArgoCD ApplicationSet gotchas (learned in WEP-0001 phase 1):
 
 - The struct `spec.template` only templates *string* fields — it cannot emit
