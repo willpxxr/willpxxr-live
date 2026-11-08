@@ -15,7 +15,11 @@
 # (SKILL.md + companions) -- agents mount it at /skills/<name> via the
 # template's image volume. Version identity = the artifact digest.
 # Adding a skill = one pin line + its build loop entry handles it.
-SKILL_SECURITY_AUDIT=cloudflare/security-audit-skill@c1c8a8c1471069fb0e188eeaeff69b8e8db6564a8
+# (2026-11-08 lesson: the first build's pin carried a one-character
+# transcription drift from a JSON fetch mangle -- eeaef vs eeaff --
+# and died loudly at git checkout pathspec. Pins verify themselves:
+# a wrong sha never builds.)
+SKILL_SECURITY_AUDIT=cloudflare/security-audit-skill@c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
 # The agent-base composition: hermes + the fleet agent-config
 # conventions (skills.external_dirs -> /skills). The live orchestrator
 # rode :latest; agents do not. Multi-arch index digest -- BuildKit
